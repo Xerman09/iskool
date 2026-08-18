@@ -1,0 +1,25 @@
+{
+  "version": "8.2.0",
+  "release_date": "19/03/2024",
+  "required_manual_update": false,
+  "min": "8.1.0",
+  "migrations": [
+    "database/migrations/2018_12_04_050352_create_sm_notice_boards_table.php",
+    "database/migrations/2018_12_04_060828_create_sm_events_table.php",
+    "database/migrations/2019_02_10_125119_create_sm_general_settings_table.php",
+    "database/migrations/2019_06_12_143430_create_sm_courses_table.php",
+    "database/migrations/2020_06_10_193309_create_infix_module_managers_table.php",
+    "database/migrations/2022_12_13_043756_create_graduates_table.php",
+    "database/migrations/2023_09_11_0628897_create_update_7.2.0_to_7.2.1_table.php",
+    "database/migrations/2023_09_28_054606_create_sm_photo_galleries_table.php",
+    "database/migrations/2023_11_03_110411_edulia_demo_pages.php",
+    "database/migrations/2023_12_04_122708_update_v8.0.1_to_8.1.0.php",
+    "database/migrations/2023_12_11_063723_create_sm_donors_table.php",
+    "database/migrations/2023_12_13_024824_create_sm_form_downloads_table.php",
+    "database/migrations/2024_01_30_051708_update_v8.1.0_to_8.1.1.php",
+    "database/migrations/2024_03_05_081452_update_v8.1.1_to_8.1.2.php",
+    "database/migrations/2024_03_15_081452_update_v8.1.2_to_8.2.0.php"
+  ],
+  "url": "https://pro.eskooly.com/contact",
+  "notes": "This is a bug fixing & new features update."
+}
