@@ -249,6 +249,35 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::post('subject-update', ['as' => 'subject_update', 'uses' => 'Admin\Academics\SmSubjectController@update'])->middleware('userRolePermission:subject_edit');
         Route::get('subject-delete/{id}', ['as' => 'subject_delete', 'uses' => 'Admin\Academics\SmSubjectController@delete'])->middleware('userRolePermission:subject_delete');
 
+        // Course / Program routes (uses "program" in the URL — "course" is already
+        // taken by the CMS course-showcase routes further below, e.g. course-store)
+        Route::get('program', ['as' => 'program', 'uses' => 'Admin\Academics\CourseController@index'])->middleware('userRolePermission:program');
+        Route::post('program-store', ['as' => 'program_store', 'uses' => 'Admin\Academics\CourseController@store'])->middleware('userRolePermission:program_store');
+        Route::get('program-edit/{id}', ['as' => 'program_edit', 'uses' => 'Admin\Academics\CourseController@edit'])->middleware('userRolePermission:program_edit');
+        Route::post('program-update', ['as' => 'program_update', 'uses' => 'Admin\Academics\CourseController@update'])->middleware('userRolePermission:program_edit');
+        Route::get('program-delete/{id}', ['as' => 'program_delete', 'uses' => 'Admin\Academics\CourseController@delete'])->middleware('userRolePermission:program_delete');
+
+        // Curriculum Version routes
+        Route::get('curriculum-version', ['as' => 'curriculum-version', 'uses' => 'Admin\Academics\CurriculumVersionController@index'])->middleware('userRolePermission:curriculum-version');
+        Route::post('curriculum-version-store', ['as' => 'curriculum_version_store', 'uses' => 'Admin\Academics\CurriculumVersionController@store'])->middleware('userRolePermission:curriculum_version_store');
+        Route::get('curriculum-version-edit/{id}', ['as' => 'curriculum_version_edit', 'uses' => 'Admin\Academics\CurriculumVersionController@edit'])->middleware('userRolePermission:curriculum_version_edit');
+        Route::post('curriculum-version-update', ['as' => 'curriculum_version_update', 'uses' => 'Admin\Academics\CurriculumVersionController@update'])->middleware('userRolePermission:curriculum_version_edit');
+        Route::get('curriculum-version-activate/{id}', ['as' => 'curriculum_version_activate', 'uses' => 'Admin\Academics\CurriculumVersionController@activate'])->middleware('userRolePermission:curriculum_version_edit');
+        Route::get('curriculum-version-delete/{id}', ['as' => 'curriculum_version_delete', 'uses' => 'Admin\Academics\CurriculumVersionController@delete'])->middleware('userRolePermission:curriculum_version_delete');
+
+        // Semester routes
+        Route::get('semester', ['as' => 'semester', 'uses' => 'Admin\Academics\SemesterController@index'])->middleware('userRolePermission:semester');
+        Route::post('semester-store', ['as' => 'semester_store', 'uses' => 'Admin\Academics\SemesterController@store'])->middleware('userRolePermission:semester_store');
+        Route::get('semester-edit/{id}', ['as' => 'semester_edit', 'uses' => 'Admin\Academics\SemesterController@edit'])->middleware('userRolePermission:semester_edit');
+        Route::post('semester-update', ['as' => 'semester_update', 'uses' => 'Admin\Academics\SemesterController@update'])->middleware('userRolePermission:semester_edit');
+        Route::get('semester-delete/{id}', ['as' => 'semester_delete', 'uses' => 'Admin\Academics\SemesterController@delete'])->middleware('userRolePermission:semester_delete');
+
+        // Curriculum Builder routes
+        Route::get('curriculum-builder', ['as' => 'curriculum-builder', 'uses' => 'Admin\Academics\CurriculumBuilderController@index'])->middleware('userRolePermission:curriculum-builder');
+        Route::post('curriculum-builder-store', ['as' => 'curriculum_builder_store', 'uses' => 'Admin\Academics\CurriculumBuilderController@store'])->middleware('userRolePermission:curriculum_builder_store');
+        Route::post('curriculum-builder-update', ['as' => 'curriculum_builder_update', 'uses' => 'Admin\Academics\CurriculumBuilderController@update'])->middleware('userRolePermission:curriculum_builder_edit');
+        Route::get('curriculum-builder-delete/{id}', ['as' => 'curriculum_builder_delete', 'uses' => 'Admin\Academics\CurriculumBuilderController@delete'])->middleware('userRolePermission:curriculum_builder_delete');
+
         //Class Routine
         // Route::get('class-routine', ['as' => 'class_routine', 'uses' => 'SmAcademicsController@classRoutine']);
         // Route::get('class-routine-create', ['as' => 'class_routine_create', 'uses' => 'SmAcademicsController@classRoutineCreate']);

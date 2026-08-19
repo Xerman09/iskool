@@ -1,6 +1,8 @@
 /node_modules/
 /public/build/
+/public/public/
 /storage/*.key
+/storage/framework/lsp-*.php
 .env
 .env.*
 !.env.example

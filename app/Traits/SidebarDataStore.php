@@ -101,7 +101,7 @@ trait SidebarDataStore
         $settings_sections = ["general_settings", "fees_settings", "exam_settings", "frontend_cms", "custom_field"];
 
         //permission section
-        $permissionSections = include './resources/var/permission/permission_section_sidebar.php';
+        $permissionSections = include base_path('resources/var/permission/permission_section_sidebar.php');
         $permissionSectionRoutes = [];
         foreach ($permissionSections as $item) {
             storePermissionData($item, auth()->user()->id);

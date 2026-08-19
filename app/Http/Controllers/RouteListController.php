@@ -4968,12 +4968,124 @@ class RouteListController extends Controller
            'parent_route' => 'student_info',
            'type' => 2,
          ),
-         15209 => 
+         15209 =>
          array (
            'name' => 'UnAssign Student',
            'route' => 'unassigned_student',
            'parent_route' => 'student_info',
            'type' => 2,
+         ),
+         20000 =>
+         array (
+           'name' => 'Program',
+           'route' => 'program',
+           'parent_route' => 'academics',
+           'type' => 2,
+         ),
+         20001 =>
+         array (
+           'name' => 'Add',
+           'route' => 'program_store',
+           'parent_route' => 'program',
+           'type' => 3,
+         ),
+         20002 =>
+         array (
+           'name' => 'Edit',
+           'route' => 'program_edit',
+           'parent_route' => 'program',
+           'type' => 3,
+         ),
+         20003 =>
+         array (
+           'name' => 'Delete',
+           'route' => 'program_delete',
+           'parent_route' => 'program',
+           'type' => 3,
+         ),
+         20010 =>
+         array (
+           'name' => 'Curriculum Version',
+           'route' => 'curriculum-version',
+           'parent_route' => 'academics',
+           'type' => 2,
+         ),
+         20011 =>
+         array (
+           'name' => 'Add',
+           'route' => 'curriculum_version_store',
+           'parent_route' => 'curriculum-version',
+           'type' => 3,
+         ),
+         20012 =>
+         array (
+           'name' => 'Edit',
+           'route' => 'curriculum_version_edit',
+           'parent_route' => 'curriculum-version',
+           'type' => 3,
+         ),
+         20013 =>
+         array (
+           'name' => 'Activate',
+           'route' => 'curriculum_version_activate',
+           'parent_route' => 'curriculum-version',
+           'type' => 3,
+         ),
+         20014 =>
+         array (
+           'name' => 'Delete',
+           'route' => 'curriculum_version_delete',
+           'parent_route' => 'curriculum-version',
+           'type' => 3,
+         ),
+         20020 =>
+         array (
+           'name' => 'Semester',
+           'route' => 'semester',
+           'parent_route' => 'academics',
+           'type' => 2,
+         ),
+         20021 =>
+         array (
+           'name' => 'Add',
+           'route' => 'semester_store',
+           'parent_route' => 'semester',
+           'type' => 3,
+         ),
+         20022 =>
+         array (
+           'name' => 'Edit',
+           'route' => 'semester_edit',
+           'parent_route' => 'semester',
+           'type' => 3,
+         ),
+         20023 =>
+         array (
+           'name' => 'Delete',
+           'route' => 'semester_delete',
+           'parent_route' => 'semester',
+           'type' => 3,
+         ),
+         20030 =>
+         array (
+           'name' => 'Subject Prerequisite',
+           'route' => 'subject-prerequisite',
+           'parent_route' => 'academics',
+           'type' => 2,
+         ),
+         20031 =>
+         array (
+           'name' => 'Add',
+           'route' => 'subject_prerequisite_store',
+           'parent_route' => 'subject-prerequisite',
+           'type' => 3,
+         ),
+         20032 =>
+         array (
+           'name' => 'Delete',
+           'route' => 'subject_prerequisite_delete',
+           'parent_route' => 'subject-prerequisite',
+           'type' => 3,
          ),
        );
     }

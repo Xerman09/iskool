@@ -126,6 +126,16 @@ class SmStudent extends Model
         return $this->belongsTo('App\SmAcademicYear', 'academic_id', 'id');
     }
 
+    public function course()
+    {
+        return $this->belongsTo('App\Course', 'course_id', 'id');
+    }
+
+    public function curriculumVersion()
+    {
+        return $this->belongsTo('App\CurriculumVersion', 'curriculum_version_id', 'id');
+    }
+
     //student class name
     public function class()
     {
