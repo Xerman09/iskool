@@ -91,4 +91,31 @@ class SemesterController extends Controller
             return redirect()->back();
         }
     }
+
+    public function activate(Request $request, $id)
+    {
+        try {
+            $semester = Semester::where('school_id', auth()->user()->school_id)->findOrFail($id);
+            $semester->is_active = 1;
+            $semester->save();
+            $this->deactivateSiblings($semester);
+
+            Toastr::success('Semester activated for enrollment', 'Success');
+            return redirect()->back();
+        } catch (\Exception $e) {
+            Toastr::error('Operation Failed', 'Failed');
+            return redirect()->back();
+        }
+    }
+
+    /**
+     * Only one semester should be active school-wide at a time, since new
+     * enrollments get anchored to whichever semester is currently active.
+     */
+    private function deactivateSiblings(Semester $semester)
+    {
+        Semester::where('school_id', $semester->school_id)
+            ->where('id', '!=', $semester->id)
+            ->update(['is_active' => 0]);
+    }
 }

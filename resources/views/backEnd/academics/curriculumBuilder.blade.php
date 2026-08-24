@@ -11,6 +11,9 @@
                 <a href="{{route('dashboard')}}">@lang('common.dashboard')</a>
                 <a href="#">@lang('academics.academics')</a>
                 <a href="#">@lang('academics.curriculum_builder')</a>
+                @if(userPermission('curriculum-layout'))
+                <a href="{{route('curriculum-layout', array_filter(['course_id' => @$criteria['course_id'], 'curriculum_version_id' => @$criteria['curriculum_version_id']]))}}">@lang('academics.view_full_curriculum')</a>
+                @endif
             </div>
         </div>
     </div>

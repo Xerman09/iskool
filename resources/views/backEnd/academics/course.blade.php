@@ -79,6 +79,19 @@
                                 <div class="row mt-15">
                                     <div class="col-lg-12">
                                         <div class="primary_input">
+                                            <label class="primary_input_label" for="">@lang('academics.price_per_unit')</label>
+                                            <input class="primary_input_field form-control{{ @$errors->has('price_per_unit') ? ' is-invalid' : '' }}"
+                                            type="number" step="0.01" min="0" name="price_per_unit" autocomplete="off" value="{{isset($course)? $course->price_per_unit: old('price_per_unit')}}">
+                                            <small class="text-muted">@lang('academics.price_per_unit_hint')</small>
+                                            @if ($errors->has('price_per_unit'))
+                                                <span class="text-danger">{{ @$errors->first('price_per_unit') }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-15">
+                                    <div class="col-lg-12">
+                                        <div class="primary_input">
                                             <label class="primary_input_label" for="">@lang('common.description')</label>
                                             <textarea class="primary_input_field form-control" name="description" rows="3">{{isset($course)? $course->description: old('description')}}</textarea>
                                         </div>
@@ -122,6 +135,7 @@
                                             <th>@lang('common.sl')</th>
                                             <th>@lang('academics.program_name')</th>
                                             <th>@lang('academics.program_code')</th>
+                                            <th>@lang('academics.price_per_unit')</th>
                                             <th>@lang('common.action')</th>
                                         </tr>
                                     </thead>
@@ -132,6 +146,7 @@
                                             <td>{{++$i}}</td>
                                             <td>{{@$course->course_name}}</td>
                                             <td>{{@$course->course_code}}</td>
+                                            <td>{{$course->price_per_unit ? currency_format($course->price_per_unit) ?: number_format($course->price_per_unit, 2) : '-'}}</td>
                                             <td>
                                                 @php
                                                     $routeList = [

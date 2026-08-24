@@ -171,7 +171,7 @@ class FeesController extends Controller
 
     public function feesTypeStore(Request $request)
     {
-       
+
         $validator = Validator::make($request->all(), [
             'fees_group' => ['required'],
             'name' => ['required', 'max:50', Rule::unique('fm_fees_types', 'name')->where('fees_group_id', $request->fees_group)->where('school_id', auth()->user()->school_id)],
@@ -300,7 +300,7 @@ class FeesController extends Controller
         return view('fees::feesInvoice.feesInvoiceList');
     }
 
-    public function feesInvoice()
+    public function feesInvoice(Request $request)
     {
         try {
             $classes = SmClass::where('school_id', Auth::user()->school_id)
@@ -1066,6 +1066,21 @@ class FeesController extends Controller
             sendNotification("Add Fees Payment", null, $student->user_id, 2);
             sendNotification("Add Fees Payment", null, $student->parents->user_id, 3);
 
+            $paidInvoice = FmFeesInvoice::find($request->invoice_id);
+            if ($paidInvoice) {
+                $balance = ($paidInvoice->Tamount + $paidInvoice->Tfine) - ($paidInvoice->Tpaidamount + $paidInvoice->Tweaver);
+                if ($balance <= 0) {
+                    $paidInvoice->payment_status = 'paid';
+                    $paidInvoice->update();
+
+                    $extendedController = new FeesExtendedController();
+                    $extendedController->markStudentEnrolledIfPending($paidInvoice->student_id);
+                } else {
+                    $paidInvoice->payment_status = 'partial';
+                    $paidInvoice->update();
+                }
+            }
+
             Toastr::success('Save Successful', 'Success');
             return redirect()->route('fees.fees-invoice-list');
         } catch (\Exception $e) {
@@ -1322,7 +1337,7 @@ class FeesController extends Controller
         }
         
         $studentInvoices = FmFeesInvoice::where('type', $fees_type)
-            ->with('studentInfo')
+            ->with('studentInfo', 'course')
             ->select('fm_fees_invoices.*')
             ->where('school_id', Auth::user()->school_id)
             ->where('academic_id', getAcademicId())
@@ -1333,6 +1348,9 @@ class FeesController extends Controller
                     ->addColumn('student_name', function($row){
                         $btn = '<a href="' . route('fees.fees-invoice-view', ['id' => $row->id, 'state' => 'view']) . 'target="_blank">' .@$row->studentInfo->full_name . '</a>';
                         return $btn;
+                    })
+                    ->addColumn('course_name', function($row){
+                        return @$row->course->course_name ?: '-';
                     })
                     ->addColumn('amount', function($row){
                         $amount = $row->Tamount;

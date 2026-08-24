@@ -38,8 +38,10 @@ class SmClassRoutineNewController extends Controller
         try {
             $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             $class_routines = SmClassRoutineUpdate::where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            Session::put('session_day_id', null); 
-            return view('backEnd.academics.class_routine_new', compact('classes', 'class_routines'));
+            $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+            Session::put('session_day_id', null);
+            return view('backEnd.academics.class_routine_new', compact('classes', 'class_routines', 'courses', 'semesters'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -111,6 +113,8 @@ class SmClassRoutineNewController extends Controller
         try {
             $class_id = $request->class;
             $section_id = $request->section;
+            $course_id = $request->course_id;
+            $semester_id = $request->semester_id;
 
             $sm_weekends = SmWeekend::with('classRoutine')->where('school_id', Auth::user()->school_id)
                 ->orderBy('order', 'ASC')
@@ -118,10 +122,18 @@ class SmClassRoutineNewController extends Controller
                 ->get();
             // return $sm_weekends;
             $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
 
             $subjects = SmAssignSubject::where('class_id', $class_id)
                 ->where('section_id', $section_id)
                 ->where('school_id', Auth::user()->school_id)
+                ->when($course_id || $semester_id, function ($query) use ($course_id, $semester_id) {
+                    $query->whereHas('subject', function ($q) use ($course_id, $semester_id) {
+                        $q->when($course_id, fn ($q2) => $q2->where('course_id', $course_id))
+                            ->when($semester_id, fn ($q2) => $q2->where('semester_id', $semester_id));
+                    });
+                })
                // ->distinct(['class_id', 'section_id', 'subject_id'])
                 ->get();
 
@@ -137,7 +149,7 @@ class SmClassRoutineNewController extends Controller
                 Session::put('session_day_id', null);
             }
             $smClass = $class_id ? SmClass::with('classSection')->find($class_id) : null;
-            return view('backEnd.academics.class_routine_new', compact('classes', 'teachers', 'rooms', 'subjects', 'class_id', 'section_id', 'sm_weekends', 'smClass'));
+            return view('backEnd.academics.class_routine_new', compact('classes', 'teachers', 'rooms', 'subjects', 'class_id', 'section_id', 'sm_weekends', 'smClass', 'courses', 'semesters', 'course_id', 'semester_id'));
         } catch (\Exception $e) {
              ;
             Toastr::error('Operation Failed', 'Failed');

@@ -55,22 +55,6 @@
                                 <div class="row">
                                     <div class="col-lg-12">
                                         <div class="primary_input">
-                                            <label class="primary_input_label" for="">@lang('academics.program') <span class="text-danger"> *</span></label>
-                                            <select class="primary_select form-control{{ @$errors->has('course_id') ? ' is-invalid' : '' }}" name="course_id">
-                                                <option value="">@lang('common.select')</option>
-                                                @foreach($courses as $course)
-                                                <option value="{{$course->id}}" {{isset($curriculumVersion) && $curriculumVersion->course_id == $course->id ? 'selected' : ''}}>{{$course->course_name}}</option>
-                                                @endforeach
-                                            </select>
-                                            @if ($errors->has('course_id'))
-                                                <span class="text-danger">{{ @$errors->first('course_id') }}</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row mt-15">
-                                    <div class="col-lg-12">
-                                        <div class="primary_input">
                                             <label class="primary_input_label" for="">@lang('academics.version_label') <span class="text-danger"> *</span></label>
                                             <input class="primary_input_field form-control{{ @$errors->has('version_label') ? ' is-invalid' : '' }}"
                                             type="text" name="version_label" autocomplete="off" value="{{isset($curriculumVersion)? $curriculumVersion->version_label: old('version_label')}}">
@@ -137,7 +121,6 @@
                                     <thead>
                                         <tr>
                                             <th>@lang('common.sl')</th>
-                                            <th>@lang('academics.program')</th>
                                             <th>@lang('academics.version_label')</th>
                                             <th>@lang('common.status')</th>
                                             <th>@lang('common.action')</th>
@@ -148,7 +131,6 @@
                                         @foreach($curriculumVersions as $curriculumVersion)
                                         <tr>
                                             <td>{{++$i}}</td>
-                                            <td>{{@$curriculumVersion->course->course_name}}</td>
                                             <td>{{@$curriculumVersion->version_label}}</td>
                                             <td>{{$curriculumVersion->is_active ? __('common.active') : __('common.inactive')}}</td>
                                             <td>

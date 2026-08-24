@@ -271,9 +271,32 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('semester-edit/{id}', ['as' => 'semester_edit', 'uses' => 'Admin\Academics\SemesterController@edit'])->middleware('userRolePermission:semester_edit');
         Route::post('semester-update', ['as' => 'semester_update', 'uses' => 'Admin\Academics\SemesterController@update'])->middleware('userRolePermission:semester_edit');
         Route::get('semester-delete/{id}', ['as' => 'semester_delete', 'uses' => 'Admin\Academics\SemesterController@delete'])->middleware('userRolePermission:semester_delete');
+        Route::get('semester-activate/{id}', ['as' => 'semester_activate', 'uses' => 'Admin\Academics\SemesterController@activate'])->middleware('userRolePermission:semester_edit');
 
         // Curriculum Builder routes
         Route::get('curriculum-builder', ['as' => 'curriculum-builder', 'uses' => 'Admin\Academics\CurriculumBuilderController@index'])->middleware('userRolePermission:curriculum-builder');
+        Route::get('curriculum-layout', ['as' => 'curriculum-layout', 'uses' => 'Admin\Academics\CourseCurriculumLayoutController@index'])->middleware('userRolePermission:curriculum-layout');
+
+        Route::get('assign-program', ['as' => 'assign-program', 'uses' => 'Admin\Academics\AssignProgramController@index'])->middleware('userRolePermission:assign-program');
+        Route::post('assign-program-store', ['as' => 'assign-program-store', 'uses' => 'Admin\Academics\AssignProgramController@store'])->middleware('userRolePermission:assign-program');
+        Route::post('assign-program-generate-invoice', ['as' => 'assign-program-generate-invoice', 'uses' => 'Admin\Academics\AssignProgramController@generateInvoice'])->middleware('userRolePermission:assign-program');
+        Route::get('assign-program-balance-summary/{student}/{state}', ['as' => 'assign-program-balance-summary', 'uses' => 'Admin\Academics\AssignProgramController@balanceSummary'])->middleware('userRolePermission:assign-program');
+
+        Route::get('payment-plan-type', ['as' => 'payment-plan-type', 'uses' => 'Admin\Academics\PaymentPlanTypeController@index'])->middleware('userRolePermission:payment-plan-type');
+        Route::post('payment-plan-type-store', ['as' => 'payment-plan-type-store', 'uses' => 'Admin\Academics\PaymentPlanTypeController@store'])->middleware('userRolePermission:payment-plan-type-store');
+        Route::get('payment-plan-type-edit/{id}', ['as' => 'payment-plan-type-edit', 'uses' => 'Admin\Academics\PaymentPlanTypeController@edit'])->middleware('userRolePermission:payment-plan-type-edit');
+        Route::post('payment-plan-type-update', ['as' => 'payment-plan-type-update', 'uses' => 'Admin\Academics\PaymentPlanTypeController@update'])->middleware('userRolePermission:payment-plan-type-edit');
+        Route::get('payment-plan-type-delete/{id}', ['as' => 'payment-plan-type-delete', 'uses' => 'Admin\Academics\PaymentPlanTypeController@delete'])->middleware('userRolePermission:payment-plan-type-delete');
+
+        Route::get('payment-plan-assign', ['as' => 'payment-plan-assign', 'uses' => 'Admin\Academics\PaymentPlanAssignController@index'])->middleware('userRolePermission:payment-plan-assign');
+        Route::post('payment-plan-assign-store', ['as' => 'payment-plan-assign-store', 'uses' => 'Admin\Academics\PaymentPlanAssignController@store'])->middleware('userRolePermission:payment-plan-assign');
+        Route::get('payment-plan-assign-edit/{id}', ['as' => 'payment-plan-assign-edit', 'uses' => 'Admin\Academics\PaymentPlanAssignController@edit'])->middleware('userRolePermission:payment-plan-assign');
+        Route::post('payment-plan-assign-update', ['as' => 'payment-plan-assign-update', 'uses' => 'Admin\Academics\PaymentPlanAssignController@update'])->middleware('userRolePermission:payment-plan-assign');
+
+        Route::get('misc-fee-assign', ['as' => 'misc-fee-assign', 'uses' => 'Admin\Academics\MiscFeeController@index'])->middleware('userRolePermission:misc-fee-assign');
+        Route::post('misc-fee-assign-store', ['as' => 'misc-fee-assign-store', 'uses' => 'Admin\Academics\MiscFeeController@store'])->middleware('userRolePermission:misc-fee-assign');
+        Route::post('misc-fee-assign-update', ['as' => 'misc-fee-assign-update', 'uses' => 'Admin\Academics\MiscFeeController@update'])->middleware('userRolePermission:misc-fee-assign');
+        Route::get('misc-fee-assign-delete/{id}', ['as' => 'misc-fee-assign-delete', 'uses' => 'Admin\Academics\MiscFeeController@delete'])->middleware('userRolePermission:misc-fee-assign');
         Route::post('curriculum-builder-store', ['as' => 'curriculum_builder_store', 'uses' => 'Admin\Academics\CurriculumBuilderController@store'])->middleware('userRolePermission:curriculum_builder_store');
         Route::post('curriculum-builder-update', ['as' => 'curriculum_builder_update', 'uses' => 'Admin\Academics\CurriculumBuilderController@update'])->middleware('userRolePermission:curriculum_builder_edit');
         Route::get('curriculum-builder-delete/{id}', ['as' => 'curriculum_builder_delete', 'uses' => 'Admin\Academics\CurriculumBuilderController@delete'])->middleware('userRolePermission:curriculum_builder_delete');

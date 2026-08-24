@@ -589,3 +589,15 @@
 <script>
     selectPosition({!! feesInvoiceSettings()->invoice_positions !!});
 </script>
+<script>
+    $(document).on('submit', 'form[action*="fees-payment-store"], form[action*="student-fees-payment-store"]', function () {
+        var total = 0;
+        $('.addFeesPaidAmount').each(function () {
+            var amount = parseFloat($(this).val());
+            if (!isNaN(amount)) {
+                total += amount;
+            }
+        });
+        $('#ttlpaidAmount').val(total.toFixed(2));
+    });
+</script>

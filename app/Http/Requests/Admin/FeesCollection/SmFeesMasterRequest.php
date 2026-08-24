@@ -36,9 +36,10 @@ class SmFeesMasterRequest extends FormRequest
                 'class' => "required",
                 'section_id' => "required",
                 'unPercentage' => "required",
-                'totalInstallmentAmount' => 'required|same:amount'
+                'totalInstallmentAmount' => 'required|same:amount',
+                'price_per_unit' => 'sometimes|nullable|numeric|min:0',
              ];
-             
+
         }
         
         else {

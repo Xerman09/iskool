@@ -110,6 +110,7 @@
                                             <th>@lang('common.sl')</th>
                                             <th>@lang('academics.semester_name')</th>
                                             <th>@lang('academics.sort_order')</th>
+                                            <th>@lang('common.status')</th>
                                             <th>@lang('common.action')</th>
                                         </tr>
                                     </thead>
@@ -120,9 +121,12 @@
                                             <td>{{++$i}}</td>
                                             <td>{{@$semester->semester_name}}</td>
                                             <td>{{@$semester->sort_order}}</td>
+                                            <td>{{$semester->is_active ? __('academics.active_for_enrollment') : __('common.inactive')}}</td>
                                             <td>
                                                 @php
                                                     $routeList = [
+                                                        (!$semester->is_active && userPermission('semester_edit')) ?
+                                                        '<a class="dropdown-item" href="'.route('semester_activate', [@$semester->id]).'">'.__('academics.activate').'</a>':null,
                                                         userPermission('semester_edit') ?
                                                         '<a class="dropdown-item" href="'.route('semester_edit', [@$semester->id]).'">'.__('common.edit').'</a>':null,
                                                         userPermission('semester_delete') ?

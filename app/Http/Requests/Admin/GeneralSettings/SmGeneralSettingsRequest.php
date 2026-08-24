@@ -41,6 +41,7 @@ class SmGeneralSettingsRequest extends FormRequest
             'ss_page_load' => "required",          
             'attendance_layout' => "required",
             'address' => "required",
+            'down_payment_amount' => "nullable|numeric|min:0",
         ];
     }
 }

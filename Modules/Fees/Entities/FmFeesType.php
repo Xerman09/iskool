@@ -2,6 +2,8 @@
 
 namespace Modules\Fees\Entities;
 
+use App\Course;
+use App\SmClass;
 use App\Scopes\AcademicSchoolScope;
 use Modules\Fees\Entities\FmFeesGroup;
 use Illuminate\Database\Eloquent\Model;
@@ -24,5 +26,13 @@ class FmFeesType extends Model
 
     public function fessGroup(){
         return $this->belongsTo(FmFeesGroup::class,'fees_group_id','id');
+    }
+
+    public function course(){
+        return $this->belongsTo(Course::class,'course_id','id');
+    }
+
+    public function smClass(){
+        return $this->belongsTo(SmClass::class,'class_id','id');
     }
 }

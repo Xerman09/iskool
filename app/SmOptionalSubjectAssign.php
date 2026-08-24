@@ -27,4 +27,9 @@ class SmOptionalSubjectAssign extends Model
         return $this->belongsTo('App\SmSubject', 'subject_id', 'id');
     }
 
+    public function assignSubject()
+    {
+        return $this->belongsTo('App\SmAssignSubject', 'assign_subject_id', 'id')->withoutGlobalScopes();
+    }
+
 }

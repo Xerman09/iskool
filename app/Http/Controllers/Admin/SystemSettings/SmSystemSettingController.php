@@ -1263,6 +1263,7 @@ class SmSystemSettingController extends Controller
             $generalSettData->result_type  = $request->result_type;
             $generalSettData->with_guardian  = $request->with_guardian;
             $generalSettData->due_fees_login  = $request->due_fees_login;
+            $generalSettData->down_payment_amount  = $request->down_payment_amount ?: null;
             $generalSettData->auto_approve  = $request->auto_approve ?? 0;
             $generalSettData->is_comment  = $request->is_comment ?? 0;
             $generalSettData->blog_search  = $request->blog_search;

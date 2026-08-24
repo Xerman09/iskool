@@ -228,7 +228,19 @@
 
                                     </div>
                                     <div class="row mt-25">
-                                        <div class="col-lg-12">        
+                                        <div class="col-lg-12 mb-30">
+                                            <div class="primary_input">
+                                                <label class="primary_input_label" for="">@lang('fees.price_per_unit')</label>
+                                                <input oninput="numberCheckWithDot(this)" class="primary_input_field form-control{{ $errors->has('price_per_unit') ? ' is-invalid' : '' }}" type="text" name="price_per_unit" autocomplete="off" value="{{isset($fees_master)? $fees_master->price_per_unit:''}}">
+                                                <small class="text-muted">@lang('fees.price_per_unit_hint')</small>
+                                                @if ($errors->has('price_per_unit'))
+                                                <span class="text-danger">{{ $errors->first('price_per_unit') }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-25">
+                                        <div class="col-lg-12">
                                             <div class="row">
                                                     <div class="col-lg-10">
                                                     <div class="main-title">

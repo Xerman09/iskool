@@ -4,6 +4,7 @@ namespace Modules\Fees\Http\Controllers;
 
 use App\User;
 use App\SmSchool;
+use App\SmStudent;
 use App\SmAddIncome;
 use App\SmBankAccount;
 use App\SmBankStatement;
@@ -28,6 +29,7 @@ class FeesExtendedController extends Controller
         
         $storeFeesInvoice = new FmFeesInvoice();
         $storeFeesInvoice->class_id = $request->class;
+        $storeFeesInvoice->course_id = optional(SmStudent::find($request->student))->course_id;
         $storeFeesInvoice->create_date = date('Y-m-d', strtotime($request->create_date));
         $storeFeesInvoice->due_date = date('Y-m-d', strtotime($request->due_date));
         $storeFeesInvoice->payment_status = $request->payment_status;
@@ -131,6 +133,10 @@ class FeesExtendedController extends Controller
             $storeWeaver->academic_id = getAcademicId();
             $storeWeaver->save();
         }
+
+        if ($storeFeesInvoice->payment_status === 'paid') {
+            $this->markStudentEnrolledIfPending($storeFeesInvoice->student_id);
+        }
     }
 
     public function addFeesAmount($transcation_id, $total_paid_amount)
@@ -205,9 +211,10 @@ class FeesExtendedController extends Controller
         if($fees_invoice){
             $balance = ($fees_invoice->Tamount + $fees_invoice->Tfine) - ($fees_invoice->Tpaidamount + $fees_invoice->Tweaver);
             if($balance == 0){
-                $fees_invoice->payment_status = "paid"; 
+                $fees_invoice->payment_status = "paid";
                 $fees_invoice->update();
                 Cache::forget('have_due_fees_'.$transcation->user_id);
+                $this->markStudentEnrolledIfPending($fees_invoice->student_id);
             }else{
                 $fees_invoice->payment_status = "partial"; 
                 $fees_invoice->update();
@@ -245,6 +252,24 @@ class FeesExtendedController extends Controller
             @send_mail($user->email, $user->full_name, "fees_extra_amount_add", $compact);
 
             sendNotification($user->id, null, null, $user->role_id, "Fees Xtra Amount Add");
+        }
+    }
+
+    /**
+     * First time a student's invoice is fully paid, flip them from "pending" to "enrolled".
+     * Only fires once (guarded by the pending check) so later-term invoices don't re-trigger it.
+     */
+    public function markStudentEnrolledIfPending($studentId)
+    {
+        if (!$studentId) {
+            return;
+        }
+
+        $student = SmStudent::find($studentId);
+        if ($student && $student->course_id && $student->enrollment_status === 'pending') {
+            $student->enrollment_status = 'enrolled';
+            $student->enrolled_at = now();
+            $student->save();
         }
     }
 }

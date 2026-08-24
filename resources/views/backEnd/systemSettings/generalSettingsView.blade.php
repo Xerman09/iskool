@@ -412,6 +412,22 @@
                                     <div class="row">
                                         <div class="col-lg-6 col-md-6">
                                             <div class="name">
+                                                @lang('academics.down_payment_amount')
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6">
+                                            <div class="value text-left">
+                                                @if(isset($editData))
+                                                {{@$editData->down_payment_amount ? (currency_format($editData->down_payment_amount) ?: number_format($editData->down_payment_amount, 2)) : '-'}}
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="single-meta">
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-6">
+                                            <div class="name">
                                                 @lang('student.multiple_roll_number')
                                             </div>
                                         </div>

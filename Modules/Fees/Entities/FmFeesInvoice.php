@@ -2,6 +2,7 @@
 
 namespace Modules\Fees\Entities;
 
+use App\Course;
 use App\SmStudent;
 use App\Scopes\AcademicSchoolScope;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,11 @@ class FmFeesInvoice extends Model
     public function studentInfo()
     {
         return $this->belongsTo(SmStudent::class,'student_id','id');
+    }
+
+    public function course()
+    {
+        return $this->belongsTo(Course::class,'course_id','id');
     }
 
     public function invoiceDetails()
@@ -60,5 +66,9 @@ class FmFeesInvoice extends Model
 
     public function recordDetail(){
         return $this->belongsTo('App\Models\StudentRecord', 'record_id', 'id');
+    }
+
+    public function paymentPlanAssign(){
+        return $this->belongsTo('App\PaymentPlanAssign', 'payment_plan_assign_id', 'id');
     }
 }

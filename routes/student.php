@@ -79,6 +79,18 @@ Route::group(['middleware' => ['XSS', 'subdomain']], function () {
         // Student Subject
         Route::get('student-subject', ['as' => 'student_subject', 'uses' => 'Student\SmStudentPanelController@studentSubject'])->middleware('userRolePermission:student_subject');
 
+        // Student Course Curriculum
+        Route::get('student-course-curriculum', ['as' => 'student-course-curriculum', 'uses' => 'Student\StudentCourseCurriculumController@index'])->middleware('userRolePermission:student-course-curriculum');
+        Route::post('student-course-curriculum-enroll', ['as' => 'student-course-curriculum-enroll', 'uses' => 'Student\StudentCourseCurriculumController@enroll'])->middleware('userRolePermission:student-course-curriculum');
+
+        // Student My Schedule
+        Route::get('student-my-schedule', ['as' => 'student-my-schedule', 'uses' => 'Student\StudentMyScheduleController@index'])->middleware('userRolePermission:student-my-schedule');
+
+        // Student Subject Registration (pick a block/section per subject for the active semester)
+        Route::get('student-subject-registration', ['as' => 'student-subject-registration', 'uses' => 'Student\StudentSubjectRegistrationController@index'])->middleware('userRolePermission:student-subject-registration');
+        Route::post('student-subject-registration-store', ['as' => 'student-subject-registration-store', 'uses' => 'Student\StudentSubjectRegistrationController@register'])->middleware('userRolePermission:student-subject-registration');
+        Route::get('student-balance-summary/{state}', ['as' => 'student-balance-summary', 'uses' => 'Student\StudentSubjectRegistrationController@balanceSummary'])->middleware('userRolePermission:student-subject-registration');
+
         // Online Exam
         Route::get('student-answer-script/{exam_id}/{s_id}', ['as' => 'student_answer_script', 'uses' => 'Student\SmOnlineExamController@studentAnswerScript']);
 

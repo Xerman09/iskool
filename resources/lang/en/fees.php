@@ -26,6 +26,8 @@ return[
     'select_bank'=>'Select Bank',
     'mode'=> 'Mode',
     'amount'=> 'Amount',
+    'price_per_unit'=> 'Price Per Unit',
+    'price_per_unit_hint'=> 'Optional. If this fee is charged per curriculum unit (e.g. tuition), set the rate here — leave blank for a flat fee.',
     'transfer'=> 'Transfer',
     'fund'=> 'Fund',
     'fund_transfer'=> 'Fund Transfer',

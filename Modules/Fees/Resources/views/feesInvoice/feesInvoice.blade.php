@@ -76,9 +76,9 @@
                                     </h3>
                                 </div>
 
-                                    <div class="add-visitor">                              
+                                    <div class="add-visitor">
                                         <div class="row">
-                                            
+
                                         </div>
 
                                     @if (moduleStatusCheck('University'))
@@ -109,7 +109,7 @@
                                             </div>
                                         </div>
                                     @else
-                                        <div class="row">
+                                        <div class="row" id="selectClassRow">
                                             <div class="col-lg-12 mt-15">
                                                 <label class="primary_input_label" for="">
                                                     {{ __('common.class') }}

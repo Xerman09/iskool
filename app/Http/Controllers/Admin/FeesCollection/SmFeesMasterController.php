@@ -133,6 +133,7 @@ class SmFeesMasterController extends Controller
                     if($request->section_id != "all_section"){
                         $fees_master->section_id = $request->section_id;
                     }
+                    $fees_master->price_per_unit = $request->price_per_unit ?: null;
                 }else{
                     $fees_master->fees_group_id = $fees_type->fees_group_id;
                     $fees_master->academic_id = getAcademicId();
@@ -259,8 +260,10 @@ class SmFeesMasterController extends Controller
                 $feesGroup = SmFeesGroup::find($request->fees_group_id);
                 $feesGroup->name = $request->name;
                 $feesGroup->save();
+                $fees_master->price_per_unit = $request->price_per_unit ?: null;
+                $fees_master->save();
                 $this->installmentCreate($fees_master->id, $request);
-               
+
             }
           
             Toastr::success('Operation successful', 'Success');

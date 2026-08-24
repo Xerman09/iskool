@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin\Academics;
 
-use App\Course;
 use App\tableList;
 use App\SmAcademicYear;
 use Illuminate\Http\Request;
@@ -21,10 +20,9 @@ class CurriculumVersionController extends Controller
     public function index(Request $request)
     {
         try {
-            $curriculumVersions = CurriculumVersion::where('school_id', auth()->user()->school_id)->with('course')->orderBy('id', 'DESC')->get();
-            $courses = Course::where('school_id', auth()->user()->school_id)->get();
+            $curriculumVersions = CurriculumVersion::where('school_id', auth()->user()->school_id)->orderBy('id', 'DESC')->get();
             $academicYears = SmAcademicYear::where('school_id', auth()->user()->school_id)->get();
-            return view('backEnd.academics.curriculumVersion', compact('curriculumVersions', 'courses', 'academicYears'));
+            return view('backEnd.academics.curriculumVersion', compact('curriculumVersions', 'academicYears'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -35,7 +33,6 @@ class CurriculumVersionController extends Controller
     {
         try {
             $curriculumVersion = new CurriculumVersion();
-            $curriculumVersion->course_id = $request->course_id;
             $curriculumVersion->version_label = $request->version_label;
             $curriculumVersion->effective_academic_id = $request->effective_academic_id;
             $curriculumVersion->is_active = $request->boolean('is_active') ? 1 : 0;
@@ -59,10 +56,9 @@ class CurriculumVersionController extends Controller
     {
         try {
             $curriculumVersion = CurriculumVersion::where('school_id', auth()->user()->school_id)->findOrFail($id);
-            $curriculumVersions = CurriculumVersion::where('school_id', auth()->user()->school_id)->with('course')->orderBy('id', 'DESC')->get();
-            $courses = Course::where('school_id', auth()->user()->school_id)->get();
+            $curriculumVersions = CurriculumVersion::where('school_id', auth()->user()->school_id)->orderBy('id', 'DESC')->get();
             $academicYears = SmAcademicYear::where('school_id', auth()->user()->school_id)->get();
-            return view('backEnd.academics.curriculumVersion', compact('curriculumVersion', 'curriculumVersions', 'courses', 'academicYears'));
+            return view('backEnd.academics.curriculumVersion', compact('curriculumVersion', 'curriculumVersions', 'academicYears'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -73,7 +69,6 @@ class CurriculumVersionController extends Controller
     {
         try {
             $curriculumVersion = CurriculumVersion::where('school_id', auth()->user()->school_id)->findOrFail($request->id);
-            $curriculumVersion->course_id = $request->course_id;
             $curriculumVersion->version_label = $request->version_label;
             $curriculumVersion->effective_academic_id = $request->effective_academic_id;
             $curriculumVersion->is_active = $request->boolean('is_active') ? 1 : 0;
@@ -128,13 +123,12 @@ class CurriculumVersionController extends Controller
     }
 
     /**
-     * Only one curriculum version per course should stay active at a time,
+     * Only one curriculum version should stay active at a time for the school,
      * since newly-admitted students get anchored to whichever version is active.
      */
     private function deactivateSiblings(CurriculumVersion $curriculumVersion)
     {
-        CurriculumVersion::where('course_id', $curriculumVersion->course_id)
-            ->where('school_id', $curriculumVersion->school_id)
+        CurriculumVersion::where('school_id', $curriculumVersion->school_id)
             ->where('id', '!=', $curriculumVersion->id)
             ->update(['is_active' => 0]);
     }

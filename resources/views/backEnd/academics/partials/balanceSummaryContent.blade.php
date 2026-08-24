@@ -1,0 +1,160 @@
+@php
+    $setting = generalSetting();
+@endphp
+<div class="invoice_wrapper">
+    <div class="invoice_print">
+        <div class="invoice_part_iner">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td>
+                            @if(optional($setting)->logo)
+                            <div class="logo_img">
+                                <img src="{{asset($setting->logo)}}" alt="{{optional($setting)->school_name}}">
+                            </div>
+                            @endif
+                        </td>
+                        <td class="virtical_middle address_text">
+                            <p>{{optional($setting)->school_name}}</p>
+                            <p>{{optional($setting)->phone}}</p>
+                            <p>{{optional($setting)->email}}</p>
+                            <p>{{optional($setting)->address}}</p>
+                        </td>
+                    </tr>
+                </thead>
+            </table>
+
+            <table class="table">
+                <tbody>
+                    <tr>
+                        <td>
+                            <table class="mb_30">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="addressleft_text">
+                                                <p>@lang('fees.fees_invoice_issued_to')</p>
+                                                <p><span><strong>@lang('student.student_name')</strong></span> <span class="nowrap">: {{$student->first_name}} {{$student->last_name}}</span></p>
+                                                <p><span>@lang('academics.program')</span> <span>: {{optional($course)->course_name}}</span></p>
+                                                <p><span>@lang('student.admission_no')</span> <span>: {{$student->admission_no}}</span></p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                        <td>
+                            <table class="mb_30 margin_auto">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="addressright_text">
+                                                <p><span><strong>@lang('academics.balance_summary')</strong></span></p>
+                                                <p><span>@lang('fees.create_date')</span> <span>: {{now()->format('M d, Y')}}</span></p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <table class="table border_table mb_30 description_table">
+        <thead>
+            <tr>
+                <th>@lang('common.sl')</th>
+                <th>@lang('academics.description')</th>
+                <th class="text-right-print">@lang('accounts.amount')</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($lines as $i => $line)
+            <tr>
+                <td>{{$i + 1}}</td>
+                <td>{{$line['label']}}</td>
+                <td class="text-right-print">{{currency_format($line['amount']) ?: number_format($line['amount'], 2)}}</td>
+            </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2"></td>
+                <td>
+                    <p class="total_count"><span>@lang('academics.total_amount_due')</span> <span>{{currency_format($totalAmount) ?: number_format($totalAmount, 2)}}</span></p>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2"></td>
+                <td>
+                    <p class="total_count"><span>@lang('academics.down_payment_required')</span> <span>{{currency_format($downPayment) ?: number_format($downPayment, 2)}}</span></p>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2"></td>
+                <td>
+                    <p class="total_count"><span>@lang('academics.down_payment_paid')</span> <span>&ndash; {{currency_format($amountPaid) ?: number_format($amountPaid, 2)}}</span></p>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2"></td>
+                <td>
+                    <p class="total_count">
+                        <span><strong>@lang('academics.remaining_balance')</strong></span>
+                        <span><strong>
+                            @if($paymentPlan)
+                                {{ __('academics.on_payment_plan', ['plan' => $paymentPlan['name'], 'paid' => $paymentPlan['paid'], 'total' => $paymentPlan['total']]) }}
+                            @else
+                                {{currency_format($remainingBalance) ?: number_format($remainingBalance, 2)}}
+                            @endif
+                        </strong></span>
+                    </p>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+
+    @if($paymentPlan)
+    <div class="mt-30">
+        <h4 class="mb-15">@lang('academics.payment_schedule') &mdash; {{$paymentPlan['name']}}</h4>
+        <table class="table border_table mb_30 description_table">
+            <thead>
+                <tr>
+                    <th>@lang('academics.installment_no')</th>
+                    <th>@lang('academics.due_date')</th>
+                    <th class="text-right-print">@lang('accounts.amount')</th>
+                    <th>@lang('student.status')</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($paymentPlan['schedule'] as $installment)
+                <tr @if($installment['is_next']) style="font-weight:bold;" @endif>
+                    <td>
+                        {{$installment['installment_no']}} @lang('academics.of') {{$paymentPlan['total']}}
+                        @if($installment['is_next'])
+                        <span class="badge badge-warning">@lang('academics.next_payment')</span>
+                        @endif
+                    </td>
+                    <td>{{ \Carbon\Carbon::parse($installment['due_date'])->format('M d, Y') }}</td>
+                    <td class="text-right-print">{{currency_format($installment['amount']) ?: number_format($installment['amount'], 2)}}</td>
+                    <td>
+                        @if($installment['status'] == 'paid')
+                            <span class="badge badge-success">@lang('academics.paid_status')</span>
+                        @elseif($installment['status'] == 'partial')
+                            <span class="badge badge-warning">@lang('academics.partial_status')</span>
+                        @else
+                            <span class="badge badge-secondary">@lang('academics.unpaid_status')</span>
+                        @endif
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
+    <p class="text-muted">@lang('academics.balance_summary_hint')</p>
+</div>

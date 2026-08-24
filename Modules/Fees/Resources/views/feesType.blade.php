@@ -107,8 +107,8 @@
                                             <label class="primary_input_label" for="">@lang('common.description') <span></span></label>
                                             <textarea class="primary_input_field form-control" cols="0" rows="4"
                                                 name="description">{{isset($feesType)? $feesType->description: old('description')}}</textarea>
-                                                
-                                            
+
+
                                         </div>
                                     </div>
                                 </div>

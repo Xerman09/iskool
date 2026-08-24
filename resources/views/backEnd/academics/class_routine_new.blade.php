@@ -148,6 +148,27 @@
                                     </span>
                                 @endif
                             </div>
+
+                            <div class="col-lg-6 mt-15">
+                                <label class="primary_input_label" for="">@lang('academics.program')</label>
+                                <select class="primary_select form-control" name="course_id">
+                                    <option value="">@lang('fees.all')</option>
+                                    @foreach ($courses as $c)
+                                        <option value="{{$c->id}}" {{isset($course_id) && $course_id == $c->id ? 'selected' : ''}}>{{$c->course_name}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-lg-6 mt-15">
+                                <label class="primary_input_label" for="">@lang('academics.semester')</label>
+                                <select class="primary_select form-control" name="semester_id">
+                                    <option value="">@lang('fees.all')</option>
+                                    @foreach ($semesters as $sem)
+                                        <option value="{{$sem->id}}" {{isset($semester_id) && $semester_id == $sem->id ? 'selected' : ''}}>{{$sem->semester_name}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
                             <div class="col-lg-12 mt-20 text-right">
                                 <button type="submit" class="primary-btn small fix-gr-bg">
                                     <span class="ti-search pr-2"></span>

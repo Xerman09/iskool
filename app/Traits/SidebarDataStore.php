@@ -90,7 +90,7 @@ trait SidebarDataStore
         $user = auth()->user(); 
 
         $dashboardSections = ["dashboard", "menumanage.index"];
-        $administration_sections = ["admin_section", "academics", "study_material", 'download-center', "lesson-plan", "bulk_print","certificate","university","lms"];
+        $administration_sections = ["admin_section", "academics", "enroll", "study_material", 'download-center', "lesson-plan", "bulk_print","certificate","university","lms"];
         $student_sections = ["student_info", "fees", "fees_collection", "transport", "dormitory", "library", "homework", "behaviour_records","alumni_records"];
         $alumni_sections = ["student_info", "fees", "fees_collection", "transport", "dormitory", "library", "homework", "behaviour_records","alumni_records"];
         $exam_sections = ["examination", "online_exam", "examplan"];

@@ -42,7 +42,10 @@ class SmAssignSubjectController extends Controller
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
             }
-            return view('backEnd.academics.assign_subject_create', compact('classes'));
+            $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+            $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+            return view('backEnd.academics.assign_subject_create', compact('classes', 'courses', 'curriculumVersions', 'semesters'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -79,7 +82,10 @@ class SmAssignSubjectController extends Controller
     {
         $input = $request->all();
         $validator = Validator::make($input, [
+            'course_id' => 'required|exists:courses,id',
+            'curriculum_version_id' => 'required|exists:curriculum_versions,id',
             'class' => 'required',
+            'semester_id' => 'required|exists:semesters,id',
             'section' => 'required'
         ]);
 
@@ -99,7 +105,15 @@ class SmAssignSubjectController extends Controller
                     $q->where('section_id', $request->section);
                 })->get();
 
-            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
+            // Curriculum-driven: pull every subject already defined for this
+            // program/year/semester in Curriculum Builder — no manual subject picking.
+            $subjects = SmSubject::whereNotNull('course_id')
+                ->where('course_id', $request->course_id)
+                ->where('curriculum_version_id', $request->curriculum_version_id)
+                ->where('class_id', $request->class)
+                ->where('semester_id', $request->semester_id)
+                ->get();
+
             $teachers = SmStaff::where('active_status', 1)
                 ->where(function ($q) {
                     $q->where('role_id', 4)->orWhere('previous_role_id', 4);
@@ -109,7 +123,14 @@ class SmAssignSubjectController extends Controller
             $section_id = $request->section;
             $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
-            return view('backEnd.academics.assign_subject_create', compact('classes', 'sections', 'assign_subjects', 'teachers', 'subjects', 'class_id', 'section_id'));
+            $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+            $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+            $course_id = $request->course_id;
+            $curriculum_version_id = $request->curriculum_version_id;
+            $semester_id = $request->semester_id;
+
+            return view('backEnd.academics.assign_subject_create', compact('classes', 'sections', 'assign_subjects', 'teachers', 'subjects', 'class_id', 'section_id', 'courses', 'curriculumVersions', 'semesters', 'course_id', 'curriculum_version_id', 'semester_id'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -156,6 +177,7 @@ class SmAssignSubjectController extends Controller
                                     $assign_subject->section_id = $section->section_id;
                                     $assign_subject->subject_id = $subject;
                                     $assign_subject->teacher_id = $request->teachers[$key];
+                                    $assign_subject->max_slots = $request->max_slots[$key] ?? null;
                                     $assign_subject->created_at = YearCheck::getYear() . '-' . date('m-d h:i:s');
                                     $assign_subject->academic_id = getAcademicId();
                                     $assign_subject->save();
@@ -169,6 +191,7 @@ class SmAssignSubjectController extends Controller
                                 $assign_subject->section_id = $request->section_id;
                                 $assign_subject->subject_id = $subject;
                                 $assign_subject->teacher_id = $request->teachers[$i];
+                                $assign_subject->max_slots = $request->max_slots[$i] ?? null;
                                 $assign_subject->created_at = YearCheck::getYear() . '-' . date('m-d h:i:s');
                                 $assign_subject->academic_id = getAcademicId();
                                 $assign_subject->save();
@@ -197,6 +220,7 @@ class SmAssignSubjectController extends Controller
                                     $assign_subject->section_id = $section->section_id;
                                     $assign_subject->subject_id = $subject;
                                     $assign_subject->teacher_id = $request->teachers[$key];
+                                    $assign_subject->max_slots = $request->max_slots[$key] ?? null;
                                     $assign_subject->created_at = YearCheck::getYear() . '-' . date('m-d h:i:s');
                                     $assign_subject->academic_id = getAcademicId();
                                     $assign_subject->school_id = Auth::user()->school_id;
@@ -223,6 +247,7 @@ class SmAssignSubjectController extends Controller
                                 $assign_subject->section_id = $request->section_id;
                                 $assign_subject->subject_id = $subject;
                                 $assign_subject->teacher_id = $request->teachers[$i];
+                                $assign_subject->max_slots = $request->max_slots[$i] ?? null;
                                 $assign_subject->created_at = YearCheck::getYear() . '-' . date('m-d h:i:s');
                                 $assign_subject->academic_id = getAcademicId();
                                 $assign_subject->school_id = Auth::user()->school_id;

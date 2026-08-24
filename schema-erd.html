@@ -1,0 +1,2095 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iSkool Schema Atlas</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#F2F5F9; --surface:#FFFFFF; --surface-alt:#E7ECF3; --line:#CBD5E1;
+    --ink:#16202C; --ink-muted:#55677A; --ink-faint:#8494A6;
+    --accent:#2A5DB0; --accent-ink:#FFFFFF; --annotate:#B8571F; --annotate-soft:#F4E3D6;
+    --radius:10px; --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0C141F; --surface:#121D2C; --surface-alt:#1A2A3D; --line:#2D4053;
+      --ink:#E6EDF5; --ink-muted:#93A6BA; --ink-faint:#5E7085;
+      --accent:#7FAEE8; --accent-ink:#0C141F; --annotate:#E38B4E; --annotate-soft:#3A2A1D;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0C141F; --surface:#121D2C; --surface-alt:#1A2A3D; --line:#2D4053;
+    --ink:#E6EDF5; --ink-muted:#93A6BA; --ink-faint:#5E7085;
+    --accent:#7FAEE8; --accent-ink:#0C141F; --annotate:#E38B4E; --annotate-soft:#3A2A1D;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:28px 28px; background-attachment:local;
+  }
+  @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto !important; transition:none !important;} }
+  code{font-family:var(--mono); font-size:0.9em; background:var(--surface-alt); padding:0.1em 0.4em; border-radius:4px;}
+
+  .page{display:flex; min-height:100vh;}
+
+  .sidebar{
+    position:sticky; top:0; height:100vh; width:280px; flex:0 0 280px;
+    background:var(--surface); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; overflow-y:auto;
+  }
+  .brand{display:flex; align-items:center; gap:12px; padding:22px 20px 16px;}
+  .brand-mark{
+    font-family:var(--mono); font-weight:600; font-size:0.8rem; letter-spacing:0.06em;
+    background:var(--ink); color:var(--surface); border-radius:6px; padding:6px 8px;
+  }
+  .brand-text{display:flex; flex-direction:column; line-height:1.25;}
+  .brand-text strong{font-size:0.95rem; font-weight:600;}
+  .brand-text span{font-size:0.72rem; color:var(--ink-muted); font-family:var(--mono);}
+
+  .stat-row{display:flex; gap:0; margin:4px 20px 18px; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+  .stat{flex:1; padding:10px 8px; text-align:center; border-right:1px solid var(--line);}
+  .stat:last-child{border-right:none;}
+  .stat-n{display:block; font-family:var(--mono); font-weight:600; font-size:1.05rem; font-variant-numeric:tabular-nums;}
+  .stat-l{display:block; font-size:0.65rem; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px;}
+
+  .nav{display:flex; flex-direction:column; padding:6px 10px 24px; gap:1px; overflow-y:auto;}
+  .nav-link{
+    display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:7px;
+    color:var(--ink-muted); text-decoration:none; font-size:0.85rem; border-left:2px solid transparent;
+  }
+  .nav-link:hover{background:var(--surface-alt); color:var(--ink);}
+  .nav-link.active{background:var(--annotate-soft); color:var(--annotate); border-left-color:var(--annotate); font-weight:500;}
+  .nav-count{font-family:var(--mono); font-size:0.72rem; color:var(--ink-faint); min-width:1.4em;}
+  .nav-link.active .nav-count{color:var(--annotate);}
+
+  .content{flex:1; min-width:0; padding:56px 48px 80px; max-width:1180px;}
+  .hero{max-width:640px; margin-bottom:40px;}
+  .eyebrow{font-family:var(--mono); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--annotate);}
+  .hero h1{font-size:2.5rem; line-height:1.08; letter-spacing:-0.01em; margin:10px 0 14px; text-wrap:balance; font-weight:700;}
+  .hero-sub{color:var(--ink-muted); font-size:1rem; line-height:1.6; max-width:60ch;}
+
+  .sheet{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:26px 28px 30px; margin-bottom:28px; scroll-margin-top:24px;
+  }
+  .sheet-head{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .sheet-title{display:flex; align-items:baseline; gap:12px;}
+  .sheet-num{font-family:var(--mono); color:var(--ink-faint); font-size:0.85rem;}
+  .sheet-title h2{font-size:1.35rem; margin:0; font-weight:600; letter-spacing:-0.005em;}
+  .table-count{font-family:var(--mono); font-size:0.75rem; color:var(--ink-muted); background:var(--surface-alt); padding:4px 10px; border-radius:20px;}
+  .sheet-blurb{color:var(--ink-muted); font-size:0.92rem; line-height:1.6; max-width:74ch; margin:10px 0 0;}
+
+  .ext-refs{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:14px;}
+  .ext-label{font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-faint); font-family:var(--mono);}
+  .chip{font-family:var(--mono); font-size:0.75rem; background:var(--surface-alt); border:1px solid var(--line); padding:3px 9px; border-radius:20px; color:var(--ink-muted);}
+
+  .diagram-frame{margin-top:18px; overflow-x:auto; border:1px dashed var(--line); border-radius:8px; padding:10px; background:var(--bg);}
+
+  .foot{margin-top:20px; padding-top:20px; border-top:1px solid var(--line); color:var(--ink-faint); font-size:0.78rem; font-family:var(--mono);}
+
+  @media (max-width: 900px){
+    .page{flex-direction:column;}
+    .sidebar{position:relative; height:auto; width:100%; flex:none;}
+    .content{padding:32px 20px 60px;}
+    .hero h1{font-size:1.9rem;}
+  }
+</style>
+
+</head>
+<body>
+<div class="page">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">ISK</span>
+      <div class="brand-text">
+        <strong>Schema Atlas</strong>
+        <span>local_iskool &middot; MySQL</span>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><span class="stat-n">302</span><span class="stat-l">tables</span></div>
+      <div class="stat"><span class="stat-n">14</span><span class="stat-l">modules</span></div>
+      <div class="stat"><span class="stat-n">677</span><span class="stat-l">foreign keys</span></div>
+    </div>
+    <nav class="nav">
+      <a href="#overview" class="nav-link" data-target="overview"><span class="nav-count">&middot;</span><span class="nav-label">Overview</span></a>
+      <a href="#mod-0" class="nav-link" data-target="mod-0"><span class="nav-count">47</span><span class="nav-label">Core &amp; Tenant Setup</span></a><a href="#mod-1" class="nav-link" data-target="mod-1"><span class="nav-count">19</span><span class="nav-label">Auth &amp; Permissions</span></a><a href="#mod-2" class="nav-link" data-target="mod-2"><span class="nav-count">23</span><span class="nav-label">Students &amp; Admissions</span></a><a href="#mod-3" class="nav-link" data-target="mod-3"><span class="nav-count">17</span><span class="nav-label">Staff &amp; HR / Payroll</span></a><a href="#mod-4" class="nav-link" data-target="mod-4"><span class="nav-count">24</span><span class="nav-label">Academics &amp; Timetable</span></a><a href="#mod-5" class="nav-link" data-target="mod-5"><span class="nav-count">07</span><span class="nav-label">Attendance</span></a><a href="#mod-6" class="nav-link" data-target="mod-6"><span class="nav-count">33</span><span class="nav-label">Exams &amp; Results</span></a><a href="#mod-7" class="nav-link" data-target="mod-7"><span class="nav-count">13</span><span class="nav-label">Online Exam &amp; Question Bank</span></a><a href="#mod-8" class="nav-link" data-target="mod-8"><span class="nav-count">42</span><span class="nav-label">Fees &amp; Finance</span></a><a href="#mod-9" class="nav-link" data-target="mod-9"><span class="nav-count">04</span><span class="nav-label">Library</span></a><a href="#mod-10" class="nav-link" data-target="mod-10"><span class="nav-count">10</span><span class="nav-label">Inventory &amp; Store</span></a><a href="#mod-11" class="nav-link" data-target="mod-11"><span class="nav-count">06</span><span class="nav-label">Transport &amp; Hostel</span></a><a href="#mod-12" class="nav-link" data-target="mod-12"><span class="nav-count">28</span><span class="nav-label">Communication</span></a><a href="#mod-13" class="nav-link" data-target="mod-13"><span class="nav-count">29</span><span class="nav-label">Front Website (CMS)</span></a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <header class="hero">
+      <span class="eyebrow">Reverse-engineered from live schema</span>
+      <h1>Fourteen modules,<br>one school record.</h1>
+      <p class="hero-sub">Every table below was pulled straight from <code>information_schema</code> &mdash; not hand-drawn. Column-level foreign keys are grouped into domains so the shape of the system reads at a glance instead of as 302 boxes at once.</p>
+    </header>
+
+    <section class="sheet" id="overview">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">00</span>
+          <h2>Module map</h2>
+        </div>
+      </div>
+      <p class="sheet-blurb">Arrows show the direction of reference and how many foreign keys cross each boundary &mdash; tenant-scoping columns (<code>school_id</code>, <code>academic_id</code>) are excluded here since almost every table carries them; they'd otherwise connect everything to everything.</p>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+flowchart LR
+    M0["Attendance<br/>(7 tables)"]
+    M1["Exams & Results<br/>(33 tables)"]
+    M2["Communication<br/>(28 tables)"]
+    M3["Auth & Permissions<br/>(19 tables)"]
+    M4["Academics & Timetable<br/>(24 tables)"]
+    M5["Core & Tenant Setup<br/>(47 tables)"]
+    M6["Front Website (CMS)<br/>(29 tables)"]
+    M7["Fees & Finance<br/>(42 tables)"]
+    M8["Students & Admissions<br/>(23 tables)"]
+    M9["Online Exam & Question Bank<br/>(13 tables)"]
+    M10["Staff & HR / Payroll<br/>(17 tables)"]
+    M11["Transport & Hostel<br/>(6 tables)"]
+    M12["Library<br/>(4 tables)"]
+    M13["Inventory & Store<br/>(10 tables)"]
+    M4 -->|3| M2
+    M10 -->|1| M2
+    M8 -->|8| M7
+    M3 -->|4| M7
+    M4 -->|13| M8
+    M5 -->|11| M8
+    M10 -->|4| M4
+    M3 -->|3| M5
+    M3 -->|3| M12
+    M4 -->|31| M1
+    M8 -->|9| M1
+    M10 -->|1| M1
+    M3 -->|1| M4
+    M3 -->|3| M13
+    M3 -->|7| M10
+    M3 -->|1| M6
+    M4 -->|6| M9
+    M8 -->|2| M9
+    M1 -->|1| M9
+    M8 -->|1| M4
+    M5 -->|1| M4
+    M3 -->|4| M8
+    M10 -->|1| M13
+    M5 -->|1| M3
+    M5 -->|1| M10
+    M10 -->|2| M0
+    M11 -->|4| M8
+    M4 -->|5| M0
+    M8 -->|4| M0
+    M4 -->|2| M6
+    M8 -->|1| M6
+        </pre>
+      </div>
+    </section>
+
+    
+    <section class="sheet" id="mod-0">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">01</span>
+          <h2>Core &amp; Tenant Setup</h2>
+        </div>
+        <span class="table-count">47 tables</span>
+      </div>
+      <p class="sheet-blurb">Multi-tenant scaffolding — the school record, academic year, and every general/branding/localization setting each tenant carries. Nearly every other table in the schema scopes itself to sm_schools and sm_academic_years from here.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">roles</span><span class="chip">users</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    color_theme {
+        bigint id PK
+        bigint color_id FK
+        bigint theme_id FK
+    }
+    colors {
+        bigint id PK
+    }
+    continents {
+        bigint id PK
+    }
+    continets {
+        bigint id PK
+    }
+    countries {
+        bigint id PK
+    }
+    failed_jobs {
+        bigint id PK
+    }
+    infix_module_infos {
+        bigint id PK
+    }
+    infix_module_managers {
+        bigint id PK
+    }
+    infixedu__settings {
+        bigint id PK
+    }
+    jobs {
+        bigint id PK
+    }
+    languages {
+        bigint id PK
+    }
+    maintenance_settings {
+        bigint id PK
+    }
+    migrations {
+        bigint id PK
+    }
+    plugins {
+        bigint id PK
+    }
+    school_modules {
+        bigint id PK
+    }
+    sidebars {
+        bigint id PK
+        bigint user_id FK
+    }
+    sm_academic_years {
+        bigint id PK
+    }
+    sm_add_ons {
+        bigint id PK
+    }
+    sm_background_settings {
+        bigint id PK
+    }
+    sm_backups {
+        bigint id PK
+    }
+    sm_base_groups {
+        bigint id PK
+    }
+    sm_base_setups {
+        bigint id PK
+        bigint base_group_id FK
+    }
+    sm_calendar_settings {
+        bigint id PK
+    }
+    sm_countries {
+        bigint id PK
+    }
+    sm_currencies {
+        bigint id PK
+    }
+    sm_custom_fields {
+        bigint id PK
+    }
+    sm_custom_links {
+        bigint id PK
+    }
+    sm_dashboard_settings {
+        bigint id PK
+        bigint role_id FK
+    }
+    sm_date_formats {
+        bigint id PK
+    }
+    sm_email_settings {
+        bigint id PK
+    }
+    sm_general_settings {
+        bigint id PK
+        bigint language_id FK
+        bigint date_format_id FK
+        bigint session_id FK
+    }
+    sm_instructions {
+        bigint id PK
+    }
+    sm_language_phrases {
+        bigint id PK
+    }
+    sm_languages {
+        bigint id PK
+        bigint lang_id FK
+    }
+    sm_module_links {
+        bigint id PK
+        bigint module_id FK
+    }
+    sm_module_permission_assigns {
+        bigint id PK
+        bigint module_id FK
+        bigint role_id FK
+    }
+    sm_module_permissions {
+        bigint id PK
+    }
+    sm_modules {
+        bigint id PK
+    }
+    sm_schools {
+        bigint id PK
+    }
+    sm_sessions {
+        bigint id PK
+    }
+    sm_setup_admins {
+        bigint id PK
+    }
+    sm_styles {
+        bigint id PK
+    }
+    sm_system_versions {
+        bigint id PK
+    }
+    sm_time_zones {
+        bigint id PK
+    }
+    sm_to_dos {
+        bigint id PK
+    }
+    themes {
+        bigint id PK
+    }
+    version_histories {
+        bigint id PK
+    }
+    roles {
+        bigint id PK
+    }
+    users {
+        bigint id PK
+    }
+    colors ||--o{ color_theme : "color_id"
+    themes ||--o{ color_theme : "theme_id"
+    users ||--o{ sidebars : "user_id"
+    sm_base_groups ||--o{ sm_base_setups : "base_group_id"
+    roles ||--o{ sm_dashboard_settings : "role_id"
+    sm_languages ||--o{ sm_general_settings : "language_id"
+    sm_date_formats ||--o{ sm_general_settings : "date_format_id"
+    sm_academic_years ||--o{ sm_general_settings : "session_id"
+    languages ||--o{ sm_languages : "lang_id"
+    sm_modules ||--o{ sm_module_links : "module_id"
+    sm_module_permissions ||--o{ sm_module_permission_assigns : "module_id"
+    roles ||--o{ sm_module_permission_assigns : "role_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-1">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">02</span>
+          <h2>Auth &amp; Permissions</h2>
+        </div>
+        <span class="table-count">19 tables</span>
+      </div>
+      <p class="sheet-blurb">Login identities, roles, and the granular permission-assignment tables that gate every module — including Passport&#x27;s OAuth tables for API access.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">sm_module_links</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    assign_permissions {
+        bigint id PK
+    }
+    infix_permission_assigns {
+        bigint id PK
+        bigint role_id FK
+    }
+    infix_roles {
+        bigint id PK
+    }
+    oauth_access_tokens {
+        bigint id PK
+    }
+    oauth_auth_codes {
+        bigint id PK
+    }
+    oauth_clients {
+        bigint id PK
+    }
+    oauth_personal_access_clients {
+        bigint id PK
+    }
+    oauth_refresh_tokens {
+        bigint id PK
+    }
+    password_resets {
+        bigint id PK
+    }
+    permission_sections {
+        bigint id PK
+    }
+    permissions {
+        bigint id PK
+    }
+    personal_access_tokens {
+        bigint id PK
+    }
+    roles {
+        bigint id PK
+    }
+    sm_frontend_persmissions {
+        bigint id PK
+    }
+    sm_role_permissions {
+        bigint id PK
+        bigint role_id FK
+        bigint module_link_id FK
+    }
+    sm_user_logs {
+        bigint id PK
+        bigint role_id FK
+        bigint user_id FK
+    }
+    two_factor_settings {
+        bigint id PK
+    }
+    user_otp_codes {
+        bigint id PK
+        bigint user_id FK
+    }
+    users {
+        bigint id PK
+        bigint role_id FK
+    }
+    sm_module_links {
+        bigint id PK
+    }
+    infix_roles ||--o{ infix_permission_assigns : "role_id"
+    roles ||--o{ sm_role_permissions : "role_id"
+    sm_module_links ||--o{ sm_role_permissions : "module_link_id"
+    infix_roles ||--o{ sm_user_logs : "role_id"
+    users ||--o{ sm_user_logs : "user_id"
+    users ||--o{ user_otp_codes : "user_id"
+    infix_roles ||--o{ users : "role_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-2">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">03</span>
+          <h2>Students &amp; Admissions</h2>
+        </div>
+        <span class="table-count">23 tables</span>
+      </div>
+      <p class="sheet-blurb">The student record itself, plus admission pipeline, parent links, categories, and document/ID-card generation.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">infix_roles</span><span class="chip">sm_academic_years</span><span class="chip">sm_base_setups</span><span class="chip">sm_classes</span><span class="chip">sm_dormitory_lists</span><span class="chip">sm_homeworks</span><span class="chip">sm_room_lists</span><span class="chip">sm_routes</span><span class="chip">sm_sections</span><span class="chip">sm_sessions</span><span class="chip">sm_subjects</span><span class="chip">sm_vehicles</span><span class="chip">users</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    graduates {
+        bigint id PK
+        bigint class_id FK
+        bigint student_id FK
+        bigint session_id FK
+        bigint section_id FK
+    }
+    infix_module_student_parent_infos {
+        bigint id PK
+    }
+    sm_admission_queries {
+        bigint id PK
+        bigint class FK
+    }
+    sm_admission_query_followups {
+        bigint id PK
+        bigint admission_query_id FK
+    }
+    sm_donors {
+        bigint id PK
+        bigint religion_id FK
+        bigint gender_id FK
+        bigint bloodgroup_id FK
+    }
+    sm_form_downloads {
+        bigint id PK
+    }
+    sm_homework_students {
+        bigint id PK
+        bigint student_id FK
+        bigint homework_id FK
+    }
+    sm_parents {
+        bigint id PK
+        bigint user_id FK
+    }
+    sm_student_categories {
+        bigint id PK
+    }
+    sm_student_certificates {
+        bigint id PK
+    }
+    sm_student_documents {
+        bigint id PK
+    }
+    sm_student_excel_formats {
+        bigint id PK
+    }
+    sm_student_groups {
+        bigint id PK
+    }
+    sm_student_homeworks {
+        bigint id PK
+        bigint evaluated_by FK
+        bigint subject_id FK
+        bigint student_id FK
+    }
+    sm_student_id_cards {
+        bigint id PK
+    }
+    sm_student_promotions {
+        bigint id PK
+        bigint current_section_id FK
+        bigint previous_session_id FK
+        bigint current_class_id FK
+        bigint previous_section_id FK
+        bigint previous_class_id FK
+        bigint student_id FK
+        bigint current_session_id FK
+    }
+    sm_student_registration_fields {
+        bigint id PK
+    }
+    sm_student_timelines {
+        bigint id PK
+    }
+    sm_students {
+        bigint id PK
+        bigint room_id FK
+        bigint dormitory_id FK
+        bigint session_id FK
+        bigint role_id FK
+        bigint vechile_id FK
+        bigint class_id FK
+        bigint section_id FK
+        bigint religion_id FK
+        bigint user_id FK
+        bigint bloodgroup_id FK
+        bigint parent_id FK
+        bigint student_group_id FK
+        bigint route_list_id FK
+        bigint gender_id FK
+        bigint student_category_id FK
+    }
+    student_academic_histories {
+        bigint id PK
+        bigint student_id FK
+    }
+    student_bulk_temporaries {
+        bigint id PK
+    }
+    student_record_temporaries {
+        bigint id PK
+        bigint student_record_id FK
+        bigint sm_student_id FK
+    }
+    student_records {
+        bigint id PK
+        bigint class_id FK
+        bigint student_id FK
+        bigint session_id FK
+        bigint section_id FK
+    }
+    infix_roles {
+        bigint id PK
+    }
+    sm_academic_years {
+        bigint id PK
+    }
+    sm_base_setups {
+        bigint id PK
+    }
+    sm_classes {
+        bigint id PK
+    }
+    sm_dormitory_lists {
+        bigint id PK
+    }
+    sm_homeworks {
+        bigint id PK
+    }
+    sm_room_lists {
+        bigint id PK
+    }
+    sm_routes {
+        bigint id PK
+    }
+    sm_sections {
+        bigint id PK
+    }
+    sm_sessions {
+        bigint id PK
+    }
+    sm_subjects {
+        bigint id PK
+    }
+    sm_vehicles {
+        bigint id PK
+    }
+    users {
+        bigint id PK
+    }
+    sm_classes ||--o{ graduates : "class_id"
+    sm_students ||--o{ graduates : "student_id"
+    sm_sessions ||--o{ graduates : "session_id"
+    sm_sections ||--o{ graduates : "section_id"
+    sm_classes ||--o{ sm_admission_queries : "class"
+    sm_admission_queries ||--o{ sm_admission_query_followups : "admission_query_id"
+    sm_base_setups ||--o{ sm_donors : "religion_id"
+    sm_base_setups ||--o{ sm_donors : "gender_id"
+    sm_base_setups ||--o{ sm_donors : "bloodgroup_id"
+    sm_students ||--o{ sm_homework_students : "student_id"
+    sm_homeworks ||--o{ sm_homework_students : "homework_id"
+    users ||--o{ sm_parents : "user_id"
+    users ||--o{ sm_student_homeworks : "evaluated_by"
+    sm_subjects ||--o{ sm_student_homeworks : "subject_id"
+    sm_students ||--o{ sm_student_homeworks : "student_id"
+    sm_sections ||--o{ sm_student_promotions : "current_section_id"
+    sm_academic_years ||--o{ sm_student_promotions : "previous_session_id"
+    sm_classes ||--o{ sm_student_promotions : "current_class_id"
+    sm_sections ||--o{ sm_student_promotions : "previous_section_id"
+    sm_classes ||--o{ sm_student_promotions : "previous_class_id"
+    sm_students ||--o{ sm_student_promotions : "student_id"
+    sm_academic_years ||--o{ sm_student_promotions : "current_session_id"
+    sm_room_lists ||--o{ sm_students : "room_id"
+    sm_dormitory_lists ||--o{ sm_students : "dormitory_id"
+    sm_academic_years ||--o{ sm_students : "session_id"
+    infix_roles ||--o{ sm_students : "role_id"
+    sm_vehicles ||--o{ sm_students : "vechile_id"
+    sm_classes ||--o{ sm_students : "class_id"
+    sm_sections ||--o{ sm_students : "section_id"
+    sm_base_setups ||--o{ sm_students : "religion_id"
+    users ||--o{ sm_students : "user_id"
+    sm_base_setups ||--o{ sm_students : "bloodgroup_id"
+    sm_parents ||--o{ sm_students : "parent_id"
+    sm_student_groups ||--o{ sm_students : "student_group_id"
+    sm_routes ||--o{ sm_students : "route_list_id"
+    sm_base_setups ||--o{ sm_students : "gender_id"
+    sm_student_categories ||--o{ sm_students : "student_category_id"
+    sm_students ||--o{ student_academic_histories : "student_id"
+    student_records ||--o{ student_record_temporaries : "student_record_id"
+    sm_students ||--o{ student_record_temporaries : "sm_student_id"
+    sm_classes ||--o{ student_records : "class_id"
+    sm_students ||--o{ student_records : "student_id"
+    sm_academic_years ||--o{ student_records : "session_id"
+    sm_sections ||--o{ student_records : "section_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-3">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">04</span>
+          <h2>Staff &amp; HR / Payroll</h2>
+        </div>
+        <span class="table-count">17 tables</span>
+      </div>
+      <p class="sheet-blurb">Staff records, departments and designations, leave management, and salary/payroll generation.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">infix_roles</span><span class="chip">roles</span><span class="chip">sm_base_setups</span><span class="chip">users</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    payroll_payments {
+        bigint id PK
+        bigint sm_hr_payroll_generate_id FK
+    }
+    sm_designations {
+        bigint id PK
+    }
+    sm_expert_teachers {
+        bigint id PK
+    }
+    sm_hourly_rates {
+        bigint id PK
+    }
+    sm_hr_payroll_earn_deducs {
+        bigint id PK
+        bigint payroll_generate_id FK
+    }
+    sm_hr_payroll_generates {
+        bigint id PK
+        bigint staff_id FK
+    }
+    sm_hr_salary_templates {
+        bigint id PK
+    }
+    sm_human_departments {
+        bigint id PK
+    }
+    sm_leave_deduction_infos {
+        bigint id PK
+    }
+    sm_leave_defines {
+        bigint id PK
+        bigint user_id FK
+        bigint type_id FK
+        bigint role_id FK
+    }
+    sm_leave_requests {
+        bigint id PK
+        bigint role_id FK
+        bigint leave_define_id FK
+        bigint type_id FK
+        bigint staff_id FK
+    }
+    sm_leave_types {
+        bigint id PK
+    }
+    sm_staff_registration_fields {
+        bigint id PK
+    }
+    sm_staffs {
+        bigint id PK
+        bigint role_id FK
+        bigint gender_id FK
+        bigint designation_id FK
+        bigint user_id FK
+        bigint department_id FK
+    }
+    staff_import_bulk_temporaries {
+        bigint id PK
+        bigint user_id FK
+    }
+    teacher_evaluation_settings {
+        bigint id PK
+    }
+    teacher_evaluations {
+        bigint id PK
+    }
+    infix_roles {
+        bigint id PK
+    }
+    roles {
+        bigint id PK
+    }
+    sm_base_setups {
+        bigint id PK
+    }
+    users {
+        bigint id PK
+    }
+    sm_hr_payroll_generates ||--o{ payroll_payments : "sm_hr_payroll_generate_id"
+    sm_hr_payroll_generates ||--o{ sm_hr_payroll_earn_deducs : "payroll_generate_id"
+    sm_staffs ||--o{ sm_hr_payroll_generates : "staff_id"
+    users ||--o{ sm_leave_defines : "user_id"
+    sm_leave_types ||--o{ sm_leave_defines : "type_id"
+    roles ||--o{ sm_leave_defines : "role_id"
+    roles ||--o{ sm_leave_requests : "role_id"
+    sm_leave_defines ||--o{ sm_leave_requests : "leave_define_id"
+    sm_leave_types ||--o{ sm_leave_requests : "type_id"
+    users ||--o{ sm_leave_requests : "staff_id"
+    infix_roles ||--o{ sm_staffs : "role_id"
+    sm_base_setups ||--o{ sm_staffs : "gender_id"
+    sm_designations ||--o{ sm_staffs : "designation_id"
+    users ||--o{ sm_staffs : "user_id"
+    sm_human_departments ||--o{ sm_staffs : "department_id"
+    users ||--o{ staff_import_bulk_temporaries : "user_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-4">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">05</span>
+          <h2>Academics &amp; Timetable</h2>
+        </div>
+        <span class="table-count">24 tables</span>
+      </div>
+      <p class="sheet-blurb">Classes, sections, subjects, routines, lessons and homework — the day-to-day academic structure students and staff sit inside.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">sm_academic_years</span><span class="chip">sm_staffs</span><span class="chip">sm_students</span><span class="chip">users</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    check_classes {
+        bigint id PK
+    }
+    lesson_plan_topics {
+        bigint id PK
+        bigint topic_id FK
+        bigint lesson_planner_id FK
+    }
+    lesson_planners {
+        bigint id PK
+        bigint room_id FK
+        bigint teacher_id FK
+        bigint class_period_id FK
+        bigint subject_id FK
+        bigint class_id FK
+        bigint section_id FK
+    }
+    library_subjects {
+        bigint id PK
+    }
+    sm_assign_class_teachers {
+        bigint id PK
+        bigint section_id FK
+        bigint class_id FK
+    }
+    sm_assign_subjects {
+        bigint id PK
+        bigint section_id FK
+        bigint class_id FK
+        bigint teacher_id FK
+        bigint subject_id FK
+    }
+    sm_class_optional_subject {
+        bigint id PK
+    }
+    sm_class_rooms {
+        bigint id PK
+    }
+    sm_class_routine_updates {
+        bigint id PK
+        bigint room_id FK
+        bigint teacher_id FK
+        bigint class_period_id FK
+        bigint subject_id FK
+        bigint class_id FK
+        bigint section_id FK
+    }
+    sm_class_routines {
+        bigint id PK
+        bigint subject_id FK
+        bigint section_id FK
+        bigint class_id FK
+    }
+    sm_class_sections {
+        bigint id PK
+        bigint section_id FK
+        bigint class_id FK
+    }
+    sm_class_teachers {
+        bigint id PK
+        bigint teacher_id FK
+        bigint assign_class_teacher_id FK
+    }
+    sm_class_times {
+        bigint id PK
+    }
+    sm_classes {
+        bigint id PK
+    }
+    sm_holidays {
+        bigint id PK
+    }
+    sm_homeworks {
+        bigint id PK
+        bigint class_id FK
+        bigint subject_id FK
+        bigint evaluated_by FK
+    }
+    sm_lesson_details {
+        bigint id PK
+        bigint subject_id FK
+        bigint section_id FK
+        bigint class_id FK
+    }
+    sm_lesson_topic_details {
+        bigint id PK
+        bigint topic_id FK
+    }
+    sm_lesson_topics {
+        bigint id PK
+        bigint section_id FK
+        bigint class_id FK
+        bigint subject_id FK
+    }
+    sm_lessons {
+        bigint id PK
+        bigint class_id FK
+        bigint subject_id FK
+        bigint section_id FK
+    }
+    sm_optional_subject_assigns {
+        bigint id PK
+        bigint student_id FK
+        bigint session_id FK
+        bigint subject_id FK
+    }
+    sm_sections {
+        bigint id PK
+    }
+    sm_subjects {
+        bigint id PK
+    }
+    sm_weekends {
+        bigint id PK
+    }
+    sm_academic_years {
+        bigint id PK
+    }
+    sm_staffs {
+        bigint id PK
+    }
+    sm_students {
+        bigint id PK
+    }
+    users {
+        bigint id PK
+    }
+    sm_lesson_topic_details ||--o{ lesson_plan_topics : "topic_id"
+    lesson_planners ||--o{ lesson_plan_topics : "lesson_planner_id"
+    sm_class_rooms ||--o{ lesson_planners : "room_id"
+    sm_staffs ||--o{ lesson_planners : "teacher_id"
+    sm_class_times ||--o{ lesson_planners : "class_period_id"
+    sm_subjects ||--o{ lesson_planners : "subject_id"
+    sm_classes ||--o{ lesson_planners : "class_id"
+    sm_sections ||--o{ lesson_planners : "section_id"
+    sm_sections ||--o{ sm_assign_class_teachers : "section_id"
+    sm_classes ||--o{ sm_assign_class_teachers : "class_id"
+    sm_sections ||--o{ sm_assign_subjects : "section_id"
+    sm_classes ||--o{ sm_assign_subjects : "class_id"
+    sm_staffs ||--o{ sm_assign_subjects : "teacher_id"
+    sm_subjects ||--o{ sm_assign_subjects : "subject_id"
+    sm_class_rooms ||--o{ sm_class_routine_updates : "room_id"
+    sm_staffs ||--o{ sm_class_routine_updates : "teacher_id"
+    sm_class_times ||--o{ sm_class_routine_updates : "class_period_id"
+    sm_subjects ||--o{ sm_class_routine_updates : "subject_id"
+    sm_classes ||--o{ sm_class_routine_updates : "class_id"
+    sm_sections ||--o{ sm_class_routine_updates : "section_id"
+    sm_subjects ||--o{ sm_class_routines : "subject_id"
+    sm_sections ||--o{ sm_class_routines : "section_id"
+    sm_classes ||--o{ sm_class_routines : "class_id"
+    sm_sections ||--o{ sm_class_sections : "section_id"
+    sm_classes ||--o{ sm_class_sections : "class_id"
+    sm_staffs ||--o{ sm_class_teachers : "teacher_id"
+    sm_assign_class_teachers ||--o{ sm_class_teachers : "assign_class_teacher_id"
+    sm_classes ||--o{ sm_homeworks : "class_id"
+    sm_subjects ||--o{ sm_homeworks : "subject_id"
+    users ||--o{ sm_homeworks : "evaluated_by"
+    sm_subjects ||--o{ sm_lesson_details : "subject_id"
+    sm_sections ||--o{ sm_lesson_details : "section_id"
+    sm_classes ||--o{ sm_lesson_details : "class_id"
+    sm_lesson_topics ||--o{ sm_lesson_topic_details : "topic_id"
+    sm_sections ||--o{ sm_lesson_topics : "section_id"
+    sm_classes ||--o{ sm_lesson_topics : "class_id"
+    sm_subjects ||--o{ sm_lesson_topics : "subject_id"
+    sm_classes ||--o{ sm_lessons : "class_id"
+    sm_subjects ||--o{ sm_lessons : "subject_id"
+    sm_sections ||--o{ sm_lessons : "section_id"
+    sm_students ||--o{ sm_optional_subject_assigns : "student_id"
+    sm_academic_years ||--o{ sm_optional_subject_assigns : "session_id"
+    sm_subjects ||--o{ sm_optional_subject_assigns : "subject_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-5">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">06</span>
+          <h2>Attendance</h2>
+        </div>
+        <span class="table-count">7 tables</span>
+      </div>
+      <p class="sheet-blurb">Daily attendance capture for students and staff, including bulk-import staging tables.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">sm_classes</span><span class="chip">sm_sections</span><span class="chip">sm_staffs</span><span class="chip">sm_students</span><span class="chip">sm_subjects</span><span class="chip">student_records</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    absent_notification_time_setups {
+        bigint id PK
+    }
+    sm_staff_attendance_imports {
+        bigint id PK
+        bigint staff_id FK
+    }
+    sm_staff_attendences {
+        bigint id PK
+        bigint staff_id FK
+    }
+    sm_student_attendance_imports {
+        bigint id PK
+        bigint student_id FK
+    }
+    sm_student_attendances {
+        bigint id PK
+        bigint section_id FK
+        bigint class_id FK
+        bigint student_id FK
+    }
+    sm_subject_attendances {
+        bigint id PK
+        bigint student_id FK
+        bigint section_id FK
+        bigint subject_id FK
+        bigint class_id FK
+        bigint student_record_id FK
+    }
+    student_attendance_bulks {
+        bigint id PK
+    }
+    sm_classes {
+        bigint id PK
+    }
+    sm_sections {
+        bigint id PK
+    }
+    sm_staffs {
+        bigint id PK
+    }
+    sm_students {
+        bigint id PK
+    }
+    sm_subjects {
+        bigint id PK
+    }
+    student_records {
+        bigint id PK
+    }
+    sm_staffs ||--o{ sm_staff_attendance_imports : "staff_id"
+    sm_staffs ||--o{ sm_staff_attendences : "staff_id"
+    sm_students ||--o{ sm_student_attendance_imports : "student_id"
+    sm_sections ||--o{ sm_student_attendances : "section_id"
+    sm_classes ||--o{ sm_student_attendances : "class_id"
+    sm_students ||--o{ sm_student_attendances : "student_id"
+    sm_students ||--o{ sm_subject_attendances : "student_id"
+    sm_sections ||--o{ sm_subject_attendances : "section_id"
+    sm_subjects ||--o{ sm_subject_attendances : "subject_id"
+    sm_classes ||--o{ sm_subject_attendances : "class_id"
+    student_records ||--o{ sm_subject_attendances : "student_record_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-6">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">07</span>
+          <h2>Exams &amp; Results</h2>
+        </div>
+        <span class="table-count">33 tables</span>
+      </div>
+      <p class="sheet-blurb">Exam definitions, schedules, mark registers, grading, merit lists, admit cards and seat plans.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">sm_class_times</span><span class="chip">sm_classes</span><span class="chip">sm_sections</span><span class="chip">sm_staffs</span><span class="chip">sm_students</span><span class="chip">sm_subjects</span><span class="chip">student_records</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    admit_card_settings {
+        bigint id PK
+    }
+    admit_cards {
+        bigint id PK
+    }
+    all_exam_wise_positions {
+        bigint id PK
+    }
+    custom_result_settings {
+        bigint id PK
+    }
+    exam_merit_positions {
+        bigint id PK
+    }
+    exam_step_skips {
+        bigint id PK
+    }
+    front_academic_calendars {
+        bigint id PK
+    }
+    front_class_routines {
+        bigint id PK
+    }
+    front_exam_routines {
+        bigint id PK
+    }
+    front_results {
+        bigint id PK
+    }
+    frontend_exam_results {
+        bigint id PK
+    }
+    seat_plan_settings {
+        bigint id PK
+    }
+    seat_plans {
+        bigint id PK
+    }
+    sm_custom_temporary_results {
+        bigint id PK
+    }
+    sm_exam_attendance_children {
+        bigint id PK
+        bigint student_id FK
+        bigint section_id FK
+        bigint exam_attendance_id FK
+        bigint student_record_id FK
+        bigint class_id FK
+    }
+    sm_exam_attendances {
+        bigint id PK
+        bigint exam_id FK
+        bigint class_id FK
+        bigint subject_id FK
+        bigint section_id FK
+    }
+    sm_exam_marks_registers {
+        bigint id PK
+        bigint exam_id FK
+        bigint subject_id FK
+        bigint student_id FK
+    }
+    sm_exam_schedule_subjects {
+        bigint id PK
+        bigint subject_id FK
+        bigint exam_schedule_id FK
+    }
+    sm_exam_schedules {
+        bigint id PK
+        bigint exam_term_id FK
+        bigint teacher_id FK
+        bigint exam_period_id FK
+        bigint subject_id FK
+        bigint exam_id FK
+        bigint section_id FK
+        bigint class_id FK
+    }
+    sm_exam_settings {
+        bigint id PK
+    }
+    sm_exam_setups {
+        bigint id PK
+        bigint section_id FK
+        bigint exam_term_id FK
+        bigint exam_id FK
+        bigint subject_id FK
+        bigint class_id FK
+    }
+    sm_exam_signatures {
+        bigint id PK
+    }
+    sm_exam_types {
+        bigint id PK
+    }
+    sm_exams {
+        bigint id PK
+        bigint subject_id FK
+        bigint section_id FK
+        bigint exam_type_id FK
+        bigint class_id FK
+    }
+    sm_mark_stores {
+        bigint id PK
+        bigint section_id FK
+        bigint subject_id FK
+        bigint exam_term_id FK
+        bigint student_record_id FK
+        bigint exam_setup_id FK
+        bigint student_id FK
+        bigint class_id FK
+    }
+    sm_marks_grades {
+        bigint id PK
+    }
+    sm_marks_register_children {
+        bigint id PK
+        bigint marks_register_id FK
+        bigint subject_id FK
+    }
+    sm_marks_registers {
+        bigint id PK
+        bigint section_id FK
+        bigint exam_id FK
+        bigint class_id FK
+        bigint student_id FK
+    }
+    sm_marks_send_sms {
+        bigint id PK
+        bigint exam_id FK
+        bigint student_id FK
+    }
+    sm_result_stores {
+        bigint id PK
+        bigint subject_id FK
+        bigint exam_type_id FK
+        bigint student_record_id FK
+        bigint exam_setup_id FK
+        bigint student_id FK
+        bigint class_id FK
+        bigint section_id FK
+    }
+    sm_seat_plan_children {
+        bigint id PK
+        bigint seat_plan_id FK
+    }
+    sm_seat_plans {
+        bigint id PK
+        bigint class_id FK
+        bigint subject_id FK
+        bigint section_id FK
+        bigint exam_id FK
+    }
+    sm_temporary_meritlists {
+        bigint id PK
+        bigint exam_id FK
+        bigint class_id FK
+        bigint section_id FK
+    }
+    sm_class_times {
+        bigint id PK
+    }
+    sm_classes {
+        bigint id PK
+    }
+    sm_sections {
+        bigint id PK
+    }
+    sm_staffs {
+        bigint id PK
+    }
+    sm_students {
+        bigint id PK
+    }
+    sm_subjects {
+        bigint id PK
+    }
+    student_records {
+        bigint id PK
+    }
+    sm_students ||--o{ sm_exam_attendance_children : "student_id"
+    sm_sections ||--o{ sm_exam_attendance_children : "section_id"
+    sm_exam_attendances ||--o{ sm_exam_attendance_children : "exam_attendance_id"
+    student_records ||--o{ sm_exam_attendance_children : "student_record_id"
+    sm_classes ||--o{ sm_exam_attendance_children : "class_id"
+    sm_exams ||--o{ sm_exam_attendances : "exam_id"
+    sm_classes ||--o{ sm_exam_attendances : "class_id"
+    sm_subjects ||--o{ sm_exam_attendances : "subject_id"
+    sm_sections ||--o{ sm_exam_attendances : "section_id"
+    sm_exams ||--o{ sm_exam_marks_registers : "exam_id"
+    sm_subjects ||--o{ sm_exam_marks_registers : "subject_id"
+    sm_students ||--o{ sm_exam_marks_registers : "student_id"
+    sm_subjects ||--o{ sm_exam_schedule_subjects : "subject_id"
+    sm_exam_schedules ||--o{ sm_exam_schedule_subjects : "exam_schedule_id"
+    sm_exam_types ||--o{ sm_exam_schedules : "exam_term_id"
+    sm_staffs ||--o{ sm_exam_schedules : "teacher_id"
+    sm_class_times ||--o{ sm_exam_schedules : "exam_period_id"
+    sm_subjects ||--o{ sm_exam_schedules : "subject_id"
+    sm_exams ||--o{ sm_exam_schedules : "exam_id"
+    sm_sections ||--o{ sm_exam_schedules : "section_id"
+    sm_classes ||--o{ sm_exam_schedules : "class_id"
+    sm_sections ||--o{ sm_exam_setups : "section_id"
+    sm_exam_types ||--o{ sm_exam_setups : "exam_term_id"
+    sm_exams ||--o{ sm_exam_setups : "exam_id"
+    sm_subjects ||--o{ sm_exam_setups : "subject_id"
+    sm_classes ||--o{ sm_exam_setups : "class_id"
+    sm_subjects ||--o{ sm_exams : "subject_id"
+    sm_sections ||--o{ sm_exams : "section_id"
+    sm_exam_types ||--o{ sm_exams : "exam_type_id"
+    sm_classes ||--o{ sm_exams : "class_id"
+    sm_sections ||--o{ sm_mark_stores : "section_id"
+    sm_subjects ||--o{ sm_mark_stores : "subject_id"
+    sm_exam_types ||--o{ sm_mark_stores : "exam_term_id"
+    student_records ||--o{ sm_mark_stores : "student_record_id"
+    sm_exam_setups ||--o{ sm_mark_stores : "exam_setup_id"
+    sm_students ||--o{ sm_mark_stores : "student_id"
+    sm_classes ||--o{ sm_mark_stores : "class_id"
+    sm_marks_registers ||--o{ sm_marks_register_children : "marks_register_id"
+    sm_subjects ||--o{ sm_marks_register_children : "subject_id"
+    sm_sections ||--o{ sm_marks_registers : "section_id"
+    sm_exams ||--o{ sm_marks_registers : "exam_id"
+    sm_classes ||--o{ sm_marks_registers : "class_id"
+    sm_students ||--o{ sm_marks_registers : "student_id"
+    sm_exams ||--o{ sm_marks_send_sms : "exam_id"
+    sm_students ||--o{ sm_marks_send_sms : "student_id"
+    sm_subjects ||--o{ sm_result_stores : "subject_id"
+    sm_exam_types ||--o{ sm_result_stores : "exam_type_id"
+    student_records ||--o{ sm_result_stores : "student_record_id"
+    sm_exam_setups ||--o{ sm_result_stores : "exam_setup_id"
+    sm_students ||--o{ sm_result_stores : "student_id"
+    sm_classes ||--o{ sm_result_stores : "class_id"
+    sm_sections ||--o{ sm_result_stores : "section_id"
+    sm_seat_plans ||--o{ sm_seat_plan_children : "seat_plan_id"
+    sm_classes ||--o{ sm_seat_plans : "class_id"
+    sm_subjects ||--o{ sm_seat_plans : "subject_id"
+    sm_sections ||--o{ sm_seat_plans : "section_id"
+    sm_exams ||--o{ sm_seat_plans : "exam_id"
+    sm_exams ||--o{ sm_temporary_meritlists : "exam_id"
+    sm_classes ||--o{ sm_temporary_meritlists : "class_id"
+    sm_sections ||--o{ sm_temporary_meritlists : "section_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-7">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">08</span>
+          <h2>Online Exam &amp; Question Bank</h2>
+        </div>
+        <span class="table-count">13 tables</span>
+      </div>
+      <p class="sheet-blurb">Computer-based testing — question banks, online exam assembly, and per-student answer capture.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">sm_classes</span><span class="chip">sm_exams</span><span class="chip">sm_sections</span><span class="chip">sm_students</span><span class="chip">sm_subjects</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    online_exam_student_answer_markings {
+        bigint id PK
+    }
+    sm_online_exam_marks {
+        bigint id PK
+        bigint subject_id FK
+        bigint student_id FK
+        bigint exam_id FK
+    }
+    sm_online_exam_question_assigns {
+        bigint id PK
+        bigint question_bank_id FK
+        bigint online_exam_id FK
+    }
+    sm_online_exam_question_mu_options {
+        bigint id PK
+        bigint online_exam_question_id FK
+    }
+    sm_online_exam_questions {
+        bigint id PK
+        bigint online_exam_id FK
+    }
+    sm_online_exams {
+        bigint id PK
+        bigint class_id FK
+        bigint subject_id FK
+        bigint section_id FK
+    }
+    sm_question_bank_mu_options {
+        bigint id PK
+        bigint question_bank_id FK
+    }
+    sm_question_banks {
+        bigint id PK
+        bigint q_group_id FK
+        bigint class_id FK
+        bigint section_id FK
+    }
+    sm_question_groups {
+        bigint id PK
+    }
+    sm_question_levels {
+        bigint id PK
+    }
+    sm_student_take_online_exam_questions {
+        bigint id PK
+        bigint take_online_exam_id FK
+        bigint question_bank_id FK
+    }
+    sm_student_take_online_exams {
+        bigint id PK
+        bigint student_id FK
+        bigint online_exam_id FK
+    }
+    sm_student_take_onln_ex_ques_options {
+        bigint id PK
+        bigint take_online_exam_question_id FK
+    }
+    sm_classes {
+        bigint id PK
+    }
+    sm_exams {
+        bigint id PK
+    }
+    sm_sections {
+        bigint id PK
+    }
+    sm_students {
+        bigint id PK
+    }
+    sm_subjects {
+        bigint id PK
+    }
+    sm_subjects ||--o{ sm_online_exam_marks : "subject_id"
+    sm_students ||--o{ sm_online_exam_marks : "student_id"
+    sm_exams ||--o{ sm_online_exam_marks : "exam_id"
+    sm_question_banks ||--o{ sm_online_exam_question_assigns : "question_bank_id"
+    sm_online_exams ||--o{ sm_online_exam_question_assigns : "online_exam_id"
+    sm_online_exam_questions ||--o{ sm_online_exam_question_mu_options : "online_exam_question_id"
+    sm_online_exams ||--o{ sm_online_exam_questions : "online_exam_id"
+    sm_classes ||--o{ sm_online_exams : "class_id"
+    sm_subjects ||--o{ sm_online_exams : "subject_id"
+    sm_sections ||--o{ sm_online_exams : "section_id"
+    sm_question_banks ||--o{ sm_question_bank_mu_options : "question_bank_id"
+    sm_question_groups ||--o{ sm_question_banks : "q_group_id"
+    sm_classes ||--o{ sm_question_banks : "class_id"
+    sm_sections ||--o{ sm_question_banks : "section_id"
+    sm_student_take_online_exams ||--o{ sm_student_take_online_exam_questions : "take_online_exam_id"
+    sm_question_banks ||--o{ sm_student_take_online_exam_questions : "question_bank_id"
+    sm_students ||--o{ sm_student_take_online_exams : "student_id"
+    sm_online_exams ||--o{ sm_student_take_online_exams : "online_exam_id"
+    sm_student_take_online_exam_questions ||--o{ sm_student_take_onln_ex_ques_options : "take_online_exam_question_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-8">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">09</span>
+          <h2>Fees &amp; Finance</h2>
+        </div>
+        <span class="table-count">42 tables</span>
+      </div>
+      <p class="sheet-blurb">Fee structures, discounts, invoices and installment plans, plus the school&#x27;s accounting ledger (income/expense heads, bank accounts, chart of accounts).</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">infix_roles</span><span class="chip">sm_students</span><span class="chip">users</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    dire_fees_installment_child_payments {
+        bigint id PK
+        bigint fees_type_id FK
+        bigint bank_id FK
+        bigint student_id FK
+    }
+    direct_fees_installment_assigns {
+        bigint id PK
+        bigint fees_type_id FK
+        bigint fees_discount_id FK
+        bigint bank_id FK
+        bigint student_id FK
+    }
+    direct_fees_installments {
+        bigint id PK
+    }
+    direct_fees_reminders {
+        bigint id PK
+    }
+    direct_fees_settings {
+        bigint id PK
+    }
+    due_fees_login_prevents {
+        bigint id PK
+        bigint role_id FK
+        bigint user_id FK
+    }
+    fees_carry_forward_logs {
+        bigint id PK
+    }
+    fees_carry_forward_settings {
+        bigint id PK
+    }
+    fees_installment_credits {
+        bigint id PK
+    }
+    fees_invoice_settings {
+        bigint id PK
+    }
+    fees_invoices {
+        bigint id PK
+    }
+    fm_fees_groups {
+        bigint id PK
+    }
+    fm_fees_invoice_chields {
+        bigint id PK
+        bigint fees_invoice_id FK
+    }
+    fm_fees_invoice_settings {
+        bigint id PK
+    }
+    fm_fees_invoices {
+        bigint id PK
+        bigint student_id FK
+    }
+    fm_fees_transaction_chields {
+        bigint id PK
+        bigint fees_transaction_id FK
+    }
+    fm_fees_transactions {
+        bigint id PK
+        bigint fees_invoice_id FK
+    }
+    fm_fees_types {
+        bigint id PK
+    }
+    fm_fees_weavers {
+        bigint id PK
+        bigint fees_invoice_id FK
+    }
+    invoice_settings {
+        bigint id PK
+    }
+    sm_add_expenses {
+        bigint id PK
+    }
+    sm_add_incomes {
+        bigint id PK
+        bigint payment_method_id FK
+        bigint account_id FK
+    }
+    sm_amount_transfers {
+        bigint id PK
+    }
+    sm_bank_accounts {
+        bigint id PK
+    }
+    sm_bank_payment_slips {
+        bigint id PK
+        bigint fees_discount_id FK
+        bigint student_id FK
+    }
+    sm_bank_statements {
+        bigint id PK
+    }
+    sm_chart_of_accounts {
+        bigint id PK
+    }
+    sm_expense_heads {
+        bigint id PK
+    }
+    sm_fees_assign_discounts {
+        bigint id PK
+        bigint student_id FK
+        bigint fees_discount_id FK
+    }
+    sm_fees_assigns {
+        bigint id PK
+        bigint student_id FK
+        bigint fees_master_id FK
+        bigint fees_discount_id FK
+    }
+    sm_fees_carry_forwards {
+        bigint id PK
+        bigint student_id FK
+    }
+    sm_fees_discounts {
+        bigint id PK
+    }
+    sm_fees_groups {
+        bigint id PK
+    }
+    sm_fees_masters {
+        bigint id PK
+        bigint fees_group_id FK
+        bigint fees_type_id FK
+    }
+    sm_fees_payments {
+        bigint id PK
+        bigint assign_id FK
+        bigint fees_type_id FK
+        bigint fees_discount_id FK
+        bigint bank_id FK
+        bigint student_id FK
+    }
+    sm_fees_types {
+        bigint id PK
+        bigint fees_group_id FK
+    }
+    sm_income_heads {
+        bigint id PK
+    }
+    sm_inventory_payments {
+        bigint id PK
+    }
+    sm_payment_gateway_settings {
+        bigint id PK
+    }
+    sm_payment_methhods {
+        bigint id PK
+        bigint gateway_id FK
+    }
+    transcations {
+        bigint id PK
+        bigint user_id FK
+    }
+    wallet_transactions {
+        bigint id PK
+        bigint user_id FK
+    }
+    infix_roles {
+        bigint id PK
+    }
+    sm_students {
+        bigint id PK
+    }
+    users {
+        bigint id PK
+    }
+    sm_fees_types ||--o{ dire_fees_installment_child_payments : "fees_type_id"
+    sm_bank_accounts ||--o{ dire_fees_installment_child_payments : "bank_id"
+    sm_students ||--o{ dire_fees_installment_child_payments : "student_id"
+    sm_fees_types ||--o{ direct_fees_installment_assigns : "fees_type_id"
+    sm_fees_discounts ||--o{ direct_fees_installment_assigns : "fees_discount_id"
+    sm_bank_accounts ||--o{ direct_fees_installment_assigns : "bank_id"
+    sm_students ||--o{ direct_fees_installment_assigns : "student_id"
+    infix_roles ||--o{ due_fees_login_prevents : "role_id"
+    users ||--o{ due_fees_login_prevents : "user_id"
+    fm_fees_invoices ||--o{ fm_fees_invoice_chields : "fees_invoice_id"
+    sm_students ||--o{ fm_fees_invoices : "student_id"
+    fm_fees_transactions ||--o{ fm_fees_transaction_chields : "fees_transaction_id"
+    fm_fees_invoices ||--o{ fm_fees_transactions : "fees_invoice_id"
+    fm_fees_invoices ||--o{ fm_fees_weavers : "fees_invoice_id"
+    sm_payment_methhods ||--o{ sm_add_incomes : "payment_method_id"
+    sm_bank_accounts ||--o{ sm_add_incomes : "account_id"
+    sm_fees_discounts ||--o{ sm_bank_payment_slips : "fees_discount_id"
+    sm_students ||--o{ sm_bank_payment_slips : "student_id"
+    sm_students ||--o{ sm_fees_assign_discounts : "student_id"
+    sm_fees_discounts ||--o{ sm_fees_assign_discounts : "fees_discount_id"
+    sm_students ||--o{ sm_fees_assigns : "student_id"
+    sm_fees_masters ||--o{ sm_fees_assigns : "fees_master_id"
+    sm_fees_discounts ||--o{ sm_fees_assigns : "fees_discount_id"
+    sm_students ||--o{ sm_fees_carry_forwards : "student_id"
+    sm_fees_groups ||--o{ sm_fees_masters : "fees_group_id"
+    sm_fees_types ||--o{ sm_fees_masters : "fees_type_id"
+    sm_fees_assigns ||--o{ sm_fees_payments : "assign_id"
+    sm_fees_types ||--o{ sm_fees_payments : "fees_type_id"
+    sm_fees_discounts ||--o{ sm_fees_payments : "fees_discount_id"
+    sm_bank_accounts ||--o{ sm_fees_payments : "bank_id"
+    sm_students ||--o{ sm_fees_payments : "student_id"
+    sm_fees_groups ||--o{ sm_fees_types : "fees_group_id"
+    sm_payment_gateway_settings ||--o{ sm_payment_methhods : "gateway_id"
+    users ||--o{ transcations : "user_id"
+    users ||--o{ wallet_transactions : "user_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-9">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">10</span>
+          <h2>Library</h2>
+        </div>
+        <span class="table-count">4 tables</span>
+      </div>
+      <p class="sheet-blurb">Book catalogue and circulation — issues tracked against library members.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">roles</span><span class="chip">users</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    sm_book_categories {
+        bigint id PK
+    }
+    sm_book_issues {
+        bigint id PK
+        bigint member_id FK
+        bigint book_id FK
+    }
+    sm_books {
+        bigint id PK
+        bigint book_category_id FK
+    }
+    sm_library_members {
+        bigint id PK
+        bigint student_staff_id FK
+        bigint member_type FK
+    }
+    roles {
+        bigint id PK
+    }
+    users {
+        bigint id PK
+    }
+    users ||--o{ sm_book_issues : "member_id"
+    sm_books ||--o{ sm_book_issues : "book_id"
+    sm_book_categories ||--o{ sm_books : "book_category_id"
+    users ||--o{ sm_library_members : "student_staff_id"
+    roles ||--o{ sm_library_members : "member_type"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-10">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">11</span>
+          <h2>Inventory &amp; Store</h2>
+        </div>
+        <span class="table-count">10 tables</span>
+      </div>
+      <p class="sheet-blurb">Stock items, suppliers, purchases and issue/sell records for school supplies.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">roles</span><span class="chip">sm_staffs</span><span class="chip">users</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    sm_item_categories {
+        bigint id PK
+    }
+    sm_item_issues {
+        bigint id PK
+        bigint item_category_id FK
+        bigint role_id FK
+        bigint item_id FK
+    }
+    sm_item_receive_children {
+        bigint id PK
+        bigint item_receive_id FK
+        bigint item_id FK
+    }
+    sm_item_receives {
+        bigint id PK
+        bigint supplier_id FK
+        bigint store_id FK
+    }
+    sm_item_sell_children {
+        bigint id PK
+    }
+    sm_item_sells {
+        bigint id PK
+        bigint role_id FK
+    }
+    sm_item_stores {
+        bigint id PK
+    }
+    sm_items {
+        bigint id PK
+        bigint item_category_id FK
+    }
+    sm_product_purchases {
+        bigint id PK
+        bigint staff_id FK
+        bigint user_id FK
+    }
+    sm_suppliers {
+        bigint id PK
+    }
+    roles {
+        bigint id PK
+    }
+    sm_staffs {
+        bigint id PK
+    }
+    users {
+        bigint id PK
+    }
+    sm_item_categories ||--o{ sm_item_issues : "item_category_id"
+    roles ||--o{ sm_item_issues : "role_id"
+    sm_items ||--o{ sm_item_issues : "item_id"
+    sm_item_receives ||--o{ sm_item_receive_children : "item_receive_id"
+    sm_items ||--o{ sm_item_receive_children : "item_id"
+    sm_suppliers ||--o{ sm_item_receives : "supplier_id"
+    sm_item_stores ||--o{ sm_item_receives : "store_id"
+    roles ||--o{ sm_item_sells : "role_id"
+    sm_item_categories ||--o{ sm_items : "item_category_id"
+    sm_staffs ||--o{ sm_product_purchases : "staff_id"
+    users ||--o{ sm_product_purchases : "user_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-11">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">12</span>
+          <h2>Transport &amp; Hostel</h2>
+        </div>
+        <span class="table-count">6 tables</span>
+      </div>
+      <p class="sheet-blurb">Vehicles and routes for transport; room types and dormitory assignment for boarding.</p>
+      
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    sm_assign_vehicles {
+        bigint id PK
+        bigint route_id FK
+        bigint vehicle_id FK
+    }
+    sm_dormitory_lists {
+        bigint id PK
+    }
+    sm_room_lists {
+        bigint id PK
+        bigint room_type_id FK
+        bigint dormitory_id FK
+    }
+    sm_room_types {
+        bigint id PK
+    }
+    sm_routes {
+        bigint id PK
+    }
+    sm_vehicles {
+        bigint id PK
+    }
+    sm_routes ||--o{ sm_assign_vehicles : "route_id"
+    sm_vehicles ||--o{ sm_assign_vehicles : "vehicle_id"
+    sm_room_types ||--o{ sm_room_lists : "room_type_id"
+    sm_dormitory_lists ||--o{ sm_room_lists : "dormitory_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-12">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">13</span>
+          <h2>Communication</h2>
+        </div>
+        <span class="table-count">28 tables</span>
+      </div>
+      <p class="sheet-blurb">Notices, in-app chat, SMS/email logs, complaints and disciplinary incident tracking.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">sm_classes</span><span class="chip">sm_sections</span><span class="chip">sm_staffs</span><span class="chip">sm_subjects</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    assign_incident_comments {
+        bigint id PK
+    }
+    assign_incidents {
+        bigint id PK
+    }
+    behaviour_record_settings {
+        bigint id PK
+    }
+    chat_block_users {
+        bigint id PK
+    }
+    chat_conversations {
+        bigint id PK
+    }
+    chat_group_message_recipients {
+        bigint id PK
+    }
+    chat_group_message_removes {
+        bigint id PK
+    }
+    chat_group_users {
+        bigint id PK
+    }
+    chat_groups {
+        bigint id PK
+        bigint class_id FK
+        bigint teacher_id FK
+        bigint subject_id FK
+        bigint section_id FK
+    }
+    chat_invitation_types {
+        bigint id PK
+    }
+    chat_invitations {
+        bigint id PK
+    }
+    chat_statuses {
+        bigint id PK
+    }
+    custom_sms_settings {
+        bigint id PK
+    }
+    incidents {
+        bigint id PK
+    }
+    notifications {
+        bigint id PK
+    }
+    sm_complaints {
+        bigint id PK
+    }
+    sm_contact_messages {
+        bigint id PK
+    }
+    sm_email_sms_logs {
+        bigint id PK
+    }
+    sm_notice_boards {
+        bigint id PK
+    }
+    sm_notification_settings {
+        bigint id PK
+    }
+    sm_notifications {
+        bigint id PK
+    }
+    sm_phone_call_logs {
+        bigint id PK
+    }
+    sm_postal_dispatches {
+        bigint id PK
+    }
+    sm_postal_receives {
+        bigint id PK
+    }
+    sm_send_messages {
+        bigint id PK
+    }
+    sm_sms_gateways {
+        bigint id PK
+    }
+    sm_visitors {
+        bigint id PK
+    }
+    sms_templates {
+        bigint id PK
+    }
+    sm_classes {
+        bigint id PK
+    }
+    sm_sections {
+        bigint id PK
+    }
+    sm_staffs {
+        bigint id PK
+    }
+    sm_subjects {
+        bigint id PK
+    }
+    sm_classes ||--o{ chat_groups : "class_id"
+    sm_staffs ||--o{ chat_groups : "teacher_id"
+    sm_subjects ||--o{ chat_groups : "subject_id"
+    sm_sections ||--o{ chat_groups : "section_id"
+        </pre>
+      </div>
+    </section>
+    <section class="sheet" id="mod-13">
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <span class="sheet-num">14</span>
+          <h2>Front Website (CMS)</h2>
+        </div>
+        <span class="table-count">29 tables</span>
+      </div>
+      <p class="sheet-blurb">The public-facing marketing site — pages, news, galleries and sliders — content-managed per tenant.</p>
+      <div class="ext-refs"><span class="ext-label">reads from</span><span class="chip">sm_classes</span><span class="chip">sm_homeworks</span><span class="chip">sm_students</span><span class="chip">users</span></div>
+      <div class="diagram-frame">
+        <pre class="mermaid">
+erDiagram
+    content_share_lists {
+        bigint id PK
+    }
+    content_types {
+        bigint id PK
+    }
+    contents {
+        bigint id PK
+    }
+    home_sliders {
+        bigint id PK
+    }
+    infixedu__pages {
+        bigint id PK
+    }
+    sm_about_pages {
+        bigint id PK
+    }
+    sm_class_exam_routine_pages {
+        bigint id PK
+    }
+    sm_contact_pages {
+        bigint id PK
+    }
+    sm_content_types {
+        bigint id PK
+    }
+    sm_course_categories {
+        bigint id PK
+    }
+    sm_course_pages {
+        bigint id PK
+    }
+    sm_courses {
+        bigint id PK
+    }
+    sm_events {
+        bigint id PK
+    }
+    sm_header_menu_managers {
+        bigint id PK
+    }
+    sm_home_page_settings {
+        bigint id PK
+    }
+    sm_news {
+        bigint id PK
+        bigint category_id FK
+    }
+    sm_news_categories {
+        bigint id PK
+    }
+    sm_news_comments {
+        bigint id PK
+        bigint user_id FK
+        bigint news_id FK
+    }
+    sm_news_pages {
+        bigint id PK
+    }
+    sm_pages {
+        bigint id PK
+    }
+    sm_photo_galleries {
+        bigint id PK
+    }
+    sm_social_media_icons {
+        bigint id PK
+    }
+    sm_teacher_upload_contents {
+        bigint id PK
+        bigint class FK
+    }
+    sm_testimonials {
+        bigint id PK
+    }
+    sm_upload_contents {
+        bigint id PK
+    }
+    sm_upload_homework_contents {
+        bigint id PK
+        bigint homework_id FK
+        bigint student_id FK
+    }
+    sm_video_galleries {
+        bigint id PK
+    }
+    speech_sliders {
+        bigint id PK
+    }
+    video_uploads {
+        bigint id PK
+    }
+    sm_classes {
+        bigint id PK
+    }
+    sm_homeworks {
+        bigint id PK
+    }
+    sm_students {
+        bigint id PK
+    }
+    users {
+        bigint id PK
+    }
+    sm_news_categories ||--o{ sm_news : "category_id"
+    users ||--o{ sm_news_comments : "user_id"
+    sm_news ||--o{ sm_news_comments : "news_id"
+    sm_classes ||--o{ sm_teacher_upload_contents : "class"
+    sm_homeworks ||--o{ sm_upload_homework_contents : "homework_id"
+    sm_students ||--o{ sm_upload_homework_contents : "student_id"
+        </pre>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>Generated by inspecting <code>local_iskool</code> via <code>information_schema.KEY_COLUMN_USAGE</code>.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+  (function(){
+    var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+    var sections = links.map(function(l){ return document.getElementById(l.dataset.target); });
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    links.forEach(function(l){
+      l.addEventListener('click', function(e){
+        e.preventDefault();
+        var el = document.getElementById(l.dataset.target);
+        if(el) el.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block:'start'});
+      });
+    });
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var link = links.find(function(l){ return l.dataset.target === entry.target.id; });
+        if(!link) return;
+        if(entry.isIntersecting){
+          links.forEach(function(l){ l.classList.remove('active'); });
+          link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+    sections.forEach(function(s){ if(s) obs.observe(s); });
+  })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+    securityLevel: 'loose',
+    flowchart: { useMaxWidth: false },
+    er: { useMaxWidth: false }
+  });
+</script>
+</body>
+</html>

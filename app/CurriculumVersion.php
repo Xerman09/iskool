@@ -11,11 +11,6 @@ class CurriculumVersion extends Model
 
     protected $guarded = ['id'];
 
-    public function course()
-    {
-        return $this->belongsTo(Course::class, 'course_id', 'id');
-    }
-
     public function effectiveAcademicYear()
     {
         return $this->belongsTo('App\SmAcademicYear', 'effective_academic_id', 'id');

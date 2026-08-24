@@ -246,9 +246,28 @@
                 </div>
                 <div class="nav_title">
                     <span>  @lang('common.subjects')</span>
-                  
+
                 </div>
         </a>
+    </li>
+@endif
+@if(userPermission('enroll') && menuStatus(6000))
+    <li data-position="{{menuPosition(6000)}}" class="sortable_li">
+        <a href="javascript:void(0)" class="has-arrow" aria-expanded="false">
+            <div class="nav_icon_small">
+                <span class="flaticon-reading-1"></span>
+                </div>
+                <div class="nav_title">
+                    <span>@lang('academics.enroll_section')</span>
+                </div>
+        </a>
+        <ul class="list-unstyled" id="subMenuEnroll">
+            @if(userPermission('student-course-curriculum') && menuStatus(6001))
+                <li data-position="{{menuPosition(6001)}}">
+                    <a href="{{route('student-course-curriculum')}}">@lang('academics.curriculum_layout')</a>
+                </li>
+            @endif
+        </ul>
     </li>
 @endif
 @if(userPermission('student_teacher') && menuStatus(50))

@@ -34,6 +34,7 @@ class CourseController extends Controller
             $course->course_name = $request->course_name;
             $course->course_code = $request->course_code;
             $course->description = $request->description;
+            $course->price_per_unit = $request->price_per_unit ?: null;
             $course->active_status = 1;
             $course->created_by = auth()->user()->id;
             $course->school_id = auth()->user()->school_id;
@@ -66,6 +67,7 @@ class CourseController extends Controller
             $course->course_name = $request->course_name;
             $course->course_code = $request->course_code;
             $course->description = $request->description;
+            $course->price_per_unit = $request->price_per_unit ?: null;
             $course->updated_by = auth()->user()->id;
             $course->save();
 

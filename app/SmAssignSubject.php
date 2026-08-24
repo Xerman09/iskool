@@ -52,6 +52,11 @@ class SmAssignSubject extends Model
         return $this->belongsTo('App\SmSection', 'section_id', 'id');
     }
 
+    public function registrations()
+    {
+        return $this->hasMany(SmOptionalSubjectAssign::class, 'assign_subject_id', 'id');
+    }
+
     public function examSetups()
     {
         return $this->hasMany(SmExamSetup::class, 'class_id', 'class_id')->where('class_id', $this->class_id)

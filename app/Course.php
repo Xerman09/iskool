@@ -16,16 +16,6 @@ class Course extends Model
         return $this->belongsTo('App\SmSchool', 'school_id', 'id');
     }
 
-    public function curriculumVersions()
-    {
-        return $this->hasMany(CurriculumVersion::class, 'course_id', 'id');
-    }
-
-    public function activeCurriculumVersion()
-    {
-        return $this->hasOne(CurriculumVersion::class, 'course_id', 'id')->where('is_active', 1);
-    }
-
     public function subjects()
     {
         return $this->hasMany('App\SmSubject', 'course_id', 'id');
