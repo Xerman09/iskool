@@ -55,6 +55,7 @@ class GlobalSectionController extends Controller
         try {
             $section = new SmSection();
             $section->section_name = $request->name;
+            $section->capacity = $request->capacity;
             $section->created_at = YearCheck::getYear() . '-' . date('m-d h:i:s');
             $section->school_id = Auth::user()->school_id;
             $section->created_at=auth()->user()->id;
@@ -112,6 +113,7 @@ class GlobalSectionController extends Controller
         try {
             $section = SmSection::find($request->id);
             $section->section_name = $request->name;
+            $section->capacity = $request->capacity;
             $result = $section->save();
 
             Toastr::success('Operation successful', 'Success');

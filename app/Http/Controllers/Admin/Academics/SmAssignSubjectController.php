@@ -276,6 +276,7 @@ class SmAssignSubjectController extends Controller
         }
     }
 
+
     public function assignSubjectFind(Request $request)
     {
         $input = $request->all();

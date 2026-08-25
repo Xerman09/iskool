@@ -244,6 +244,9 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
 
         // Subject routes
         Route::get('subject', ['as' => 'subject', 'uses' => 'Admin\Academics\SmSubjectController@index'])->middleware('userRolePermission:subject');
+        Route::get('subject-import', ['as' => 'subject_import', 'uses' => 'Admin\Academics\SmSubjectController@importForm'])->middleware('userRolePermission:subject_store');
+        Route::get('subject-import-sample', ['as' => 'subject_import_sample', 'uses' => 'Admin\Academics\SmSubjectController@downloadImportSample'])->middleware('userRolePermission:subject_store');
+        Route::post('subject-import', ['as' => 'subject_import_store', 'uses' => 'Admin\Academics\SmSubjectController@import'])->middleware('userRolePermission:subject_store');
         Route::post('subject-store', ['as' => 'subject_store', 'uses' => 'Admin\Academics\SmSubjectController@store'])->middleware('userRolePermission:subject_store');
         Route::get('subject-edit/{id}', ['as' => 'subject_edit', 'uses' => 'Admin\Academics\SmSubjectController@edit'])->middleware('userRolePermission:subject_edit');
         Route::post('subject-update', ['as' => 'subject_update', 'uses' => 'Admin\Academics\SmSubjectController@update'])->middleware('userRolePermission:subject_edit');
@@ -300,6 +303,9 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::post('curriculum-builder-store', ['as' => 'curriculum_builder_store', 'uses' => 'Admin\Academics\CurriculumBuilderController@store'])->middleware('userRolePermission:curriculum_builder_store');
         Route::post('curriculum-builder-update', ['as' => 'curriculum_builder_update', 'uses' => 'Admin\Academics\CurriculumBuilderController@update'])->middleware('userRolePermission:curriculum_builder_edit');
         Route::get('curriculum-builder-delete/{id}', ['as' => 'curriculum_builder_delete', 'uses' => 'Admin\Academics\CurriculumBuilderController@delete'])->middleware('userRolePermission:curriculum_builder_delete');
+        Route::get('curriculum-builder-import', ['as' => 'curriculum_builder_import', 'uses' => 'Admin\Academics\CurriculumBuilderController@importForm'])->middleware('userRolePermission:curriculum_builder_store');
+        Route::get('curriculum-builder-import-sample', ['as' => 'curriculum_builder_import_sample', 'uses' => 'Admin\Academics\CurriculumBuilderController@downloadImportSample'])->middleware('userRolePermission:curriculum_builder_store');
+        Route::post('curriculum-builder-import', ['as' => 'curriculum_builder_import_store', 'uses' => 'Admin\Academics\CurriculumBuilderController@import'])->middleware('userRolePermission:curriculum_builder_store');
 
         //Class Routine
         // Route::get('class-routine', ['as' => 'class_routine', 'uses' => 'SmAcademicsController@classRoutine']);

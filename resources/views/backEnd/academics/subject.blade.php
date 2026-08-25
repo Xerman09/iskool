@@ -30,7 +30,14 @@
         @endif
         @endif
         <div class="row">
-           
+            @if(!isset($subject) && userPermission('subject_store'))
+                <div class="col-lg-12 text-right mb-20">
+                    <a href="{{ route('subject_import') }}" class="primary-btn small fix-gr-bg">
+                        <span class="ti-import pr-2"></span> Import Subjects
+                    </a>
+                </div>
+            @endif
+
             <div class="col-lg-4 col-xl-3">
                 <div class="row">
                     <div class="col-lg-12">

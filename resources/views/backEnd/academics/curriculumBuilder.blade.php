@@ -21,17 +21,29 @@
 
 <section class="admin-visitor-area up_st_admin_visitor">
     <div class="container-fluid p-0">
-
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="main-title">
-                    <h3 class="mb-20">@lang('academics.select_criteria')</h3>
-                </div>
-            </div>
-        </div>
         <div class="row">
             <div class="col-lg-12">
                 <div class="white-box">
+                    <div class="row">
+                        <div class="col-lg-6 col-md-6 col-sm-6">
+                            <div class="main-title">
+                                <h3 class="mb-15">@lang('academics.select_criteria')</h3>
+                            </div>
+                        </div>
+                        @if(isset($subjects) && userPermission('curriculum_builder_store'))
+                        <div class="col-lg-6 text-left text-sm-right col-md-6 col-sm-6">
+                            <a href="{{ route('curriculum_builder_import', ['course_id' => $criteria['course_id'], 'curriculum_version_id' => $criteria['curriculum_version_id']]) }}" class="primary-btn small fix-gr-bg">
+                                <span class="ti-import pr-2"></span>
+                                Import
+                            </a>
+                            <a href="#" data-toggle="modal" data-target="#addCurriculumSubjectModal" class="primary-btn small fix-gr-bg">
+                                <span class="ti-plus pr-2"></span>
+                                @lang('academics.add_curriculum_subject')
+                            </a>
+                        </div>
+                        @endif
+                    </div>
+
                     {{ Form::open(['class' => 'form-horizontal', 'route' => 'curriculum-builder', 'method' => 'GET']) }}
                         <div class="row">
                             <div class="col-lg-3 mb-3 mb-lg-0">
@@ -89,29 +101,23 @@
                 </div>
             </div>
         </div>
+    </div>
+</section>
 
-        @if(isset($subjects))
-        <div class="row mt-40 justify-content-between align-items-center">
-            <div class="col-auto">
-                <div class="main-title">
-                    <h3 class="mb-0">@lang('academics.curriculum_subjects')</h3>
+@if(isset($subjects))
+<section class="admin-visitor-area up_st_admin_visitor">
+    <div class="container-fluid p-0">
+        <div class="white-box mt-40">
+            <div class="row">
+                <div class="col-lg-6 col-md-6">
+                    <div class="main-title">
+                        <h3 class="mb-15">@lang('academics.curriculum_subjects')</h3>
+                    </div>
                 </div>
             </div>
-            @if(userPermission('curriculum_builder_store'))
-            <div class="col-auto">
-                <a href="#" data-toggle="modal" data-target="#addCurriculumSubjectModal" class="primary-btn fix-gr-bg" title="@lang('academics.add_curriculum_subject')" style="width:40px;height:40px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">
-                    <span class="ti-plus"></span>
-                </a>
-            </div>
-            @endif
-        </div>
-
-        <div class="row mt-20">
-            <div class="col-lg-12">
-                <div class="white-box">
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <x-table>
+            <div class="row">
+                <div class="col-lg-12">
+                    <x-table>
                                 <table id="table_id" class="table Crm_table_active3" cellspacing="0" width="100%">
                                     <thead>
                                         <tr>
@@ -212,8 +218,6 @@
                                     </tbody>
                                 </table>
                             </x-table>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -252,9 +256,8 @@
                 </div>
             </div>
         </div>
-        @endif
-
     </div>
 </section>
+@endif
 @endsection
 @include('backEnd.partials.data_table_js')

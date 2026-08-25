@@ -30,6 +30,7 @@ class SectionRequest extends FormRequest
             }, function ($query) {
                 $query->where('academic_id', getAcademicId());
             })->where('school_id', auth()->user()->school_id)->ignore($this->id)],
+            'capacity' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }

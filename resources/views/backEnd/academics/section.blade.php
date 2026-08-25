@@ -71,9 +71,20 @@
                                                 @endif
                                             </div>
                                         </div>
-                                     
+                                        <div class="col-lg-12 mt-15">
+                                            <div class="primary_input">
+                                                <label for="sectionCapacity">@lang('academics.capacity')</label>
+                                                <input
+                                                    class="primary_input_field form-control{{ @$errors->has('capacity') ? ' is-invalid' : '' }}"
+                                                    type="number" min="1" name="capacity" autocomplete="off" id="sectionCapacity"
+                                                    value="{{ isset($section) ? $section->capacity : old('capacity') }}">
+                                                @if ($errors->has('capacity'))
+                                                    <span class="text-danger">{{ @$errors->first('capacity') }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </div>
-                                   
+
                                     @php
                                         $tooltip = '';
                                         if (userPermission('section_store')) {
@@ -122,6 +133,7 @@
     
                                             <tr>
                                                 <th>@lang('common.section')</th>
+                                                <th>@lang('academics.capacity')</th>
                                                 @if (moduleStatusCheck('MultiBranch') && isset($branches))
                                                     <th>@lang('common.branch')</th>
                                                 @endif
@@ -131,11 +143,12 @@
                                                 <th>@lang('common.action')</th>
                                             </tr>
                                         </thead>
-    
+
                                         <tbody>
                                             @foreach ($sections as $section)
                                                 <tr>
                                                     <td>{{ @$section->section_name }}</td>
+                                                    <td>{{ @$section->capacity ?: '-' }}</td>
                                                     @if (moduleStatusCheck('MultiBranch') && isset($branches))
                                                         <td></td>
                                                     @endif
