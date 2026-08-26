@@ -29,6 +29,7 @@ class CourseCurriculumLayoutController extends Controller
             $years = null;
             $grandTotalUnits = 0;
             $grandTotal = 0;
+            $printUrl = null;
 
             if ($request->filled(['course_id', 'curriculum_version_id'])) {
                 $course = Course::where('school_id', auth()->user()->school_id)->findOrFail($request->course_id);
@@ -87,17 +88,30 @@ class CourseCurriculumLayoutController extends Controller
                     $grandTotalUnits += $year['units'];
                     $grandTotal += $year['yearTotal'];
                 }
+
+                $printUrl = route('curriculum-layout', [
+                    'course_id' => $course->id,
+                    'curriculum_version_id' => $curriculumVersion->id,
+                    'state' => 'print',
+                ]);
             }
 
-            return view('backEnd.academics.courseCurriculumLayout', compact(
+            $data = compact(
                 'courses',
                 'curriculumVersions',
                 'course',
                 'curriculumVersion',
                 'years',
                 'grandTotalUnits',
-                'grandTotal'
-            ));
+                'grandTotal',
+                'printUrl'
+            );
+
+            if ($request->get('state') == 'print' && $course && $curriculumVersion) {
+                return view('backEnd.academics.courseCurriculumLayoutPrint', $data);
+            }
+
+            return view('backEnd.academics.courseCurriculumLayout', $data);
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

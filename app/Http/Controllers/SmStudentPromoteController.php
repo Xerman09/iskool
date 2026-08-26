@@ -558,6 +558,15 @@ class SmStudentPromoteController extends Controller
                             }
                             $pre_record->is_promote = 1;
                             $pre_record->save();
+
+                            // University-flow students (course/curriculum assigned) aren't tracked via
+                            // StudentRecord.class_id for enrollment purposes - advance their own row so
+                            // subject self-registration sees the new year level.
+                            if ($current_student->course_id && $current_student->curriculum_version_id) {
+                                $current_student->class_id = gv($student_data, 'class');
+                                $current_student->academic_id = $request->promote_session;
+                                $current_student->save();
+                            }
                         }
             
                     $compact['user_email'] = $pre_record->studentDetail->email;

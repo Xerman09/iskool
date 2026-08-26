@@ -77,6 +77,12 @@
                 <div class="white-box">
                     <h5 class="mb-15">{{$subject->subject_name}} ({{$subject->subject_code}}) &mdash; {{$subject->units}} @lang('academics.units')</h5>
 
+                    @if(!empty($subject->unmetPrerequisites))
+                    <p class="text-danger mb-15">
+                        @lang('academics.prerequisite_not_met'): {{ implode(', ', $subject->unmetPrerequisites) }}
+                    </p>
+                    @endif
+
                     @if($subject->blocks->count() == 0)
                     <p class="text-muted mb-0">@lang('academics.no_open_blocks')</p>
                     @else
@@ -94,7 +100,7 @@
                             <tbody>
                                 @foreach($subject->blocks as $block)
                                 @php
-                                    $isFull = $block->slotsLeft !== null && $block->slotsLeft <= 0 && $subject->chosenAssignSubjectId != $block->id;
+                                    $isFull = ($block->slotsLeft !== null && $block->slotsLeft <= 0 && $subject->chosenAssignSubjectId != $block->id) || !empty($subject->unmetPrerequisites);
                                 @endphp
                                 <tr>
                                     <td>

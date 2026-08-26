@@ -90,7 +90,7 @@ trait SidebarDataStore
         $user = auth()->user(); 
 
         $dashboardSections = ["dashboard", "menumanage.index"];
-        $administration_sections = ["admin_section", "academics", "enroll", "study_material", 'download-center', "lesson-plan", "bulk_print","certificate","university","lms"];
+        $administration_sections = ["admin_section", "academics", "enroll", "university_setup", "study_material", 'download-center', "lesson-plan", "bulk_print","certificate","university","lms"];
         $student_sections = ["student_info", "fees", "fees_collection", "transport", "dormitory", "library", "homework", "behaviour_records","alumni_records"];
         $alumni_sections = ["student_info", "fees", "fees_collection", "transport", "dormitory", "library", "homework", "behaviour_records","alumni_records"];
         $exam_sections = ["examination", "online_exam", "examplan"];
@@ -184,7 +184,8 @@ trait SidebarDataStore
                 ->where(function($q) {
                     $q->where('user_id', auth()->user()->id)->orWhereNull('user_id');
                  })
-                ->get(['id', 'name', 'type', 'route', 'parent_route', 'permission_section']);
+                ->orderBy('position', 'ASC')
+                ->get(['id', 'name', 'type', 'route', 'parent_route', 'permission_section', 'position']);
         } else {
             $permissionInfos = Permission::where('is_menu', 1)
                 

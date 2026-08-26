@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Academics;
 use DateTime;
 use App\SmClass;
 use App\SmStaff;
+use App\SmSubject;
 use App\SmSection;
 use App\SmStudent;
 use App\SmWeekend;
@@ -316,26 +317,48 @@ class SmClassRoutineNewController extends Controller
                         continue;
                     }
 
-                    $class_routine_time = SmClassRoutineUpdate::where('day', $day)
-                                            ->where('class_id', $request->class_id)
-                                            ->where('section_id', $request->section_id)
-                                            ->where('academic_id', getAcademicId())
-                                            ->where('school_id', Auth::user()->school_id)
-                                            ->first();
-                    
-                    if ($class_routine_time) {
-                        $start_time = $class_routine_time->start_time;
-                        $end_time = $class_routine_time->end_time;
-                        $startTimeToInteger = strtotime($start_time);
-                        $endTimeToInteger = strtotime($end_time);
-                        $requestStartTime =  strtotime(gv($routine_data, 'start_time'));
-                        if ($endTimeToInteger > $requestStartTime && $startTimeToInteger < $requestStartTime) {
-                            Toastr::error('This Time Has another Class', 'Failed');
+                    // Real interval-overlap check: existing.start < new.end AND existing.end > new.start.
+                    // This catches partial overlaps AND a new slot fully containing (or being fully
+                    // contained by) an existing one, in either direction - the old check here only
+                    // tested whether the new start time landed strictly inside one single existing
+                    // row, so it missed most real conflicts and never checked teacher/room at all.
+                    $newStart = date('H:i:s', strtotime(gv($routine_data, 'start_time')));
+                    $newEnd = date('H:i:s', strtotime(gv($routine_data, 'end_time')));
+                    $teacherId = gv($routine_data, 'teacher_id');
+                    $roomId = gv($routine_data, 'room');
+
+                    $overlapBase = SmClassRoutineUpdate::where('day', $day)
+                        ->where('academic_id', getAcademicId())
+                        ->where('school_id', Auth::user()->school_id)
+                        ->where('start_time', '<', $newEnd)
+                        ->where('end_time', '>', $newStart);
+
+                    $classConflict = (clone $overlapBase)
+                        ->where('class_id', $request->class_id)
+                        ->where('section_id', $request->section_id)
+                        ->exists();
+                    if ($classConflict) {
+                        Toastr::error('This class already has another subject scheduled at an overlapping time.', 'Failed');
+                        return redirect()->back();
+                    }
+
+                    if ($teacherId) {
+                        $teacherConflict = (clone $overlapBase)->where('teacher_id', $teacherId)->exists();
+                        if ($teacherConflict) {
+                            Toastr::error('The selected teacher already has another class at an overlapping time.', 'Failed');
                             return redirect()->back();
                         }
                     }
-                
-                    
+
+                    if ($roomId) {
+                        $roomConflict = (clone $overlapBase)->where('room_id', $roomId)->exists();
+                        if ($roomConflict) {
+                            Toastr::error('The selected room is already booked at an overlapping time.', 'Failed');
+                            return redirect()->back();
+                        }
+                    }
+
+
 
                     $class_routine = new SmClassRoutineUpdate();
                     $class_routine->class_id = $request->class_id;
@@ -423,6 +446,37 @@ class SmClassRoutineNewController extends Controller
             return redirect()->back();
         }
 
+    }
+
+    public function subjectScheduledHours(Request $request)
+    {
+        try {
+            $rows = SmClassRoutineUpdate::where('subject_id', $request->subject_id)
+                ->where('class_id', $request->class_id)
+                ->where('section_id', $request->section_id)
+                ->where('is_break', 0)
+                ->where('academic_id', getAcademicId())
+                ->where('school_id', Auth::user()->school_id)
+                ->get(['start_time', 'end_time']);
+
+            $totalMinutes = 0;
+            foreach ($rows as $row) {
+                $start = strtotime($row->start_time);
+                $end = strtotime($row->end_time);
+                if ($start && $end && $end > $start) {
+                    $totalMinutes += ($end - $start) / 60;
+                }
+            }
+
+            $units = SmSubject::where('id', $request->subject_id)->value('units');
+
+            return response()->json([
+                'scheduled_hours' => round($totalMinutes / 60, 2),
+                'target_hours' => $units ? round($units, 2) : 0,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['scheduled_hours' => 0, 'target_hours' => 0]);
+        }
     }
 
     public function isBusy(Request $request)

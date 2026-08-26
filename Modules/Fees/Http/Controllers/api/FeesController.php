@@ -1012,6 +1012,17 @@ class FeesController extends Controller
     }
 
     public function addFeesAmount($transcation_id , $total_paid_amount){
+        // Atomically claim this transaction before processing - prevents a retried/duplicate
+        // API call (common on mobile networks) from double-crediting the bank/income and
+        // double-reducing the invoice's due amount.
+        $claimed = FmFeesTransaction::where('id', $transcation_id)
+            ->where('paid_status', '!=', 'approve')
+            ->update(['paid_status' => 'approve']);
+
+        if (!$claimed) {
+            return;
+        }
+
         $transcation = FmFeesTransaction::find($transcation_id);
         $allTranscations = FmFeesTransactionChield::where('fees_transaction_id', $transcation->id)->get();
         foreach ($allTranscations as $key => $allTranscation) {

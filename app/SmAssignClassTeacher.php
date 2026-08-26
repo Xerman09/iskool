@@ -18,6 +18,16 @@ class SmAssignClassTeacher extends Model
         return $this->belongsTo('App\SmSection', 'section_id', 'id');
     }
 
+    public function course()
+    {
+        return $this->belongsTo('App\Course', 'course_id', 'id');
+    }
+
+    public function semester()
+    {
+        return $this->belongsTo('App\Semester', 'semester_id', 'id');
+    }
+
     public function classTeachers()
     {
         return $this->hasMany('App\SmClassTeacher', 'assign_class_teacher_id', 'id');

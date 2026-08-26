@@ -14,6 +14,8 @@ class SmAssignClassTeacherRequest extends FormRequest
     public function rules()
     {
         return [
+            'course' => "required",
+            'semester' => "required",
             'class' => "required",
             'section' => "required",
             'teacher' => "required",

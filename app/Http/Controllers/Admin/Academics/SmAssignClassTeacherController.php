@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin\Academics;
 
+use App\Course;
 use App\SmClass;
+use App\Semester;
 use App\SmStaff;
 use App\SmSection;
 use App\SmClassSection;
@@ -30,12 +32,14 @@ class SmAssignClassTeacherController extends Controller
     {
         try {
             $classes = SmClass::get();
+            $courses = Course::where('school_id', auth()->user()->school_id)->get();
+            $semesters = Semester::where('school_id', auth()->user()->school_id)->get();
             $teachers = SmStaff::status()->where(function ($q) {
                 $q->where('role_id', 4)->orWhere('previous_role_id', 4);
             })->get();
-            $assign_class_teachers = SmAssignClassTeacher::with('class', 'section', 'classTeachers')->where('academic_id', getAcademicId())->status()->orderBy('class_id', 'ASC')->orderBy('section_id', 'ASC')->get();
+            $assign_class_teachers = SmAssignClassTeacher::with('class', 'section', 'course', 'semester', 'classTeachers')->where('academic_id', getAcademicId())->status()->orderBy('class_id', 'ASC')->orderBy('section_id', 'ASC')->get();
 
-            return view('backEnd.academics.assign_class_teacher', compact('classes', 'teachers', 'assign_class_teachers'));
+            return view('backEnd.academics.assign_class_teacher', compact('classes', 'courses', 'semesters', 'teachers', 'assign_class_teachers'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -47,6 +51,8 @@ class SmAssignClassTeacherController extends Controller
         DB::beginTransaction();
         try {
             $assigned_class_teacher = SmAssignClassTeacher::where('active_status', 1)
+                ->where('course_id', $request->course)
+                ->where('semester_id', $request->semester)
                 ->where('class_id', $request->class)
                 ->where('section_id', $request->section)
                 ->where('academic_id', getAcademicId())
@@ -55,6 +61,8 @@ class SmAssignClassTeacherController extends Controller
 
             if (empty($assigned_class_teacher)) {
                 $assign_class_teacher = new SmAssignClassTeacher();
+                $assign_class_teacher->course_id = $request->course;
+                $assign_class_teacher->semester_id = $request->semester;
                 $assign_class_teacher->class_id = $request->class;
                 $assign_class_teacher->section_id = $request->section;
                 $assign_class_teacher->school_id = auth()->user()->school_id;
@@ -95,10 +103,12 @@ class SmAssignClassTeacherController extends Controller
 
         try {
             $classes = SmClass::get();
+            $courses = Course::where('school_id', auth()->user()->school_id)->get();
+            $semesters = Semester::where('school_id', auth()->user()->school_id)->get();
             $teachers = SmStaff::status()->where(function ($q) {
                 $q->where('role_id', 4)->orWhere('previous_role_id', 4);
             })->get();
-            $assign_class_teachers = SmAssignClassTeacher::with('class', 'section', 'classTeachers')->where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $assign_class_teachers = SmAssignClassTeacher::with('class', 'section', 'course', 'semester', 'classTeachers')->where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             $assign_class_teacher = SmAssignClassTeacher::find($id);
             $sections = SmSection::get();
 
@@ -107,7 +117,7 @@ class SmAssignClassTeacherController extends Controller
                 $teacherId[] = $classTeacher->teacher_id;
             }
 
-            return view('backEnd.academics.assign_class_teacher', compact('assign_class_teacher', 'classes', 'teachers', 'assign_class_teachers', 'sections', 'teacherId'));
+            return view('backEnd.academics.assign_class_teacher', compact('assign_class_teacher', 'classes', 'courses', 'semesters', 'teachers', 'assign_class_teachers', 'sections', 'teacherId'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -117,7 +127,7 @@ class SmAssignClassTeacherController extends Controller
     public function update(SmAssignClassTeacherRequest $request, $id)
     {
 
-        $is_duplicate = SmAssignClassTeacher::where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->where('class_id', $request->class)->where('section_id', $request->section)->where('id', '!=', $request->id)->first();
+        $is_duplicate = SmAssignClassTeacher::where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->where('course_id', $request->course)->where('semester_id', $request->semester)->where('class_id', $request->class)->where('section_id', $request->section)->where('id', '!=', $request->id)->first();
         if ($is_duplicate) {
             Toastr::warning('Duplicate entry found!', 'Warning');
             return redirect()->back();
@@ -128,6 +138,8 @@ class SmAssignClassTeacherController extends Controller
             SmClassTeacher::where('assign_class_teacher_id', $request->id)->delete();
 
             $assign_class_teacher = SmAssignClassTeacher::find($request->id);
+            $assign_class_teacher->course_id = $request->course;
+            $assign_class_teacher->semester_id = $request->semester;
             $assign_class_teacher->class_id = $request->class;
             $assign_class_teacher->academic_id = getAcademicId();
             $assign_class_teacher->section_id = $request->section;

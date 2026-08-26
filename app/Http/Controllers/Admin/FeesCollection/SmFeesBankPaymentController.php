@@ -162,6 +162,26 @@ class SmFeesBankPaymentController extends Controller
                 $bank_payment = SmBankPaymentSlip::where('id',$request->id)->where('school_id',Auth::user()->school_id)->first();
             }
 
+            if (!$bank_payment) {
+                Toastr::error('Operation Failed', 'Failed');
+                return redirect()->back();
+            }
+
+            // Atomically claim this slip before doing any money-moving work below - a plain
+            // check-then-act here would still let a double-click (or a replayed request)
+            // race through and process the same payment twice. The conditional UPDATE only
+            // succeeds for whichever request gets there first; a second one updates 0 rows
+            // and is turned away immediately.
+            $claimed = SmBankPaymentSlip::where('id', $bank_payment->id)
+                ->where('approve_status', '!=', 1)
+                ->update(['approve_status' => 1]);
+
+            if (!$claimed) {
+                Toastr::warning('This payment has already been approved.', 'Warning');
+                return redirect()->back();
+            }
+            $bank_payment->approve_status = 1;
+
             if(moduleStatusCheck('University')){
                 if(! is_null($bank_payment->child_payment_id)){
                     $childPayment = UnFeesInstallAssignChildPayment::find($bank_payment->child_payment_id);

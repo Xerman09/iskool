@@ -339,22 +339,43 @@ class SmFeesController extends Controller
     public function feesPaymentDelete(Request $request)
     {
         try {
-            $assignFee=SmFeesAssign::find($request->assign_id);
-            if($assignFee){
-                $newAmount=$assignFee->fees_amount+$request->amount;
-                $assignFee->fees_amount=$newAmount;
-                $assignFee->save();
-            }
             if (checkAdmin()) {
                 $payment = SmFeesPayment::find($request->id);
             }else{
                 $payment = SmFeesPayment::where('active_status',1)->where('id',$request->id)->where('school_id',Auth::user()->school_id)->first();
             }
-            if($payment){
-                $income = SmAddIncome::where('fees_collection_id',$payment->id)->first();
-                if($income){
-                    $income->delete();
+
+            if (!$payment) {
+                Toastr::error('Operation Failed', 'Failed');
+                return redirect()->back();
+            }
+
+            // Restore the due amount using the payment's own stored amount, not client input -
+            // a mismatched/forged request amount must never be able to corrupt the due balance.
+            $assignFee=SmFeesAssign::find($request->assign_id);
+            if($assignFee){
+                $newAmount=$assignFee->fees_amount+$payment->amount;
+                $assignFee->fees_amount=$newAmount;
+                $assignFee->save();
+            }
+
+            // Reverse the bank balance for a bank/cheque payment before deleting its records -
+            // otherwise the bank account stays permanently off by this payment's amount.
+            $statement = SmBankStatement::where('fees_payment_id', $payment->id)->first();
+            if ($statement) {
+                $bank = SmBankAccount::where('id', $statement->bank_id)
+                    ->where('school_id', Auth::user()->school_id)
+                    ->first();
+                if ($bank) {
+                    $bank->current_balance = $bank->current_balance - $statement->amount;
+                    $bank->update();
                 }
+                $statement->delete();
+            }
+
+            $income = SmAddIncome::where('fees_collection_id',$payment->id)->first();
+            if($income){
+                $income->delete();
             }
             $result = $payment->delete();
 

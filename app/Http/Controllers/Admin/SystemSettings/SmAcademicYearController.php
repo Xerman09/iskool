@@ -101,14 +101,42 @@ class SmAcademicYearController extends Controller
                             AcademicSchoolScope::class,
                             ActiveStatusSchoolScope::class
                         ])->get();
-                       
+
+                        // Curriculum subjects carry over into the new year, but teacher
+                        // assignments (SmAssignSubject) never do - those must be redone
+                        // by the admin (e.g. a teacher may have resigned since).
+                        $subjectIdMap = [];
+
                         if (!empty($data)) {
                             foreach ($data as $k0ey => $value) {
                                 $newClient = $value->replicate();
                                 $newClient->created_at = $created_year;
                                 $newClient->updated_at = $created_year;
                                 $newClient->academic_id = $academic_year->id;
+                                if ($table_name == \App\SmSubject::class) {
+                                    $newClient->source_subject_id = $value->id;
+                                }
                                 $newClient->save();
+
+                                if ($table_name == \App\SmSubject::class) {
+                                    $subjectIdMap[$value->id] = $newClient->id;
+                                }
+                            }
+                        }
+
+                        // Re-link prerequisites between the newly copied subjects.
+                        if ($table_name == \App\SmSubject::class && !empty($subjectIdMap)) {
+                            $oldPrerequisites = \App\SubjectPrerequisite::whereIn('subject_id', array_keys($subjectIdMap))->get();
+                            foreach ($oldPrerequisites as $prerequisite) {
+                                $newSubjectId = $subjectIdMap[$prerequisite->subject_id] ?? null;
+                                $newPrerequisiteSubjectId = $subjectIdMap[$prerequisite->prerequisite_subject_id] ?? null;
+                                if ($newSubjectId && $newPrerequisiteSubjectId) {
+                                    $newPrerequisite = new \App\SubjectPrerequisite();
+                                    $newPrerequisite->subject_id = $newSubjectId;
+                                    $newPrerequisite->prerequisite_subject_id = $newPrerequisiteSubjectId;
+                                    $newPrerequisite->school_id = Auth::user()->school_id;
+                                    $newPrerequisite->save();
+                                }
                             }
                         }
                     }

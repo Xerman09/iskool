@@ -64,6 +64,46 @@
                                     <div class="col-lg-12">
                                         <input type="hidden" name="url" id="url" value="{{URL::to('/')}}">
                                         <label class="primary_input_label" for="">
+                                            {{ __('academics.program') }}
+                                                <span class="text-danger"> *</span>
+                                        </label>
+                                        <select class="primary_select form-control {{ @$errors->has('course') ? ' is-invalid' : '' }}" id="select_course" name="course">
+                                            <option data-display="@lang('academics.program') *" value="">@lang('academics.program') *</option>
+                                            @foreach($courses as $course)
+                                            <option value="{{ @$course->id}}" {{isset($assign_class_teacher) && @$course->id == @$assign_class_teacher->course_id ? 'selected':''}}>{{ @$course->course_name}}</option>
+                                            @endforeach
+                                        </select>
+                                        @if ($errors->has('course'))
+                                        <span class="text-danger invalid-select" role="alert">
+                                            {{ @$errors->first('course') }}
+                                        </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div class="row mt-15">
+                                    <div class="col-lg-12">
+                                        <label class="primary_input_label" for="">
+                                            {{ __('academics.semester') }}
+                                                <span class="text-danger"> *</span>
+                                        </label>
+                                        <select class="primary_select form-control {{ @$errors->has('semester') ? ' is-invalid' : '' }}" id="select_semester" name="semester">
+                                            <option data-display="@lang('academics.semester') *" value="">@lang('academics.semester') *</option>
+                                            @foreach($semesters as $semester)
+                                            <option value="{{ @$semester->id}}" {{isset($assign_class_teacher) && @$semester->id == @$assign_class_teacher->semester_id ? 'selected':''}}>{{ @$semester->semester_name}}</option>
+                                            @endforeach
+                                        </select>
+                                        @if ($errors->has('semester'))
+                                        <span class="text-danger invalid-select" role="alert">
+                                            {{ @$errors->first('semester') }}
+                                        </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div class="row mt-15">
+                                    <div class="col-lg-12">
+                                        <label class="primary_input_label" for="">
                                             {{ __('common.class') }}
                                                 <span class="text-danger"> *</span>
                                         </label>
@@ -183,6 +223,8 @@
                                     <thead>
                                       
                                         <tr>
+                                            <th>@lang('academics.program')</th>
+                                            <th>@lang('academics.semester')</th>
                                             <th>@lang('common.class')</th>
                                             <th>@lang('common.section')</th>
                                             <th>@lang('common.teacher')</th>
@@ -192,6 +234,8 @@
                                     <tbody>
                                         @foreach($assign_class_teachers as $assign_class_teacher)
                                         <tr>
+                                            <td valign="top">{{@$assign_class_teacher->course != ""? @$assign_class_teacher->course->course_name:""}}</td>
+                                            <td valign="top">{{@$assign_class_teacher->semester != ""? @$assign_class_teacher->semester->semester_name:""}}</td>
                                             <td valign="top">{{@$assign_class_teacher->class !=""? @$assign_class_teacher->class->class_name:""}}</td>
                                             <td valign="top">{{@$assign_class_teacher->section != ""? @$assign_class_teacher->section->section_name:""}}</td>
                                             <td valign="top">

@@ -117,6 +117,13 @@ class SmAddExpenseController extends Controller
                 }else{
                     $add_expense = SmAddExpense::where('id',$request->id)->where('school_id',Auth::user()->school_id)->first();
             }
+
+            // Capture the ORIGINAL bank-affecting state before it's overwritten below, so the
+            // old account's balance can be correctly reversed no matter what this is changed to.
+            $previousAccountId = $add_expense->account_id;
+            $previousAmount = $add_expense->amount;
+            $wasBankPayment = paymentMethodName($add_expense->payment_method_id);
+
             $add_expense->name = $request->name;
             $add_expense->expense_head_id = $request->expense_head;
             $add_expense->date = date('Y-m-d', strtotime($request->date));
@@ -134,6 +141,20 @@ class SmAddExpenseController extends Controller
                 $add_expense->academic_id = getAcademicId();
             }
             $result = $add_expense->save();
+
+            // Reverse the ORIGINAL account's balance if this was previously a bank expense,
+            // regardless of what payment method/account it's being changed to now - otherwise
+            // switching banks (or switching away from a bank method) leaves the old account
+            // permanently short by this expense's amount.
+            if ($wasBankPayment && $previousAccountId) {
+                $previousBank = SmBankAccount::where('id', $previousAccountId)
+                                ->where('school_id', Auth::user()->school_id)
+                                ->first();
+                if ($previousBank) {
+                    $previousBank->current_balance = $previousBank->current_balance + $previousAmount;
+                    $previousBank->update();
+                }
+            }
 
             if(paymentMethodName($request->payment_method)){
                 SmBankStatement::where('item_receive_id', $request->id)

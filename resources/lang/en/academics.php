@@ -1,6 +1,16 @@
 <?php 
 return[
     'academics'=> 'Academics',
+    'university_setup' => 'University SetUp',
+    'down_payment' => 'Down Payment',
+    'hrs_scheduled' => 'hrs scheduled (based on units)',
+    'subject_completion' => 'Subject Completion',
+    'mark_pass_fail' => 'Mark Pass / Fail',
+    'passed' => 'Passed',
+    'failed' => 'Failed',
+    'not_graded' => 'Not Graded',
+    'no_students_enrolled_this_subject' => 'No students enrolled in this subject/block.',
+    'prerequisite_not_met' => 'Prerequisite not yet passed',
     'global_academics' => 'Global Academics',
     'global_exam_setup' => 'Global Exam Setup',
     'optional_subject'=>'Optional Subject',
@@ -270,4 +280,6 @@ return[
     'edit_payment_plan' => 'Edit Payment Plan',
     'payment_plan_edit_hint' => 'Choose a new plan type and schedule. Already-paid installments are untouched — only the remaining unpaid installments will be replaced.',
     'reschedule_payment_plan' => 'Reschedule',
+    'time' => 'Time',
+    'view_enrolled_subjects' => 'View Enrolled Subjects',
 ];

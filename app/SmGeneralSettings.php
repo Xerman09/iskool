@@ -301,8 +301,8 @@ class SmGeneralSettings extends Model
                 $insert_results->student_id         = $student_id;
                 $markGrades = SmMarksGrade::where([['from', '<=', $exart_gp_point], ['up', '>=', $exart_gp_point]])->first();
 
-                if ($is_absent == "") {
-                    $insert_results->result             = $markGrades->grade_name;
+                if ($is_absent == 0) {
+                    $insert_results->result             = optional($markGrades)->grade_name ?? 'F';
                 } else {
                     $insert_results->result             = 'F';
                 }

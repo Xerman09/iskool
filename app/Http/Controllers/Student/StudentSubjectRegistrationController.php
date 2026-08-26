@@ -61,11 +61,13 @@ class StudentSubjectRegistrationController extends Controller
 
                         $subject->blocks = $blocks;
                         $subject->chosenAssignSubjectId = $existingChoices->get($subject->id);
+                        $subject->unmetPrerequisites = $this->unmetPrerequisites($student->id, $subject);
                     });
                 }
             }
 
-            $hasSubmitted = $subjects->count() > 0 && $subjects->every(fn ($s) => $s->chosenAssignSubjectId !== null);
+            $eligibleSubjects = $subjects->filter(fn ($s) => empty($s->unmetPrerequisites));
+            $hasSubmitted = $eligibleSubjects->count() > 0 && $eligibleSubjects->every(fn ($s) => $s->chosenAssignSubjectId !== null);
 
             return view('backEnd.studentPanel.subjectRegistration', compact('student', 'activeSemester', 'subjects', 'hasSubmitted'));
         } catch (\Exception $e) {
@@ -100,7 +102,17 @@ class StudentSubjectRegistrationController extends Controller
             $choices = (array) $request->input('assign_subject_id', []);
 
             $selectedBlocks = [];
+            $lockedSubjectIds = [];
             foreach ($subjects as $subject) {
+                $unmet = $this->unmetPrerequisites($student->id, $subject);
+                if (!empty($unmet)) {
+                    // Not eligible for this subject yet - skip it entirely rather than
+                    // blocking the rest of the semester's registration. They can still
+                    // enroll in every other subject they do qualify for.
+                    $lockedSubjectIds[] = $subject->id;
+                    continue;
+                }
+
                 $assignSubjectId = $choices[$subject->id] ?? null;
                 if (!$assignSubjectId) {
                     Toastr::error("Please select a block for {$subject->subject_name}.", 'Failed');
@@ -161,9 +173,16 @@ class StudentSubjectRegistrationController extends Controller
                 ->where('is_promote', 0)
                 ->first();
 
-            DB::transaction(function () use ($subjects, $selectedBlocks, $student, $schoolId, $record) {
+            $lockedSubjectNames = $subjects->whereIn('id', $lockedSubjectIds)->pluck('subject_name')->implode(', ');
+
+            // Don't touch existing registrations for subjects that are locked this submission -
+            // a prerequisite may have been attached after the student already registered/was
+            // graded for it, and that record shouldn't be silently wiped.
+            $editableSubjectIds = $subjects->pluck('id')->diff($lockedSubjectIds);
+
+            DB::transaction(function () use ($editableSubjectIds, $selectedBlocks, $student, $schoolId, $record) {
                 SmOptionalSubjectAssign::where('student_id', $student->id)
-                    ->whereIn('subject_id', $subjects->pluck('id'))
+                    ->whereIn('subject_id', $editableSubjectIds)
                     ->delete();
 
                 foreach ($selectedBlocks as $block) {
@@ -183,12 +202,39 @@ class StudentSubjectRegistrationController extends Controller
                 $student->save();
             });
 
-            Toastr::success('Subjects registered. Your enrollment is pending review by the Registrar/Cashier.', 'Success');
+            $message = 'Subjects registered. Your enrollment is pending review by the Registrar/Cashier.';
+            if ($lockedSubjectNames) {
+                $message .= " Not included (prerequisite not yet passed): {$lockedSubjectNames}.";
+            }
+            Toastr::success($message, 'Success');
             return redirect()->back();
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
+    }
+
+    /**
+     * Returns the names of prerequisite subjects the student has not yet passed
+     * (passed = teacher marked is_pass=1 on their SmOptionalSubjectAssign row).
+     */
+    private function unmetPrerequisites($studentId, SmSubject $subject)
+    {
+        $prerequisites = $subject->prerequisites()->with('prerequisiteSubject')->get();
+
+        $unmet = [];
+        foreach ($prerequisites as $prerequisite) {
+            $passed = SmOptionalSubjectAssign::where('student_id', $studentId)
+                ->where('subject_id', $prerequisite->prerequisite_subject_id)
+                ->where('is_pass', 1)
+                ->exists();
+
+            if (!$passed) {
+                $unmet[] = optional($prerequisite->prerequisiteSubject)->subject_name ?? 'Unknown subject';
+            }
+        }
+
+        return $unmet;
     }
 
     public function balanceSummary($state = 'view')

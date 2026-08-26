@@ -202,8 +202,15 @@ class SmAssignSubjectController extends Controller
                     }
                 }
             } elseif ($request->update == 1) {
+                // Only replace assignments for the subjects actually shown in this
+                // search (this course/curriculum-version/semester) - a class/section
+                // can carry assignments for other semesters that must stay untouched.
+                $inScopeSubjectIds = !empty($request->subjects) ? array_filter($request->subjects) : [];
+
                 if ($request->section_id == null) {
-                    $assign_subjects = SmAssignSubject::where('class_id', $request->class_id)->delete();
+                    $assign_subjects = SmAssignSubject::where('class_id', $request->class_id)
+                        ->whereIn('subject_id', $inScopeSubjectIds)
+                        ->delete();
 
                     $i = 0;
                     if (!empty($request->subjects)) {
@@ -234,7 +241,10 @@ class SmAssignSubjectController extends Controller
                         }
                     }
                 } else {
-                    SmAssignSubject::where('class_id', $request->class_id)->where('section_id', $request->section_id)->delete();
+                    SmAssignSubject::where('class_id', $request->class_id)
+                        ->where('section_id', $request->section_id)
+                        ->whereIn('subject_id', $inScopeSubjectIds)
+                        ->delete();
 
                     $i = 0;
                     if (!empty($request->subjects)) {

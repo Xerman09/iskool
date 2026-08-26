@@ -92,6 +92,7 @@ trait EnrollmentBalanceBreakdown
     {
         $assign = PaymentPlanAssign::where('school_id', $student->school_id)
             ->where('student_id', $student->id)
+            ->where('course_id', $student->course_id)
             ->where('active_status', 1)
             ->with('planType', 'invoices.invoiceDetails')
             ->latest()
@@ -139,6 +140,7 @@ trait EnrollmentBalanceBreakdown
 
         $invoiceIds = FmFeesInvoice::where('school_id', $student->school_id)
             ->where('student_id', $student->id)
+            ->where('course_id', $student->course_id)
             ->pluck('id');
 
         return (float) FmFeesInvoiceChield::where('school_id', $student->school_id)

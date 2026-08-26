@@ -172,13 +172,13 @@ trait NotificationSend
 
                 if ($config) {
                     Config::set('mail.default', $config->mail_driver);
-                    Config::set('mail.from', $config->mail_username);
-                    Config::set('mail.name', $config->from_name);
-                    Config::set('mail.host', $config->mail_host);
-                    Config::set('mail.port', $config->mail_port);
-                    Config::set('mail.username', $config->mail_username);
-                    Config::set('mail.password', $config->mail_password);
-                    Config::set('mail.encryption', $config->mail_encryption);
+                    Config::set('mail.from.address', $config->from_email);
+                    Config::set('mail.from.name', $config->from_name);
+                    Config::set('mail.mailers.smtp.host', $config->mail_host);
+                    Config::set('mail.mailers.smtp.port', $config->mail_port);
+                    Config::set('mail.mailers.smtp.username', $config->mail_username);
+                    Config::set('mail.mailers.smtp.password', $config->mail_password);
+                    Config::set('mail.mailers.smtp.encryption', $config->mail_encryption);
                 }
             }
 

@@ -141,6 +141,21 @@ class FeesExtendedController extends Controller
 
     public function addFeesAmount($transcation_id, $total_paid_amount)
     {
+        // Atomically claim this transaction before doing any money-moving work below.
+        // This is called from many places (bank-payment approval, and every payment
+        // gateway's callback handler) - gateway callbacks in particular are commonly
+        // retried/replayed, and a plain check-then-act here would still let a double
+        // click or a duplicate callback double-credit the bank/income and double-reduce
+        // the invoice's due amount. The conditional UPDATE only succeeds once; every
+        // later call for the same transaction updates 0 rows and is turned away here.
+        $claimed = FmFeesTransaction::where('id', $transcation_id)
+            ->where('paid_status', '!=', 'approve')
+            ->update(['paid_status' => 'approve']);
+
+        if (!$claimed) {
+            return;
+        }
+
         $transcation = FmFeesTransaction::find($transcation_id);
         $fees_invoice = FmFeesInvoice::find($transcation->fees_invoice_id);
         $allTranscations = FmFeesTransactionChield::where('fees_transaction_id', $transcation->id)->get();
@@ -210,7 +225,7 @@ class FeesExtendedController extends Controller
 
         if($fees_invoice){
             $balance = ($fees_invoice->Tamount + $fees_invoice->Tfine) - ($fees_invoice->Tpaidamount + $fees_invoice->Tweaver);
-            if($balance == 0){
+            if($balance <= 0){
                 $fees_invoice->payment_status = "paid";
                 $fees_invoice->update();
                 Cache::forget('have_due_fees_'.$transcation->user_id);

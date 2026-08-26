@@ -189,6 +189,9 @@
                                                     <option value="App\SmLeaveType"
                                                         @if (isset($academic_year)) @if (in_array('App\SmLeaveType', @$copy_with_academic_year)) selected @endif
                                                         @endif >@lang('leave.leave_type')</option>
+                                                    <option value="App\SmClassRoom"
+                                                        @if (isset($academic_year)) @if (in_array('App\SmClassRoom', @$copy_with_academic_year)) selected @endif
+                                                        @endif >@lang('academics.class_room')</option>
                                                 </select>
                                             </div>
                                         </div>

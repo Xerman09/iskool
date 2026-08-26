@@ -5,13 +5,14 @@
                 <option data-display="@lang('common.select_subject') *" value="" >@lang('common.select_subject') *</option>
 
                 @foreach($subjects as $subject)
-                        
-                <option value="{{ @$subject->subject_id}}" {{ $routine->subject_id == $subject->subject_id ?'selected':''}}>{{ @$subject->subject->subject_name}}</option>
-            
+
+                <option value="{{ @$subject->subject_id}}" data-units="{{ @$subject->subject->units }}" {{ $routine->subject_id == $subject->subject_id ?'selected':''}}>{{ @$subject->subject->subject_name}}</option>
+
             @endforeach
                 </select>
-                
-                <span class="text-danger subject_error"></span>  
+
+                <span class="text-danger subject_error"></span>
+                <small class="text-muted unitsProgress" data-row="{{ $row }}"></small>
             </div>
     </td>
        

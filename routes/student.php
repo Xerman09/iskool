@@ -38,8 +38,10 @@ Route::group(['middleware' => ['XSS', 'subdomain']], function () {
 
         Route::get('student-view-online-exam-question/{id}', 'Student\SmOnlineExamController@viewOnlineExam')->name('student-online-exam-question-view');
        
-        // Class Timetable
-        Route::get('student-class-routine', ['as' => 'student_class_routine', 'uses' => 'Student\SmStudentPanelController@classRoutine'])->middleware('userRolePermission:student_class_routine');
+        // Class Timetable — points at the university-flow-aware schedule (per-subject
+        // chosen block), not the legacy fixed class_id/section_id record-based one,
+        // which crashes for students whose StudentRecord.section_id is null.
+        Route::get('student-class-routine', ['as' => 'student_class_routine', 'uses' => 'Student\StudentMyScheduleController@index'])->middleware('userRolePermission:student_class_routine');
 
         // Student Attendance
         Route::get('student-my-attendance', ['as' => 'student_my_attendance', 'uses' => 'Student\SmStudentPanelController@studentMyAttendance'])->middleware('userRolePermission:student_my_attendance');
@@ -83,8 +85,6 @@ Route::group(['middleware' => ['XSS', 'subdomain']], function () {
         Route::get('student-course-curriculum', ['as' => 'student-course-curriculum', 'uses' => 'Student\StudentCourseCurriculumController@index'])->middleware('userRolePermission:student-course-curriculum');
         Route::post('student-course-curriculum-enroll', ['as' => 'student-course-curriculum-enroll', 'uses' => 'Student\StudentCourseCurriculumController@enroll'])->middleware('userRolePermission:student-course-curriculum');
 
-        // Student My Schedule
-        Route::get('student-my-schedule', ['as' => 'student-my-schedule', 'uses' => 'Student\StudentMyScheduleController@index'])->middleware('userRolePermission:student-my-schedule');
 
         // Student Subject Registration (pick a block/section per subject for the active semester)
         Route::get('student-subject-registration', ['as' => 'student-subject-registration', 'uses' => 'Student\StudentSubjectRegistrationController@index'])->middleware('userRolePermission:student-subject-registration');

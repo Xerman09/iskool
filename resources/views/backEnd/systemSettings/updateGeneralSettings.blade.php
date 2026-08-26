@@ -317,20 +317,6 @@
                                 </div>
                             </div>
 
-                            <div class="col-lg-3">
-                                <div class="primary_input">
-                                    <label class="primary_input_label" for="">@lang('academics.down_payment_amount')</label>
-                                    <input class="primary_input_field form-control{{ $errors->has('down_payment_amount') ? ' is-invalid' : '' }}"
-                                    type="text" oninput="numberCheck(this)" name="down_payment_amount" autocomplete="off" value="{{isset($editData)? @$editData->down_payment_amount : old('down_payment_amount')}}" id="down_payment_amount" >
-                                    <small class="text-muted">@lang('academics.down_payment_amount_hint')</small>
-                                    @if ($errors->has('down_payment_amount'))
-                                    <span class="text-danger" >
-                                        {{ $errors->first('down_payment_amount') }}
-                                    </span>
-                                    @endif
-                                </div>
-                            </div>
-
                         </div>
                         <div class="row mb-30">
                             

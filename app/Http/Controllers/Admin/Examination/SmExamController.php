@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Examination;
 use App\User;
 use App\SmExam;
 use App\SmClass;
+use App\Semester;
 use App\SmStaff;
 use App\SmSection;
 use App\SmSubject;
@@ -733,12 +734,27 @@ class SmExamController extends Controller
                 ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
-    
+
                 $subjects = $subjects->groupBy('subject_id');
-    
+
+                $activeSemesterId = Semester::where('school_id', Auth::user()->school_id)->where('is_active', 1)->value('id');
+
+                // Nothing is hidden here - a subject from a non-active semester (e.g. setting up
+                // an exam for a past term, or ahead of a semester switch) still shows up, just
+                // labeled with its semester so it's never confused with the active one.
                 $assinged_subjects = [];
                 foreach ($subjects as $key => $subject) {
-                    $assinged_subjects[] = SmSubject::find($key);
+                    $subjectModel = SmSubject::find($key);
+                    if (!$subjectModel) {
+                        continue;
+                    }
+                    if ($subjectModel->semester_id && $activeSemesterId && $subjectModel->semester_id != $activeSemesterId) {
+                        $semesterName = optional($subjectModel->semester)->semester_name;
+                        if ($semesterName) {
+                            $subjectModel->subject_name = "{$subjectModel->subject_name} ({$semesterName})";
+                        }
+                    }
+                    $assinged_subjects[] = $subjectModel;
                 }
             }
             

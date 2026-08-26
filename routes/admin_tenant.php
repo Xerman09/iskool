@@ -297,6 +297,13 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::post('payment-plan-assign-update', ['as' => 'payment-plan-assign-update', 'uses' => 'Admin\Academics\PaymentPlanAssignController@update'])->middleware('userRolePermission:payment-plan-assign');
 
         Route::get('misc-fee-assign', ['as' => 'misc-fee-assign', 'uses' => 'Admin\Academics\MiscFeeController@index'])->middleware('userRolePermission:misc-fee-assign');
+
+        Route::get('down-payment', ['as' => 'down-payment', 'uses' => 'Admin\Academics\DownPaymentController@index'])->middleware('userRolePermission:down-payment');
+        Route::post('down-payment-update', ['as' => 'down-payment-update', 'uses' => 'Admin\Academics\DownPaymentController@update'])->middleware('userRolePermission:down-payment');
+
+        Route::get('subject-completion', ['as' => 'subject-completion', 'uses' => 'Admin\Academics\SubjectCompletionController@index'])->middleware('userRolePermission:subject-completion');
+        Route::post('subject-completion-search', ['as' => 'subject-completion-search', 'uses' => 'Admin\Academics\SubjectCompletionController@search'])->middleware('userRolePermission:subject-completion');
+        Route::post('subject-completion-store', ['as' => 'subject-completion-store', 'uses' => 'Admin\Academics\SubjectCompletionController@store'])->middleware('userRolePermission:subject-completion');
         Route::post('misc-fee-assign-store', ['as' => 'misc-fee-assign-store', 'uses' => 'Admin\Academics\MiscFeeController@store'])->middleware('userRolePermission:misc-fee-assign');
         Route::post('misc-fee-assign-update', ['as' => 'misc-fee-assign-update', 'uses' => 'Admin\Academics\MiscFeeController@update'])->middleware('userRolePermission:misc-fee-assign');
         Route::get('misc-fee-assign-delete/{id}', ['as' => 'misc-fee-assign-delete', 'uses' => 'Admin\Academics\MiscFeeController@delete'])->middleware('userRolePermission:misc-fee-assign');
@@ -1182,6 +1189,7 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
 
         Route::get('class-routine-new', 'Admin\Academics\SmClassRoutineNewController@classRoutineSearch')->name('class_routine_new')->middleware('userRolePermission:add-new-class-routine-store');/* change method for class routine update ->abunayem */
         Route::post('day-wise-class-routine', 'Admin\Academics\SmClassRoutineNewController@dayWiseClassRoutine')->name('dayWise_class_routine');
+        Route::get('subject-scheduled-hours', 'Admin\Academics\SmClassRoutineNewController@subjectScheduledHours')->name('subject-scheduled-hours');
 
         Route::get('print-teacher-routine/{teacher_id}', 'Admin\Academics\SmClassRoutineNewController@printTeacherRoutine')->name('print-teacher-routine');
 

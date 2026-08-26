@@ -74,6 +74,7 @@ class PaymentPlanAssignController extends Controller
 
             $alreadyOnPlan = PaymentPlanAssign::where('school_id', $schoolId)
                 ->where('student_id', $student->id)
+                ->where('course_id', $student->course_id)
                 ->where('active_status', 1)
                 ->exists();
 
@@ -192,17 +193,25 @@ class PaymentPlanAssignController extends Controller
             $record = StudentRecord::where('school_id', $schoolId)->findOrFail($planAssign->record_id);
 
             $paidInvoices = $planAssign->invoices->where('payment_status', 'paid');
-            $unpaidInvoices = $planAssign->invoices->where('payment_status', '!=', 'paid');
+            $partialInvoices = $planAssign->invoices->where('payment_status', 'partial');
+            $unpaidInvoices = $planAssign->invoices->where('payment_status', 'unpaid');
 
-            if ($unpaidInvoices->isEmpty()) {
+            $partialOutstanding = $partialInvoices->sum(function ($invoice) {
+                return $invoice->invoiceDetails->sum('amount') - $invoice->invoiceDetails->sum('paid_amount');
+            });
+            $amountRemaining = $unpaidInvoices->sum(fn ($invoice) => $invoice->invoiceDetails->sum('amount')) + $partialOutstanding;
+
+            if ($amountRemaining <= 0) {
                 Toastr::error('This payment plan is already fully paid — nothing left to reschedule.', 'Failed');
                 return redirect()->route('payment-plan-assign');
             }
 
-            $amountRemaining = $unpaidInvoices->sum(fn ($invoice) => $invoice->invoiceDetails->sum('amount'));
-            $paidCount = $paidInvoices->count();
+            $paidCount = $paidInvoices->count() + $partialInvoices->count();
 
-            // Unpaid installments are fully replaced; anything already paid is left untouched.
+            // Only fully-unpaid installments are replaced; anything with a payment on
+            // it (paid OR partial) is left untouched so we never destroy payment history
+            // or re-bill money already collected. A partial invoice's outstanding portion
+            // is folded into the new schedule's total instead.
             foreach ($unpaidInvoices as $invoice) {
                 \Modules\Fees\Entities\FmFeesInvoiceChield::where('fees_invoice_id', $invoice->id)->delete();
                 $invoice->delete();

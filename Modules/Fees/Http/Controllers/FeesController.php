@@ -256,6 +256,13 @@ class FeesController extends Controller
                     ->where('school_id', Auth::user()->school_id)
                     ->first();
             }
+
+            $systemFeeTypeNames = ['Down Payment', 'Tuition Installment'];
+            if (in_array($feesType->name, $systemFeeTypeNames) && $feesType->name !== $request->name) {
+                Toastr::error("\"{$feesType->name}\" is used internally by the enrollment system and cannot be renamed.", 'Failed');
+                return redirect()->back();
+            }
+
             $feesType->name = $request->name;
             $feesType->fees_group_id = $request->fees_group;
             $feesType->description = $request->description;
@@ -272,6 +279,13 @@ class FeesController extends Controller
     public function feesTypeDelete(Request $request)
     {
         try {
+            $systemFeeTypeNames = ['Down Payment', 'Tuition Installment'];
+            $feesTypeName = FmFeesType::where('id', $request->id)->value('name');
+            if (in_array($feesTypeName, $systemFeeTypeNames)) {
+                Toastr::error("\"{$feesTypeName}\" is used internally by the enrollment system and cannot be deleted.", 'Failed');
+                return redirect()->back();
+            }
+
             $checkExistsData = FmFeesInvoiceChield::where('fees_type', $request->id)->first();
 
             if (!$checkExistsData) {
@@ -1285,6 +1299,17 @@ class FeesController extends Controller
                 $addPayment->school_id = Auth::user()->school_id;
                 $addPayment->academic_id = getAcademicId();
                 $addPayment->save();
+            } elseif ($transcation->payment_method == "Bank") {
+                // Reverse the bank balance this transaction credited - otherwise the bank
+                // account stays permanently inflated by this deleted payment's amount.
+                $bank = SmBankAccount::where('id', $transcation->bank_id)
+                    ->where('school_id', Auth::user()->school_id)
+                    ->first();
+                if ($bank) {
+                    $bank->current_balance = $bank->current_balance - $total_amount;
+                    $bank->update();
+                }
+                SmBankStatement::where('item_sell_id', $transcation->id)->delete();
             }
 
             SmAddIncome::where('fees_collection_id', $id)->delete();
