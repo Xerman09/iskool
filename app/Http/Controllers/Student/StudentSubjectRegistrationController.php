@@ -186,6 +186,17 @@ class StudentSubjectRegistrationController extends Controller
                     ->delete();
 
                 foreach ($selectedBlocks as $block) {
+                    // Lock the block row itself (it always exists, unlike the assign rows being
+                    // counted) so concurrent registrations for the same block serialize here
+                    // instead of racing between the earlier count check and this insert.
+                    $lockedBlock = SmAssignSubject::where('id', $block->id)->lockForUpdate()->first();
+                    if ($lockedBlock && $lockedBlock->max_slots !== null) {
+                        $taken = SmOptionalSubjectAssign::where('assign_subject_id', $lockedBlock->id)->count();
+                        if ($taken >= $lockedBlock->max_slots) {
+                            throw new \RuntimeException('SLOT_FULL');
+                        }
+                    }
+
                     $choice = new SmOptionalSubjectAssign();
                     $choice->student_id = $student->id;
                     $choice->record_id = optional($record)->id;
@@ -207,6 +218,13 @@ class StudentSubjectRegistrationController extends Controller
                 $message .= " Not included (prerequisite not yet passed): {$lockedSubjectNames}.";
             }
             Toastr::success($message, 'Success');
+            return redirect()->back();
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'SLOT_FULL') {
+                Toastr::error('One of the selected blocks filled up while you were registering. Please choose another block.', 'Failed');
+                return redirect()->back();
+            }
+            Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

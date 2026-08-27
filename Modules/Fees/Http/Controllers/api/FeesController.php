@@ -22,6 +22,7 @@ use Modules\Fees\Entities\FmFeesWeaver;
 use Modules\Fees\Entities\FmFeesInvoice;
 use Modules\Fees\Entities\FmFeesTransaction;
 use Modules\Fees\Entities\FmFeesInvoiceChield;
+use Modules\Fees\Http\Controllers\FeesExtendedController;
 use Modules\Wallet\Entities\WalletTransaction;
 use Modules\Fees\Http\Requests\BankFeesPayment;
 use Modules\Fees\Entities\FmFeesInvoiceSettings;
@@ -1083,6 +1084,19 @@ class FeesController extends Controller
             $fees_transcation = FmFeesTransaction::find($transcation->id);
             $fees_transcation->paid_status = 'approve';
             $fees_transcation->update();
+        }
+
+        $fees_invoice = FmFeesInvoice::find($transcation->fees_invoice_id);
+        if ($fees_invoice) {
+            $balance = ($fees_invoice->Tamount + $fees_invoice->Tfine) - ($fees_invoice->Tpaidamount + $fees_invoice->Tweaver);
+            if ($balance <= 0) {
+                $fees_invoice->payment_status = 'paid';
+                $fees_invoice->update();
+                (new FeesExtendedController())->markStudentEnrolledIfPending($fees_invoice->student_id);
+            } else {
+                $fees_invoice->payment_status = 'partial';
+                $fees_invoice->update();
+            }
         }
 
         if ($transcation->add_wallet_money > 0) {

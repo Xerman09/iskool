@@ -59,7 +59,6 @@ class SmSectionController extends Controller
             $section->capacity = $request->capacity;
             $section->created_at = YearCheck::getYear() . '-' . date('m-d h:i:s');
             $section->school_id = Auth::user()->school_id;
-            $section->created_at = auth()->user()->id;
             $section->academic_id = !moduleStatusCheck('University') ? getAcademicId() : null;
             if (moduleStatusCheck('University')) {
                 $section->un_academic_id = getAcademicId();
