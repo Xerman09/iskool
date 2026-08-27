@@ -142,6 +142,7 @@ class SmSubjectController extends Controller
             $codes = array_flip($existingCodes);
             $subjects = [];
             $errors = [];
+            $skipped = 0;
 
             foreach ($rows as $index => $row) {
                 $data = array_combine($headings, array_pad(array_slice($row, 0, count($headings)), count($headings), null));
@@ -160,7 +161,7 @@ class SmSubjectController extends Controller
                     continue;
                 }
                 if (isset($names[strtolower($name)]) || isset($codes[strtolower($code)])) {
-                    $errors[] = "row {$line} (duplicate name or code)";
+                    $skipped++;
                     continue;
                 }
                 if (@generalSetting()->result_type == 'mark' && ($passMark === null || $passMark === '')) {
@@ -188,14 +189,14 @@ class SmSubjectController extends Controller
                 return redirect()->back();
             }
             if (!$subjects) {
-                Toastr::error('The import file does not contain any subjects.', 'Failed');
+                Toastr::error($skipped ? 'All rows already exist as subjects - nothing new to import.' : 'The import file does not contain any subjects.', 'Failed');
                 return redirect()->back();
             }
 
             DB::transaction(function () use ($subjects) {
                 SmSubject::withoutGlobalScopes()->insert($subjects);
             });
-            Toastr::success(count($subjects) . ' subjects imported successfully.', 'Success');
+            Toastr::success(count($subjects) . ' subjects imported successfully.' . ($skipped ? " {$skipped} skipped (already exist)." : ''), 'Success');
             return redirect()->route('subject');
         } catch (\Throwable $e) {
             Toastr::error('The subject import could not be completed.', 'Failed');

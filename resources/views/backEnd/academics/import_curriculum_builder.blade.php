@@ -66,3 +66,13 @@
     </div>
 </section>
 @endsection
+
+@section('script')
+<script>
+    document.getElementById('curriculum_import_file').addEventListener('change', function (event) {
+        if (event.target.files.length) {
+            document.getElementById('placeholderPhoto').placeholder = event.target.files[0].name;
+        }
+    });
+</script>
+@endsection
