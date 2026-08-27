@@ -11,6 +11,9 @@ use Brian2694\Toastr\Facades\Toastr;
 use App\Http\Requests\Admin\Academics\SmSubjectRequest;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class SmSubjectController extends Controller
 {
@@ -63,7 +66,7 @@ class SmSubjectController extends Controller
     {
         $usesMarks = @generalSetting()->result_type == 'mark';
 
-        return Excel::download(new class($usesMarks) implements FromArray {
+        return Excel::download(new class($usesMarks) implements FromArray, WithStyles, ShouldAutoSize {
             private $usesMarks;
 
             public function __construct($usesMarks)
@@ -87,6 +90,19 @@ class SmSubjectController extends Controller
                 }
 
                 return [$headings, $example, $practicalExample];
+            }
+
+            public function styles(Worksheet $sheet)
+            {
+                $range = 'A1:' . $sheet->getHighestColumn() . $sheet->getHighestRow();
+                $sheet->getStyle($range)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+                return [
+                    1 => [
+                        'font' => ['bold' => true, 'size' => 12],
+                        'alignment' => ['horizontal' => 'center'],
+                    ],
+                ];
             }
         }, 'subjects-import-sample.xlsx');
     }

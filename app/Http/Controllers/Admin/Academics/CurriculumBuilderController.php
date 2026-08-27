@@ -16,6 +16,9 @@ use Brian2694\Toastr\Facades\Toastr;
 use App\Http\Requests\Admin\Academics\CurriculumBuilderRequest;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class CurriculumBuilderController extends Controller
 {
@@ -159,13 +162,27 @@ class CurriculumBuilderController extends Controller
 
     public function downloadImportSample()
     {
-        return Excel::download(new class implements FromArray {
+        return Excel::download(new class implements FromArray, WithStyles, ShouldAutoSize {
             public function array(): array
             {
                 return [
                     ['subject_code', 'class', 'semester', 'units', 'subject_classification', 'prerequisite_codes'],
                     ['MATH-101', 'Year 1', 'Semester 1', 3, 'major', ''],
                     ['MATH-102', 'Year 1', 'Semester 2', 3, 'major', 'MATH-101'],
+                    ['MATH-201', 'Year 2', 'Semester 1', 3, 'major', 'MATH-101,MATH-102'],
+                ];
+            }
+
+            public function styles(Worksheet $sheet)
+            {
+                $range = 'A1:' . $sheet->getHighestColumn() . $sheet->getHighestRow();
+                $sheet->getStyle($range)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+                return [
+                    1 => [
+                        'font' => ['bold' => true, 'size' => 12],
+                        'alignment' => ['horizontal' => 'center'],
+                    ],
                 ];
             }
         }, 'curriculum-import-sample.xlsx');
