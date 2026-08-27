@@ -105,6 +105,8 @@
                                             <th>@lang('academics.year_level')</th>
                                             <th>@lang('academics.remaining_balance')</th>
                                             <th>@lang('student.status')</th>
+                                            <th>@lang('academics.program_status')</th>
+                                            <th>@lang('academics.alumni_status')</th>
                                             <th>@lang('student.action')</th>
                                         </tr>
                                     </thead>
@@ -132,6 +134,27 @@
                                                     {{ __('academics.awaiting_invoice') }}
                                                 @else
                                                     {{ __('academics.pending_enrollment') }}
+                                                @endif
+                                            </td>
+                                            <td valign="top">
+                                                <label class="switch_toggle">
+                                                    <input type="checkbox" class="program_status_switch" data-id="{{ $s->id }}"
+                                                        {{ $s->program_status == 1 ? 'checked' : '' }}>
+                                                    <span class="slider round"></span>
+                                                </label>
+                                                <span class="d-block">{{ $s->program_status == 1 ? __('academics.program_completed') : __('academics.program_ongoing') }}</span>
+                                            </td>
+                                            <td valign="top">
+                                                <label class="switch_toggle">
+                                                    <input type="checkbox" class="alumni_status_switch" data-id="{{ $s->id }}"
+                                                        {{ $s->program_status != 1 ? 'disabled' : '' }}
+                                                        {{ $s->alumni_active_status == 1 ? 'checked' : '' }}>
+                                                    <span class="slider round"></span>
+                                                </label>
+                                                @if($s->program_status == 1)
+                                                <span class="d-block">{{ $s->alumni_active_status == 1 ? __('academics.alumni_active') : __('academics.alumni_inactive') }}</span>
+                                                @else
+                                                <span class="d-block">-</span>
                                                 @endif
                                             </td>
                                             <td valign="top">
@@ -165,3 +188,40 @@
 </section>
 @endsection
 @include('backEnd.partials.data_table_js')
+
+@section('script')
+<script>
+    function bindStatusSwitch(selector, url, fieldName) {
+        $(document).on('change', selector, function () {
+            var checkbox = $(this);
+            var studentId = checkbox.data('id');
+            var isChecked = checkbox.is(':checked') ? 1 : 0;
+            var data = { student_id: studentId };
+            data[fieldName] = isChecked;
+
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: data,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.message) {
+                        toastr.success(response.message, 'Success');
+                        location.reload();
+                    } else {
+                        toastr.error(response.error, 'Failed');
+                        checkbox.prop('checked', !isChecked);
+                    }
+                },
+                error: function () {
+                    toastr.error('Operation Failed', 'Failed');
+                    checkbox.prop('checked', !isChecked);
+                }
+            });
+        });
+    }
+
+    bindStatusSwitch('.program_status_switch', "{{ route('assign-program-status-update') }}", 'program_status');
+    bindStatusSwitch('.alumni_status_switch', "{{ route('assign-program-alumni-status-update') }}", 'alumni_active_status');
+</script>
+@endsection

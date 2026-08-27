@@ -282,4 +282,11 @@ return[
     'reschedule_payment_plan' => 'Reschedule',
     'time' => 'Time',
     'view_enrolled_subjects' => 'View Enrolled Subjects',
+
+    'program_status' => 'Program Status',
+    'program_ongoing' => 'Ongoing',
+    'program_completed' => 'Completed',
+    'alumni_status' => 'Alumni Status',
+    'alumni_active' => 'Active',
+    'alumni_inactive' => 'Inactive',
 ];

@@ -182,4 +182,54 @@ class AssignProgramController extends Controller
         }
     }
 
+    public function updateProgramStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'student_id' => 'required|integer|exists:sm_students,id',
+            ]);
+
+            $student = SmStudent::where('school_id', auth()->user()->school_id)
+                ->whereNotNull('course_id')
+                ->find($request->student_id);
+            if (!$student) {
+                return response()->json(['error' => 'Operation Failed']);
+            }
+
+            $student->program_status = $request->program_status ? 1 : 0;
+            if (!$student->program_status) {
+                $student->alumni_active_status = 1;
+            }
+            $student->save();
+
+            return response()->json(['message' => 'Operation Success']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Operation Failed']);
+        }
+    }
+
+    public function updateAlumniStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'student_id' => 'required|integer|exists:sm_students,id',
+            ]);
+
+            $student = SmStudent::where('school_id', auth()->user()->school_id)
+                ->whereNotNull('course_id')
+                ->where('program_status', 1)
+                ->find($request->student_id);
+            if (!$student) {
+                return response()->json(['error' => 'Operation Failed']);
+            }
+
+            $student->alumni_active_status = $request->alumni_active_status ? 1 : 0;
+            $student->save();
+
+            return response()->json(['message' => 'Operation Success']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Operation Failed']);
+        }
+    }
+
 }

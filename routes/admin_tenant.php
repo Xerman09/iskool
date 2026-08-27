@@ -284,6 +284,8 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::post('assign-program-store', ['as' => 'assign-program-store', 'uses' => 'Admin\Academics\AssignProgramController@store'])->middleware('userRolePermission:assign-program');
         Route::post('assign-program-generate-invoice', ['as' => 'assign-program-generate-invoice', 'uses' => 'Admin\Academics\AssignProgramController@generateInvoice'])->middleware('userRolePermission:assign-program');
         Route::get('assign-program-balance-summary/{student}/{state}', ['as' => 'assign-program-balance-summary', 'uses' => 'Admin\Academics\AssignProgramController@balanceSummary'])->middleware('userRolePermission:assign-program');
+        Route::post('assign-program-status-update', ['as' => 'assign-program-status-update', 'uses' => 'Admin\Academics\AssignProgramController@updateProgramStatus'])->middleware('userRolePermission:assign-program');
+        Route::post('assign-program-alumni-status-update', ['as' => 'assign-program-alumni-status-update', 'uses' => 'Admin\Academics\AssignProgramController@updateAlumniStatus'])->middleware('userRolePermission:assign-program');
 
         Route::get('payment-plan-type', ['as' => 'payment-plan-type', 'uses' => 'Admin\Academics\PaymentPlanTypeController@index'])->middleware('userRolePermission:payment-plan-type');
         Route::post('payment-plan-type-store', ['as' => 'payment-plan-type-store', 'uses' => 'Admin\Academics\PaymentPlanTypeController@store'])->middleware('userRolePermission:payment-plan-type-store');
