@@ -8,11 +8,13 @@ use App\SmSubject;
 use App\CurriculumVersion;
 use App\SmOptionalSubjectAssign;
 use App\Models\StudentRecord;
+use App\Models\StudentProgramHistory;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Traits\EnrollmentBalanceBreakdown;
 use App\Traits\EnrollmentInvoicing;
 use Brian2694\Toastr\Facades\Toastr;
+use Illuminate\Support\Facades\Auth;
 use Modules\Fees\Entities\FmFeesInvoice;
 
 class AssignProgramController extends Controller
@@ -31,7 +33,7 @@ class AssignProgramController extends Controller
 
             $courses = Course::where('school_id', $schoolId)->get();
             $curriculumVersions = CurriculumVersion::where('school_id', $schoolId)->get();
-            $students = SmStudent::where('school_id', $schoolId)->orderBy('first_name')->get();
+            $students = SmStudent::where('school_id', $schoolId)->with('course')->orderBy('first_name')->get();
 
             $assignedStudents = SmStudent::where('school_id', $schoolId)
                 ->whereNotNull('course_id')
@@ -57,11 +59,14 @@ class AssignProgramController extends Controller
                 }
             });
 
+            $selectedStudentId = $request->student_id;
+
             return view('backEnd.academics.assign_program', compact(
                 'courses',
                 'curriculumVersions',
                 'students',
-                'assignedStudents'
+                'assignedStudents',
+                'selectedStudentId'
             ));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -79,6 +84,10 @@ class AssignProgramController extends Controller
             ]);
 
             $student = SmStudent::where('school_id', auth()->user()->school_id)->findOrFail($request->student_id);
+
+            $previousCourseId = $student->course_id;
+            $previousCurriculumVersionId = $student->curriculum_version_id;
+
             $student->course_id = $request->course_id;
             $student->curriculum_version_id = $request->curriculum_version_id;
             if (!$student->class_id) {
@@ -91,7 +100,24 @@ class AssignProgramController extends Controller
             }
             $student->save();
 
-            Toastr::success('Program assigned. The student can now register for subjects once the semester is open for enrollment.', 'Success');
+            $isShift = $previousCourseId && $previousCourseId != $student->course_id;
+
+            if ($previousCourseId != $student->course_id || $previousCurriculumVersionId != $student->curriculum_version_id) {
+                StudentProgramHistory::create([
+                    'student_id' => $student->id,
+                    'previous_course_id' => $previousCourseId,
+                    'current_course_id' => $student->course_id,
+                    'previous_curriculum_version_id' => $previousCurriculumVersionId,
+                    'current_curriculum_version_id' => $student->curriculum_version_id,
+                    'changed_by' => Auth::id(),
+                    'school_id' => auth()->user()->school_id,
+                    'academic_id' => getAcademicId(),
+                ]);
+            }
+
+            Toastr::success($isShift
+                ? 'Program shifted. The student can now register for subjects once the semester is open for enrollment.'
+                : 'Program assigned. The student can now register for subjects once the semester is open for enrollment.', 'Success');
             return redirect()->back();
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

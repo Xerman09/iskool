@@ -188,6 +188,18 @@ if (!function_exists('students')) {
 
     }
 }
+if (!function_exists('courses')) {
+    function courses()
+    {
+        return \App\Course::where('school_id', auth()->user()->school_id)->get();
+    }
+}
+if (!function_exists('semesters')) {
+    function semesters()
+    {
+        return \App\Semester::where('school_id', auth()->user()->school_id)->where('active_status', 1)->get();
+    }
+}
 if (!function_exists('classSubjects')) {
     function classSubjects($class_id = null)
     {

@@ -43,12 +43,20 @@ class StudentMultiRecordController extends Controller
             })->pluck('student_id')->toArray();
 
 
-            $students = SmStudent::whereIn('id', $record_student_ids)->where('active_status', 1)->get();
+            $students = SmStudent::whereIn('id', $record_student_ids)->where('active_status', 1)
+                ->when($request->filled('course_id'), function ($q) use ($request) {
+                    $q->where('course_id', $request->course_id);
+                })
+                ->when($request->filled('semester_id'), function ($q) use ($request) {
+                    $q->where('semester_id', $request->semester_id);
+                })->get();
         }
         $selected['student_id'] = $request->student;
         $selected['academic_year'] = $request->academic_year;
         $selected['class_id'] = $request->class_id;
         $selected['section_id'] = $request->section_id;
+        $selected['course_id'] = $request->course_id;
+        $selected['semester_id'] = $request->semester_id;
 
         $sessions = SmAcademicYear::where('school_id', auth()->user()->school_id)->get();
         $classes = SmClass::get();

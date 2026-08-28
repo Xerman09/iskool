@@ -55,7 +55,7 @@
                                         @else
                                             @include('backEnd.common.search_criteria', [
                                                 'div' => 'col-lg-3',
-                                                'visiable' => ['academic', 'class', 'section',],
+                                                'visiable' => ['academic', 'class', 'section', 'program', 'semester'],
                                             ])
                                             <div class="col-lg-3 mt-0">
                                                 <div class="primary_input sm_mb_20 ">
@@ -76,6 +76,8 @@
                             <input type="hidden" id="academic_id" value="{{ @$academic_year }}">
                             <input type="hidden" id="class" value="{{ @$class_id }}">
                             <input type="hidden" id="section" value="{{ @$section }}">
+                            <input type="hidden" id="course_id" value="{{ @$course_id }}">
+                            <input type="hidden" id="semester_id" value="{{ @$semester_id }}">
                             <input type="hidden" id="name" value="{{ @$name }}">
                             <input type="hidden" id="un_session" value="{{ @$data['un_session_id'] }}">
                             <input type="hidden" id="un_academic" value="{{ @$data['un_academic_id'] }}">
@@ -173,6 +175,8 @@
                         academic_year: $('#academic_id').val(),
                         class: $('#class').val(),
                         section: $('#section').val(),
+                        course_id: $('#course_id').val(),
+                        semester_id: $('#semester_id').val(),
                         name: $('#name').val(),
                         un_session_id: $('#un_session').val(),
                         un_academic_id: $('#un_academic').val(),

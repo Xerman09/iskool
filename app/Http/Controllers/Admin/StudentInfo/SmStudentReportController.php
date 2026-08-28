@@ -90,6 +90,10 @@ class SmStudentReportController extends Controller
                     $q->where('student_category_id', $request->type);
                 })->when($request->gender, function ($q) use ($request) {
                     $q->where('gender_id', $request->gender);
+                })->when($request->filled('course_id'), function ($q) use ($request) {
+                    $q->where('course_id', $request->course_id);
+                })->when($request->filled('semester_id'), function ($q) use ($request) {
+                    $q->where('semester_id', $request->semester_id);
                 })->where('active_status', 1);
             })->get();
 
@@ -100,6 +104,10 @@ class SmStudentReportController extends Controller
             $data['class_id'] = $request->class_id;
             $data['gender_id'] = $request->gender;
             $data['type_id'] = $request->type;
+            $data['selected']['course_id'] = $request->course_id;
+            $data['selected']['semester_id'] = $request->semester_id;
+            $data['selected']['class_id'] = $request->class_id;
+            $data['selected']['section_id'] = $request->section_id;
             if (moduleStatusCheck('University')) {
                 $interface = App::make(UnCommonRepositoryInterface::class);
                 $data += $interface->getCommonData($request);
@@ -279,6 +287,15 @@ class SmStudentReportController extends Controller
             if (moduleStatusCheck('University')) {
                 $student_records = universityFilter($student_records, $request);
             }
+            if ($request->filled('course_id') || $request->filled('semester_id')) {
+                $student_records->whereHas('student', function ($q) use ($request) {
+                    $q->when($request->filled('course_id'), function ($q2) use ($request) {
+                        $q2->where('course_id', $request->course_id);
+                    })->when($request->filled('semester_id'), function ($q2) use ($request) {
+                        $q2->where('semester_id', $request->semester_id);
+                    });
+                });
+            }
 
             $students = $student_records->with('student.parents', 'class', 'section')->get();
             $data = [];
@@ -287,6 +304,8 @@ class SmStudentReportController extends Controller
 
             $selected['class_id'] = $request->class_id;
             $selected['section_id'] = $request->section_id;
+            $selected['course_id'] = $request->course_id;
+            $selected['semester_id'] = $request->semester_id;
 
             return view('backEnd.studentInformation.guardian_report', compact('selected'))->with($data);
         } catch (\Exception $e) {

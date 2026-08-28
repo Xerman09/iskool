@@ -33,7 +33,7 @@
                                 <div class="row">
                                     @include('backEnd.common.search_criteria', [
                                         'div' => 'col-lg-3',
-                                        'visiable' => ['class', 'section'],
+                                        'visiable' => ['class', 'section', 'program', 'semester'],
                                     ])
                                     <div class="col-lg-3 mt-30-md">
                                         <label class="primary_input_label" for="">@lang('student.parent_name')</label>

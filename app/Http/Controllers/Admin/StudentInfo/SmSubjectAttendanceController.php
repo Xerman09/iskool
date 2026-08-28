@@ -74,8 +74,14 @@ class SmSubjectAttendanceController extends Controller
             }
 
             $students = StudentRecord::with('studentDetail', 'studentDetail.DateSubjectWiseAttendances')
-                ->whereHas('studentDetail', function ($q) {
-                    $q->where('active_status', 1);
+                ->whereHas('studentDetail', function ($q) use ($request) {
+                    $q->where('active_status', 1)
+                        ->when($request->filled('course_id'), function ($q2) use ($request) {
+                            $q2->where('course_id', $request->course_id);
+                        })
+                        ->when($request->filled('semester_id'), function ($q2) use ($request) {
+                            $q2->where('semester_id', $request->semester_id);
+                        });
                 })
                 ->where('class_id', $input['class'])
                 ->where('section_id', $input['section'])
@@ -545,7 +551,18 @@ class SmSubjectAttendanceController extends Controller
 
             $classes = SmClass::get();
             $activeStudentIds = SmStudentAttendanceController::activeStudent()->pluck('id')->toArray();
-            $students = StudentRecord::where('class_id', $request->class)->where('section_id', $request->section)->whereIn('student_id', $activeStudentIds)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get()->sortBy('roll_no');
+            $students = StudentRecord::where('class_id', $request->class)->where('section_id', $request->section)->whereIn('student_id', $activeStudentIds)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)
+                ->when($request->filled('course_id'), function ($q) use ($request) {
+                    $q->whereHas('student', function ($q2) use ($request) {
+                        $q2->where('course_id', $request->course_id);
+                    });
+                })
+                ->when($request->filled('semester_id'), function ($q) use ($request) {
+                    $q->whereHas('student', function ($q2) use ($request) {
+                        $q2->where('semester_id', $request->semester_id);
+                    });
+                })
+                ->get()->sortBy('roll_no');
 
             $attendances = [];
 
@@ -571,6 +588,8 @@ class SmSubjectAttendanceController extends Controller
             }
             $selected['class_id'] = $class_id;
             $selected['section_id'] = $section_id;
+            $selected['course_id'] = $request->course_id;
+            $selected['semester_id'] = $request->semester_id;
             //   return $attendances;
             return view('backEnd.studentInformation.subject_attendance_report_average_view', compact('classes', 'attendances', 'days', 'year', 'month', 'current_day', 'class_id', 'section_id', 'subject_id', 'selected'));
         } catch (\Exception $e) {

@@ -44,6 +44,12 @@ class SmStudentParentController extends Controller
                 })
                 ->when($request->student_name, function ($q) use ($request) {
                     $q->where('full_name', 'like', '%' . $request->student_name . '%');
+                })
+                ->when($request->filled('course_id'), function ($q) use ($request) {
+                    $q->where('course_id', $request->course_id);
+                })
+                ->when($request->filled('semester_id'), function ($q) use ($request) {
+                    $q->where('semester_id', $request->semester_id);
                 })->get();
             return view('backEnd.studentInformation.student_parent_list', compact('parents', 'classes'));
         } catch (\Exception $e) {

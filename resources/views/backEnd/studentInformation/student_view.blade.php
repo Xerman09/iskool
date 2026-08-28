@@ -155,6 +155,10 @@
                                     href="#studentRecord" role="tab" data-toggle="tab">@lang('student.record')</a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" href="#programHistory" role="tab"
+                                    data-toggle="tab">@lang('academics.program_history')</a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link {{ $type == 'studentTimeline' ? 'active' : '' }} " href="#studentTimeline"
                                     role="tab" data-toggle="tab">@lang('student.timeline')</a>
                             </li>
@@ -347,6 +351,60 @@
                                 </div>
                             </div>
                             <!-- End reocrd Tab -->
+
+                            <!-- Start Program History Tab -->
+                            <div role="tabpanel" class="tab-pane fade" id="programHistory">
+                                <div>
+                                    <div class="mb-20">
+                                        <span class="badge fix-gr-bg">
+                                            {{ $student_detail->program_status == 1 ? __('academics.status_alumni') : __('academics.status_student') }}
+                                        </span>
+                                        @if ($student_detail->program_status == 1)
+                                            <span class="badge fix-gr-bg">
+                                                {{ $student_detail->alumni_active_status == 1 ? __('academics.alumni_active') : __('academics.alumni_inactive') }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <table id="" class="table simple-table table-responsive school-table"
+                                        cellspacing="0">
+                                        <thead class="d-block">
+                                            <tr class="d-flex">
+                                                <th class="col-2">@lang('academics.date')</th>
+                                                <th class="col-4">@lang('academics.program')</th>
+                                                <th class="col-3">@lang('academics.curriculum_version')</th>
+                                                <th class="col-3">@lang('academics.changed_by')</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="d-block">
+                                            @forelse ($programHistories as $history)
+                                                <tr class="d-flex">
+                                                    <td class="col-2">{{ $history->created_at->format('M d, Y') }}</td>
+                                                    <td class="col-4">
+                                                        @if ($history->previous_course_id)
+                                                            {{ optional($history->previousCourse)->course_name }} &rarr; {{ optional($history->currentCourse)->course_name }}
+                                                        @else
+                                                            {{ __('academics.initial_enrollment') }}: {{ optional($history->currentCourse)->course_name }}
+                                                        @endif
+                                                    </td>
+                                                    <td class="col-3">
+                                                        @if ($history->previous_curriculum_version_id)
+                                                            {{ optional($history->previousCurriculumVersion)->version_label }} &rarr; {{ optional($history->currentCurriculumVersion)->version_label }}
+                                                        @else
+                                                            {{ optional($history->currentCurriculumVersion)->version_label }}
+                                                        @endif
+                                                    </td>
+                                                    <td class="col-3">{{ optional($history->changedByUser)->name ?? '-' }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr class="d-flex">
+                                                    <td class="col-12">@lang('reports.no_data_found')</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- End Program History Tab -->
     
                             <!-- Start Timeline Tab -->
                             <div role="tabpanel" class="tab-pane fade" id="studentTimeline">

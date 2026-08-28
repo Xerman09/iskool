@@ -67,8 +67,18 @@
                                     'mt' => 'mt-0',
                                     'div' => 'col-lg-3',
                                     'required' => ['academic'],
-                                    'visiable' => ['academic', 'class', 'section'],
+                                    'visiable' => ['academic', 'class', 'section', 'program', 'semester'],
                                 ])
+                                <div class="col-lg-3">
+                                    <div class="primary_input sm_mb_20 ">
+                                        <label class="primary_input_label" for="">@lang('academics.status')</label>
+                                        <select class="primary_select form-control" name="program_status">
+                                            <option value="">@lang('academics.status')</option>
+                                            <option value="0" {{ isset($program_status) && $program_status === '0' ? 'selected' : '' }}>@lang('academics.status_student')</option>
+                                            <option value="1" {{ isset($program_status) && $program_status === '1' ? 'selected' : '' }}>@lang('academics.status_alumni')</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <div class="col-lg-2">
                                     <div class="primary_input sm_mb_20 ">
                                         <label class="primary_input_label" for="">@lang('student.search_by_name')</label>
@@ -101,6 +111,9 @@
             <input type="hidden" id="academic_id" value="{{ @$academic_year }}">
             <input type="hidden" id="class" value="{{ @$class_id }}">
             <input type="hidden" id="section" value="{{ @$section }}">
+            <input type="hidden" id="course_id" value="{{ @$course_id }}">
+            <input type="hidden" id="semester_id" value="{{ @$semester_id }}">
+            <input type="hidden" id="program_status" value="{{ @$program_status }}">
             <input type="hidden" id="roll" value="{{ @$roll_no }}">
             <input type="hidden" id="name" value="{{ @$name }}">
             <input type="hidden" id="un_session" value="{{ @$data['un_session_id'] }}">
@@ -145,6 +158,7 @@
                                                 <th>@lang('common.gender')</th>
                                                 <th>@lang('common.type')</th>
                                                 <th>@lang('common.phone')</th>
+                                                <th>@lang('academics.status')</th>
                                                 <th>@lang('common.actions')</th>
                                             </tr>
                                         </thead>
@@ -209,6 +223,9 @@
                         academic_year: $('#academic_id').val(),
                         class: $('#class').val(),
                         section: $('#section').val(),
+                        course_id: $('#course_id').val(),
+                        semester_id: $('#semester_id').val(),
+                        program_status: $('#program_status').val(),
                         roll_no: $('#roll').val(),
                         name: $('#name').val(),
                         un_session_id: $('#un_session').val(),
@@ -261,6 +278,12 @@
                     {
                         data: 'mobile',
                         name: 'sm_students.mobile'
+                    },
+                    {
+                        data: 'status',
+                        name: 'sm_students.program_status',
+                        orderable: false,
+                        searchable: false
                     },
                     {
                         data: 'action',

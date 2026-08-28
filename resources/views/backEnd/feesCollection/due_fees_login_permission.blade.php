@@ -73,7 +73,7 @@
                                                     'mt' => 'mt-0',
                                                     'div' => 'col-lg-3',
                                                     'required' => [],
-                                                    'visiable' => ['class', 'section'],
+                                                    'visiable' => ['class', 'section', 'program', 'semester'],
                                                 ])
                                                 <div class="col-lg-3">
                                                     <div class="primary_input sm_mb_20 ">

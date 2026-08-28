@@ -95,7 +95,7 @@ $breadCrumbs = [
 
                         @include('backEnd.common.search_criteria', [
                         'div'=>'col-lg-4',
-                        'visiable'=>['class', 'section'],
+                        'visiable'=>['class', 'section', 'program', 'semester'],
                         'required'=>['class', 'section'],
                         ])
 

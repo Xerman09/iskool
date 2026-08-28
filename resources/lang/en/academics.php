@@ -289,4 +289,13 @@ return[
     'alumni_status' => 'Alumni Status',
     'alumni_active' => 'Active',
     'alumni_inactive' => 'Inactive',
+
+    'currently' => 'currently',
+    'program_history' => 'Program History',
+    'status_student' => 'Student',
+    'status_alumni' => 'Alumni',
+    'initial_enrollment' => 'Initial enrollment',
+    'changed_by' => 'Changed By',
+    'date' => 'Date',
+    'status' => 'Status',
 ];

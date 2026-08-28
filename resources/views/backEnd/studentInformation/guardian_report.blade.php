@@ -36,7 +36,7 @@
                                 @includeIf('university::common.session_faculty_depart_academic_semester_level',['required' => ['US'], 'hide' => ['USUB']])
                                 @else
                                 @include('backEnd.common.search_criteria', [
-                                'visiable'=>['class', 'section'],
+                                'visiable'=>['class', 'section', 'program', 'semester'],
                                 'div'=>'col-lg-6',
                                 'required'=>['class']
                                 ])

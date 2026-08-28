@@ -66,7 +66,7 @@
                             'div'=>'col-lg-3',
                             'subject'=>true,
                             'required'=>['class', 'section', 'subject'],
-                            'visiable'=>['class', 'section', 'subject'],    
+                            'visiable'=>['class', 'section', 'program', 'semester', 'subject'],
                             ])
                            
                             <div class="col-lg-3 mt-30-md md_mb_20">

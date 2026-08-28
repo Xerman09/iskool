@@ -36,6 +36,8 @@ class GraduateListController extends Controller
             $class_id = $request->class_id;
             $name = $request->name;
             $section = $request->section_id;
+            $course_id = $request->course_id;
+            $semester_id = $request->semester_id;
             $data['un_session_id'] = $request->un_session_id;
             $data['un_academic_id'] = $request->un_academic_id;
             $data['un_faculty_id'] = $request->un_faculty_id;
@@ -45,7 +47,7 @@ class GraduateListController extends Controller
             $data['un_section_id'] = $request->un_section_id;
 
             $graduates = Graduate::where('school_id', Auth::user()->school_id)->get();
-            return view('backEnd.graduate.graduate_list', compact('classes', 'class_id', 'name', 'sessions', 'section', 'academic_year', 'data', 'graduates'));
+            return view('backEnd.graduate.graduate_list', compact('classes', 'class_id', 'name', 'sessions', 'section', 'course_id', 'semester_id', 'academic_year', 'data', 'graduates'));
         }
     }
     public function gradauateDatatable(Request $request)
@@ -85,6 +87,16 @@ class GraduateListController extends Controller
                 });
                 $query->orWhereHas('student', function ($q) use ($request) {
                     $q->where('admission_no', 'like', '%' . $request->name . '%');
+                });
+            });
+
+            $records->when($request->filled('course_id') || $request->filled('semester_id'), function ($query) use ($request) {
+                $query->whereHas('student', function ($q) use ($request) {
+                    $q->when($request->filled('course_id'), function ($q2) use ($request) {
+                        $q2->where('course_id', $request->course_id);
+                    })->when($request->filled('semester_id'), function ($q2) use ($request) {
+                        $q2->where('semester_id', $request->semester_id);
+                    });
                 });
             });
 

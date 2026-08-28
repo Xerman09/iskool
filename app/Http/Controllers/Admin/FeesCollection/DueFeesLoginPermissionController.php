@@ -79,8 +79,14 @@ class DueFeesLoginPermissionController extends Controller
                                     })
                                     ->when($request->name, function ($query) use ($request) {
                                         $query->where('full_name', 'like', '%' . $request->name . '%');
+                                    })
+                                    ->when($request->filled('course_id'), function ($query) use ($request) {
+                                        $query->where('sm_students.course_id', $request->course_id);
+                                    })
+                                    ->when($request->filled('semester_id'), function ($query) use ($request) {
+                                        $query->where('sm_students.semester_id', $request->semester_id);
                                     });
-    
+
             $students = $all_students->get();
     
             return view('backEnd.feesCollection.due_fees_login_permission', compact('roles', 'classes','students'));

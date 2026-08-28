@@ -60,7 +60,7 @@
                                 <select class="primary_select form-control{{ @$errors->has('student_id') ? ' is-invalid' : '' }}" name="student_id" required>
                                     <option value="">@lang('academics.select_student')</option>
                                     @foreach($students as $s)
-                                    <option value="{{$s->id}}">{{$s->first_name}} {{$s->last_name}} ({{$s->admission_no}})</option>
+                                    <option value="{{$s->id}}" {{ (string) @$selectedStudentId === (string) $s->id ? 'selected' : '' }}>{{$s->first_name}} {{$s->last_name}} ({{$s->admission_no}}){{ $s->course ? ' - ' . __('academics.currently') . ': ' . $s->course->course_name : '' }}</option>
                                     @endforeach
                                 </select>
                                 @if ($errors->has('student_id'))

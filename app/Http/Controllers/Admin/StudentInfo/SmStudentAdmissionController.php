@@ -32,6 +32,7 @@ use App\Traits\CustomFields;
 use Illuminate\Http\Request;
 use App\Models\SmCustomField;
 use App\Models\StudentRecord;
+use App\Models\StudentProgramHistory;
 use App\StudentBulkTemporary;
 use App\Imports\StudentsImport;
 use App\Traits\FeesAssignTrait;
@@ -806,6 +807,12 @@ class SmStudentAdmissionController extends Controller
             $studentBehaviourRecords = (moduleStatusCheck('BehaviourRecords')) ? AssignIncident::where('student_id', $id)->with('incident', 'user', 'academicYear')->get() : null;
             $behaviourRecordSetting = BehaviourRecordSetting::where('id', 1)->first();
 
+            $programHistories = StudentProgramHistory::where('student_id', $student_detail->id)
+                ->where('school_id', $student_detail->school_id)
+                ->with(['previousCourse', 'currentCourse', 'previousCurriculumVersion', 'currentCurriculumVersion', 'changedByUser'])
+                ->orderByDesc('id')
+                ->get();
+
             if (moduleStatusCheck('University')) {
                 $next_labels = null;
                 $assinged_exam_types = [];
@@ -824,9 +831,9 @@ class SmStudentAdmissionController extends Controller
                 $studentDetails = SmStudent::find($student_id);
                 $studentRecordDetails = StudentRecord::where('student_id', $student_id);
                 $studentRecords = StudentRecord::where('student_id', $student_id)->distinct('un_academic_id')->get();
-                return view('backEnd.studentInformation.student_view', compact('timelines', 'student_detail', 'driver_info', 'exams', 'siblings', 'grades', 'academic_year', 'exam_terms', 'max_gpa', 'fail_gpa_name', 'custom_field_values', 'sessions', 'records', 'next_labels', 'type', 'studentRecordDetails', 'studentDetails', 'studentRecords', 'result_setting', 'assinged_exam_types', 'studentBehaviourRecords', 'behaviourRecordSetting'));
+                return view('backEnd.studentInformation.student_view', compact('timelines', 'student_detail', 'driver_info', 'exams', 'siblings', 'grades', 'academic_year', 'exam_terms', 'max_gpa', 'fail_gpa_name', 'custom_field_values', 'sessions', 'records', 'next_labels', 'type', 'studentRecordDetails', 'studentDetails', 'studentRecords', 'result_setting', 'assinged_exam_types', 'studentBehaviourRecords', 'behaviourRecordSetting', 'programHistories'));
             } else {
-                return view('backEnd.studentInformation.student_view', compact('timelines', 'student_detail', 'driver_info', 'exams', 'siblings', 'grades', 'academic_year', 'exam_terms', 'max_gpa', 'fail_gpa_name', 'custom_field_values', 'sessions', 'records', 'next_labels', 'type', 'result_setting', 'attendance', 'subjectAttendance', 'days', 'year', 'month', 'studentBehaviourRecords', 'behaviourRecordSetting'));
+                return view('backEnd.studentInformation.student_view', compact('timelines', 'student_detail', 'driver_info', 'exams', 'siblings', 'grades', 'academic_year', 'exam_terms', 'max_gpa', 'fail_gpa_name', 'custom_field_values', 'sessions', 'records', 'next_labels', 'type', 'result_setting', 'attendance', 'subjectAttendance', 'days', 'year', 'month', 'studentBehaviourRecords', 'behaviourRecordSetting', 'programHistories'));
             }
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

@@ -20,6 +20,10 @@ $sections = $class_id ? sections($class_id) : null;
 $subjects = $class_id && $section_id ? subjects($class_id, $section_id) : null;
 }
 $visiable = $visiable ?? [];
+$courses = courses();
+$semesters = semesters();
+$course_id = $selected && isset($selected['course_id']) ? $selected['course_id'] : null;
+$semester_id = $selected && isset($selected['semester_id']) ? $selected['semester_id'] : null;
 
 @endphp
 @if (in_array('academic', $visiable))
@@ -106,6 +110,44 @@ $visiable = $visiable ?? [];
         {{ $errors->first('section_id') }}
     </span>
     @endif
+</div>
+@endif
+@if (in_array('program', $visiable))
+<div class="{{ $div . ' ' . $mt }}" id="common_select_program_div">
+    <label class="primary_input_label" for="">{{ __('academics.program') }}
+        <span class="text-danger">{{ in_array('program', $required) ? '*' : '' }}</span>
+    </label>
+    <select class="primary_select form-control{{ $errors->has('course_id') ? ' is-invalid' : '' }}" name="course_id"
+        id="common_select_program">
+        <option data-display="@lang('academics.program') {{ in_array('program', $required) ? '*' : '' }}" value="">
+            {{ __('academics.program') }} {{ in_array('program', $required) ? '*' : '' }}</option>
+        @isset($courses)
+        @foreach ($courses as $course)
+        <option value="{{ $course->id }}" {{ isset($course_id) ? ($course_id == $course->id ? 'selected' : '') : '' }}>
+            {{ $course->course_name }}</option>
+        @endforeach
+        @endisset
+    </select>
+    <span class="text-danger">{{ $errors->first('course_id') }}</span>
+</div>
+@endif
+@if (in_array('semester', $visiable))
+<div class="{{ $div . ' ' . $mt }}" id="common_select_semester_div">
+    <label class="primary_input_label" for="">{{ __('academics.semester') }}
+        <span class="text-danger">{{ in_array('semester', $required) ? '*' : '' }}</span>
+    </label>
+    <select class="primary_select form-control{{ $errors->has('semester_id') ? ' is-invalid' : '' }}" name="semester_id"
+        id="common_select_semester">
+        <option data-display="@lang('academics.semester') {{ in_array('semester', $required) ? '*' : '' }}" value="">
+            {{ __('academics.semester') }} {{ in_array('semester', $required) ? '*' : '' }}</option>
+        @isset($semesters)
+        @foreach ($semesters as $semester)
+        <option value="{{ $semester->id }}" {{ isset($semester_id) ? ($semester_id == $semester->id ? 'selected' : '') : '' }}>
+            {{ $semester->semester_name }}</option>
+        @endforeach
+        @endisset
+    </select>
+    <span class="text-danger">{{ $errors->first('semester_id') }}</span>
 </div>
 @endif
 @if (in_array('subject', $visiable))

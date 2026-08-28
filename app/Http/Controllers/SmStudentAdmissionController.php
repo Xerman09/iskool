@@ -2334,17 +2334,25 @@ class SmStudentAdmissionController extends Controller
             if ($request->admission_no != "") {
                 $students->where('admission_no', 'like', '%' . $request->admission_no . '%');
             }
+            $students->when($request->filled('course_id'), function ($query) use ($request) {
+                $query->where('course_id', $request->course_id);
+            })->when($request->filled('semester_id'), function ($query) use ($request) {
+                $query->where('semester_id', $request->semester_id);
+            });
+
             $students = $students->whereIn('id', $student_ids)->where('school_id', Auth::user()->school_id)->get();
 
             $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
             $class_id = $request->class_id;
             $section_id = $request->section_id;
+            $course_id = $request->course_id;
+            $semester_id = $request->semester_id;
             $name = $request->name;
             $admission_no = $request->admission_no;
 
 
-            return view('backEnd.studentInformation.disabled_student', compact('classes', 'class_id', 'section_id', 'name', 'admission_no', 'pt'));
+            return view('backEnd.studentInformation.disabled_student', compact('classes', 'class_id', 'section_id', 'course_id', 'semester_id', 'name', 'admission_no', 'pt', 'students'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

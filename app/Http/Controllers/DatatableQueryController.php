@@ -53,6 +53,9 @@ class DatatableQueryController extends Controller
             $name = $request->name;
             $roll_no = $request->roll_no;
             $section = $request->section_id;
+            $course_id = $request->course_id;
+            $semester_id = $request->semester_id;
+            $program_status = $request->program_status;
             $data['un_session_id']= $request->un_session_id ;
             $data['un_academic_id']= $request->un_academic_id ;
             $data['un_faculty_id']= $request->un_faculty_id;
@@ -60,8 +63,8 @@ class DatatableQueryController extends Controller
             $data['un_semester_id']= $request->un_semester_id;
             $data['un_semester_label_id']= $request->un_semester_label_id;
             $data['un_section_id']= $request->un_section_id;
-           
-            return view('backEnd.studentInformation.student_details', compact('classes', 'class_id', 'name', 'roll_no', 'sessions', 'section', 'academic_year','data'));
+
+            return view('backEnd.studentInformation.student_details', compact('classes', 'class_id', 'name', 'roll_no', 'sessions', 'section', 'academic_year', 'course_id', 'semester_id', 'program_status', 'data'));
         }
         if ($request->ajax()) {
             $records = StudentRecord::query();
@@ -88,10 +91,10 @@ class DatatableQueryController extends Controller
                     $query->where('section_id', $request->section);
                 });
             })
-            ->when(!$request->academic_year && moduleStatusCheck('University')==false, function ($query) use ($request) {
+            ->when(!$request->academic_year && !($request->program_status == 1) && moduleStatusCheck('University')==false, function ($query) use ($request) {
                 $query->where('academic_id', getAcademicId());
             })
-            
+
             ->when( moduleStatusCheck('University') && $request->filled('un_session_id'), function ($query) use ($request) {
                 $query->where('un_session_id', $request->un_session_id);
             })
@@ -114,6 +117,15 @@ class DatatableQueryController extends Controller
                                 }))
                                 ->when($request->name, function ($query) use ($request) {
                                     $query->where('full_name', 'like', '%' . $request->name . '%');
+                                })
+                                ->when($request->filled('course_id'), function ($query) use ($request) {
+                                    $query->where('sm_students.course_id', $request->course_id);
+                                })
+                                ->when($request->filled('semester_id'), function ($query) use ($request) {
+                                    $query->where('sm_students.semester_id', $request->semester_id);
+                                })
+                                ->when($request->filled('program_status'), function ($query) use ($request) {
+                                    $query->where('sm_students.program_status', $request->program_status);
                                 });
 
                              
@@ -199,6 +211,13 @@ class DatatableQueryController extends Controller
                     return $mobile;
                 })
 
+                ->addColumn('status', function ($row) {
+                    $status = '<span class="badge fix-gr-bg">' . ($row->program_status == 1 ? __('academics.status_alumni') : __('academics.status_student')) . '</span>';
+                    if ($row->program_status == 1) {
+                        $status .= ' <span class="badge fix-gr-bg">' . ($row->alumni_active_status == 1 ? __('academics.alumni_active') : __('academics.alumni_inactive')) . '</span>';
+                    }
+                    return $status;
+                })
 
                 ->addColumn('semester_label', function ($row) use ($request) {
                     $semester_label=[];
@@ -224,12 +243,13 @@ class DatatableQueryController extends Controller
                 })
 
                 ->addColumn('action', function ($row) {
-                    $langName = (moduleStatusCheck('University')) ? app('translator')->get('university::un.assign_faculty_department') : app('translator')->get('student.assign_class') ;
+                    $langName = (moduleStatusCheck('University')) ? app('translator')->get('university::un.assign_faculty_department') : app('translator')->get('academics.assign_program') ;
+                    $assignHref = moduleStatusCheck('University') ? route('student.assign-class', [$row->id]) : route('assign-program', ['student_id' => $row->id]);
                     $btn = '<div class="dropdown CRM_dropdown">
                                     <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">' . app('translator')->get('common.select') . '</button>
 
                                     <div class="dropdown-menu dropdown-menu-right">'
-                        .(userPermission('student.assign-class') === true ? '<a class="dropdown-item" target="_blank" href="' . route('student.assign-class', [$row->id]) . '">' . $langName . '</a>' :'')
+                        .(userPermission('assign-program') === true ? '<a class="dropdown-item" target="_blank" href="' . $assignHref . '">' . $langName . '</a>' :'')
 
                         .((userPermission('student.assign-class') === true && moduleStatusCheck('University')) ?
                         '<a class="dropdown-item" target="_blank" href="' . route('student_view', [$row->id,'assign_subject']) . '">' .  app('translator')->get('university::un.assign_subject') . '</a>' :'')
@@ -245,7 +265,7 @@ class DatatableQueryController extends Controller
 
                     return $btn;
                 })
-                ->rawColumns(['action','full_name', 'mobile', 'dob','class_sec','full_name', 'mobile', 'dob','class_sec'])
+                ->rawColumns(['action','full_name', 'mobile', 'dob','class_sec','full_name', 'mobile', 'dob','class_sec','status'])
                 ->make(true);
         }
         return view('backEnd.studentInformation.students');

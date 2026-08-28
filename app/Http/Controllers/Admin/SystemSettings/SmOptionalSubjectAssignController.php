@@ -54,8 +54,14 @@ class SmOptionalSubjectAssignController extends Controller
     {
         try {
             $students = StudentRecord::with('studentDetail','studentDetail.subjectAssign', 'studentDetail.subjectAssign.subject')
-            ->whereHas('studentDetail', function($q){
-                return $q->where('active_status', 1);
+            ->whereHas('studentDetail', function($q) use ($request){
+                return $q->where('active_status', 1)
+                    ->when($request->filled('course_id'), function ($q2) use ($request) {
+                        $q2->where('course_id', $request->course_id);
+                    })
+                    ->when($request->filled('semester_id'), function ($q2) use ($request) {
+                        $q2->where('semester_id', $request->semester_id);
+                    });
             })
                         ->where('class_id', $request->class_id)
                         ->where('section_id', $request->section_id)

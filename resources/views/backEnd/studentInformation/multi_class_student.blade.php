@@ -116,7 +116,7 @@
                             @else
                                 @include('backEnd.common.search_criteria', [
                                     'div' => 'col-lg-3',
-                                    'visiable' => ['academic', 'class', 'section', 'student'],
+                                    'visiable' => ['academic', 'class', 'section', 'program', 'semester', 'student'],
                                 ])
                             @endif
                             <div class="col-lg-12 mt-20 text-right">

@@ -70,8 +70,14 @@ class SmStudentAttendanceController extends Controller
                 ->when($request->class_id, function ($query) use ($request) {
                     $query->where('class_id', $request->class_id);
                 })
-                ->whereHas('studentDetail', function ($q) {
-                    $q->where('active_status', 1);
+                ->whereHas('studentDetail', function ($q) use ($request) {
+                    $q->where('active_status', 1)
+                        ->when($request->filled('course_id'), function ($q2) use ($request) {
+                            $q2->where('course_id', $request->course_id);
+                        })
+                        ->when($request->filled('semester_id'), function ($q2) use ($request) {
+                            $q2->where('semester_id', $request->semester_id);
+                        });
                 })
                 ->when($request->section_id, function ($query) use ($request) {
                     $query->where('section_id', $request->section_id);

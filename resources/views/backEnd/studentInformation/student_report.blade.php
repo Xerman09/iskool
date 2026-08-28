@@ -41,7 +41,7 @@
                                 @include('backEnd.common.search_criteria', [
                                     'div' => 'col-lg-3 mb-15',
                                     'required' => ['class'],
-                                    'visiable' => ['class', 'section'],
+                                    'visiable' => ['class', 'section', 'program', 'semester'],
                                 ])
                             @endif
                             <div class="col-lg-3 mb-15">

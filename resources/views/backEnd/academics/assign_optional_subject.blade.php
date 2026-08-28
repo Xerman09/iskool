@@ -36,7 +36,7 @@
                             @include('backEnd.common.search_criteria', [
                                 'div'=>'col-lg-4',
                                 'subject'=>true,
-                                'visiable'=>['class', 'section', 'subject'], 
+                                'visiable'=>['class', 'section', 'program', 'semester', 'subject'],
                                 'required'=>['class', 'section', 'subject'], 
                                 
                                 ]) 
