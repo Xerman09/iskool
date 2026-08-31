@@ -334,12 +334,6 @@
 
                             $('#select_class_routine_loader').removeClass('pre_dloader').addClass('dloader');
 
-                            $('#show_routine .selectSubject').each(function() {
-                                if ($(this).val()) {
-                                    updateUnitsProgress($(this).attr('id').replace('subject_', ''));
-                                }
-                            });
-
                         },
 
                         error: function(data) {
@@ -370,7 +364,7 @@
 
                         @foreach ($subjects as $subject)
 
-                        <option value="{{ @$subject->subject_id }}" data-units="{{ @$subject->subject->units }}">{{ @$subject->subject->subject_name }}</option>
+                        <option value="{{ @$subject->subject_id }}">{{ @$subject->subject->subject_name }}</option>
 
                     @endforeach
                         </select>
@@ -380,7 +374,6 @@
                             {{ $errors->first('subject') }}
                         </span>
                         @endif
-                        <small class="text-muted unitsProgress" data-row="${row_count}"></small>
                     </div>
             </td>
                 
@@ -624,45 +617,6 @@
 
 
                 });
-
-                $(document).on('change', '.selectSubject', function(e) {
-                    let id = $(this).attr('id').replace('subject_', '');
-                    updateUnitsProgress(id);
-                })
-
-                function updateUnitsProgress(rowId) {
-                    let subjectSelect = $('#subject_' + rowId);
-                    let selectedOption = subjectSelect.find('option:selected');
-                    let units = parseFloat(selectedOption.data('units'));
-                    let badge = $('.unitsProgress[data-row="' + rowId + '"]');
-
-                    if (!subjectSelect.val() || !units || isNaN(units)) {
-                        badge.text('');
-                        return;
-                    }
-
-                    let url = $('#url').val();
-                    let class_id = $('#routine_class_id').val() || $('#select_class').val();
-                    let section_id = $('#routine_section_id').val() || $('#select_section').val();
-
-                    $.ajax({
-                        type: "GET",
-                        data: {
-                            subject_id: subjectSelect.val(),
-                            class_id: class_id,
-                            section_id: section_id,
-                        },
-                        dataType: "json",
-                        url: url + '/subject-scheduled-hours',
-                        success: function(data) {
-                            let scheduled = data.scheduled_hours || 0;
-                            let target = data.target_hours || units;
-                            badge.text(scheduled + ' / ' + target + ' @lang('academics.hrs_scheduled')');
-                            badge.removeClass('text-muted text-success text-warning');
-                            badge.addClass(scheduled >= target ? 'text-success' : 'text-warning');
-                        }
-                    });
-                }
 
                 $(document).on('change', '.selectTeacher', function(e) {
                     let id = $(this).data('teacher_row_id');

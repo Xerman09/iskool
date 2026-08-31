@@ -32,19 +32,15 @@ class StudentSubjectRegistrationController extends Controller
                 $activeSemester = Semester::where('school_id', $schoolId)->where('is_active', 1)->first();
 
                 if ($activeSemester && $student->class_id) {
-                    $subjects = SmSubject::where('course_id', $student->course_id)
-                        ->where('curriculum_version_id', $student->curriculum_version_id)
-                        ->where('class_id', $student->class_id)
-                        ->where('semester_id', $activeSemester->id)
-                        ->get();
+                    $subjects = $this->requiredSubjects($student, $activeSemester);
 
                     $existingChoices = SmOptionalSubjectAssign::where('student_id', $student->id)
                         ->whereIn('subject_id', $subjects->pluck('id'))
                         ->pluck('assign_subject_id', 'subject_id');
 
                     $subjects->each(function ($subject) use ($student, $existingChoices) {
-                        $blocks = SmAssignSubject::where('subject_id', $subject->id)
-                            ->with('teacher', 'section')
+                        $blocks = SmAssignSubject::whereIn('subject_id', $this->equivalentSubjectIds($subject))
+                            ->with('teacher', 'section', 'subject.course')
                             ->get();
 
                         $blocks->each(function ($block) {
@@ -93,11 +89,7 @@ class StudentSubjectRegistrationController extends Controller
                 return redirect()->back();
             }
 
-            $subjects = SmSubject::where('course_id', $student->course_id)
-                ->where('curriculum_version_id', $student->curriculum_version_id)
-                ->where('class_id', $student->class_id)
-                ->where('semester_id', $activeSemester->id)
-                ->get();
+            $subjects = $this->requiredSubjects($student, $activeSemester);
 
             $choices = (array) $request->input('assign_subject_id', []);
 
@@ -119,7 +111,9 @@ class StudentSubjectRegistrationController extends Controller
                     return redirect()->back();
                 }
 
-                $block = SmAssignSubject::where('id', $assignSubjectId)->where('subject_id', $subject->id)->first();
+                $block = SmAssignSubject::where('id', $assignSubjectId)
+                    ->whereIn('subject_id', $this->equivalentSubjectIds($subject))
+                    ->first();
                 if (!$block) {
                     Toastr::error('One of the selected blocks is no longer valid.', 'Failed');
                     return redirect()->back();
@@ -230,6 +224,56 @@ class StudentSubjectRegistrationController extends Controller
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
+    }
+
+    /**
+     * The subjects a student must/can register for this semester. Majors stay locked to the
+     * student's current year level. Minors are curriculum-wide - any minor in the student's
+     * own course+curriculum for this semester is offered regardless of which year level it's
+     * tagged under, so a student can pick up a minor they skipped, or take one early. Minors
+     * already passed (in any of their cross-program equivalent forms - see
+     * equivalentSubjectIds()) are excluded so they stop reappearing once completed; without
+     * this, resubmitting a later semester would delete and recreate that already-graded row.
+     */
+    private function requiredSubjects($student, Semester $activeSemester)
+    {
+        $subjects = SmSubject::where('course_id', $student->course_id)
+            ->where('curriculum_version_id', $student->curriculum_version_id)
+            ->where('semester_id', $activeSemester->id)
+            ->where(function ($q) use ($student) {
+                $q->where('class_id', $student->class_id)
+                    ->orWhere('subject_classification', 'minor');
+            })
+            ->get();
+
+        return $subjects->reject(function ($subject) use ($student) {
+            return $subject->subject_classification === 'minor'
+                && SmOptionalSubjectAssign::where('student_id', $student->id)
+                    ->whereIn('subject_id', $this->equivalentSubjectIds($subject))
+                    ->where('is_pass', 1)
+                    ->exists();
+        })->values();
+    }
+
+    /**
+     * Minor subjects are shared across courses via source_subject_id (the base-subject
+     * catalog Curriculum Builder builds each course's curriculum rows from). For a minor,
+     * this resolves every course's curriculum row built from the same base subject, with the
+     * same units, for the same semester, so students can register into any course's open
+     * block. Majors, and any subject without a source_subject_id, stay scoped to just the
+     * subject itself.
+     */
+    private function equivalentSubjectIds(SmSubject $subject)
+    {
+        if ($subject->subject_classification !== 'minor' || !$subject->source_subject_id) {
+            return collect([$subject->id]);
+        }
+
+        return SmSubject::where('source_subject_id', $subject->source_subject_id)
+            ->where('subject_classification', 'minor')
+            ->where('semester_id', $subject->semester_id)
+            ->where('units', $subject->units)
+            ->pluck('id');
     }
 
     /**

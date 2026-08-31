@@ -68,24 +68,23 @@
         </div>
 
         @if(isset($miscFees))
-        <div class="row mt-40 justify-content-between align-items-center">
-            <div class="col-auto">
-                <div class="main-title">
-                    <h3 class="mb-0">{{$course->course_name}} &mdash; {{$class->class_name}} &mdash; {{$semester->semester_name}}</h3>
-                </div>
-            </div>
-            @if(userPermission('misc-fee-assign'))
-            <div class="col-auto">
-                <a href="#" data-toggle="modal" data-target="#addMiscFeeModal" class="primary-btn fix-gr-bg" title="@lang('academics.add_misc_fee')" style="width:40px;height:40px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">
-                    <span class="ti-plus"></span>
-                </a>
-            </div>
-            @endif
-        </div>
-
-        <div class="row mt-20">
+        <div class="row mt-40">
             <div class="col-lg-12">
                 <div class="white-box">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col-auto">
+                            <div class="main-title">
+                                <h3 class="mb-15">{{$course->course_name}} &mdash; {{$class->class_name}} &mdash; {{$semester->semester_name}}</h3>
+                            </div>
+                        </div>
+                        @if(userPermission('misc-fee-assign'))
+                        <div class="col-auto">
+                            <a href="#" data-toggle="modal" data-target="#addMiscFeeModal" class="primary-btn fix-gr-bg" title="@lang('academics.add_misc_fee')" style="width:40px;height:40px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">
+                                <span class="ti-plus"></span>
+                            </a>
+                        </div>
+                        @endif
+                    </div>
                     <div class="row">
                         <div class="col-lg-12">
                             <x-table>

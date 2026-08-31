@@ -16,9 +16,13 @@ class SmSubjectRequest extends FormRequest
     {
 
         $rules = [
-            'subject_name' => ['required', 'max:200' , Rule::unique('sm_subjects', 'subject_name')->where('academic_id', getAcademicId())->where('school_id', auth()->user()->school_id)->ignore($this->id)],
+            'subject_name' => ['required', 'max:200' , Rule::unique('sm_subjects', 'subject_name')->where(function ($query) {
+                $query->whereNull('course_id')->where('academic_id', getAcademicId())->where('school_id', auth()->user()->school_id);
+            })->ignore($this->id)],
             'subject_type' => "required",
-            'subject_code' => ['sometimes', 'required', 'max:200' , Rule::unique('sm_subjects', 'subject_code')->where('academic_id', getAcademicId())->where('school_id', auth()->user()->school_id)->ignore($this->id)],
+            'subject_code' => ['sometimes', 'required', 'max:200' , Rule::unique('sm_subjects', 'subject_code')->where(function ($query) {
+                $query->whereNull('course_id')->where('academic_id', getAcademicId())->where('school_id', auth()->user()->school_id);
+            })->ignore($this->id)],
         ];
 
         if (@generalSetting()->result_type == 'mark') {

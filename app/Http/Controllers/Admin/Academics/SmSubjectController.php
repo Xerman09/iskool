@@ -27,7 +27,7 @@ class SmSubjectController extends Controller
     {
 
         try {
-            $subjects = SmSubject::orderBy('id', 'DESC')->get();
+            $subjects = SmSubject::whereNull('course_id')->orderBy('id', 'DESC')->get();
 
             return view('backEnd.academics.subject', compact('subjects'));
         } catch (\Exception $e) {
@@ -132,10 +132,10 @@ class SmSubjectController extends Controller
                 return redirect()->back();
             }
 
-            $existingNames = SmSubject::pluck('subject_name')->map(function ($name) {
+            $existingNames = SmSubject::whereNull('course_id')->pluck('subject_name')->map(function ($name) {
                 return strtolower(trim($name));
             })->all();
-            $existingCodes = SmSubject::pluck('subject_code')->map(function ($code) {
+            $existingCodes = SmSubject::whereNull('course_id')->pluck('subject_code')->map(function ($code) {
                 return strtolower(trim($code));
             })->all();
             $names = array_flip($existingNames);
@@ -207,8 +207,8 @@ class SmSubjectController extends Controller
     public function edit(Request $request, $id)
     {
         try {
-            $subject = SmSubject::find($id);
-            $subjects = SmSubject::orderBy('id', 'DESC')->get();
+            $subject = SmSubject::whereNull('course_id')->find($id);
+            $subjects = SmSubject::whereNull('course_id')->orderBy('id', 'DESC')->get();
             return view('backEnd.academics.subject', compact('subject', 'subjects'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

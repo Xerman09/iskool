@@ -128,7 +128,7 @@ class AppServiceProvider extends ServiceProvider
                 $q->where('school_id', Auth::user()->school_id);
             })->pluck('permission_id')->toArray();
             
-            $permissions = Permission::whereIn('id', $permissionIds)->pluck('route')->toArray();  
+            return Permission::whereIn('id', $permissionIds)->pluck('route')->toArray();
 
         });
 

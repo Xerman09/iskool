@@ -91,6 +91,7 @@
                             <thead>
                                 <tr>
                                     <th></th>
+                                    <th>@lang('academics.program')</th>
                                     <th>@lang('academics.block')</th>
                                     <th>@lang('academics.teacher')</th>
                                     <th>@lang('academics.schedule')</th>
@@ -115,6 +116,7 @@
                                             {{ $isFull ? 'disabled' : '' }}
                                             required>
                                     </td>
+                                    <td>{{ optional(optional($block->subject)->course)->course_name }}</td>
                                     <td>{{ optional($block->section)->section_name }}</td>
                                     <td>{{ optional($block->teacher)->full_name }}</td>
                                     <td>

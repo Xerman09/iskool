@@ -174,9 +174,6 @@
                                                     <option value="App\SmSection"
                                                         @if (isset($academic_year)) @if (in_array('App\SmSection', @$copy_with_academic_year)) selected @endif
                                                         @endif >@lang('common.section')</option>
-                                                    <option value="App\SmSubject"
-                                                        @if (isset($academic_year)) @if (in_array('App\SmSubject', @$copy_with_academic_year)) selected @endif
-                                                        @endif >@lang('common.subject')</option>
                                                     <option value="App\SmExamType"
                                                         @if (isset($academic_year)) @if (in_array('App\SmExamType', @$copy_with_academic_year)) selected @endif
                                                         @endif >@lang('exam.exam_type') </option>
