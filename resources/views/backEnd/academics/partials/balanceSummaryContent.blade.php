@@ -72,12 +72,26 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($lines as $i => $line)
+            @php
+                $tuitionLines = $lines->filter(fn ($l) => str_starts_with($l['label'], 'Tuition'));
+                $miscLines = $lines->filter(fn ($l) => !str_starts_with($l['label'], 'Tuition'));
+                $groupedLines = collect([
+                    'academics.tuition' => $tuitionLines,
+                    'academics.miscellaneous_fees' => $miscLines,
+                ])->filter(fn ($group) => $group->count() > 0);
+                $rowNo = 0;
+            @endphp
+            @foreach($groupedLines as $sectionLabel => $sectionLines)
+            <tr class="table-group-header">
+                <td colspan="3"><strong>@lang($sectionLabel)</strong></td>
+            </tr>
+            @foreach($sectionLines as $line)
             <tr>
-                <td>{{$i + 1}}</td>
+                <td>{{ ++$rowNo }}</td>
                 <td>{{$line['label']}}</td>
                 <td class="text-right-print">{{currency_format($line['amount']) ?: number_format($line['amount'], 2)}}</td>
             </tr>
+            @endforeach
             @endforeach
         </tbody>
         <tfoot>
@@ -96,7 +110,7 @@
             <tr>
                 <td colspan="2"></td>
                 <td>
-                    <p class="total_count"><span>@lang('academics.down_payment_paid')</span> <span>&ndash; {{currency_format($amountPaid) ?: number_format($amountPaid, 2)}}</span></p>
+                    <p class="total_count"><span>@lang('academics.total_paid')</span> <span>&ndash; {{currency_format($amountPaid) ?: number_format($amountPaid, 2)}}</span></p>
                 </td>
             </tr>
             <tr>
@@ -116,6 +130,47 @@
             </tr>
         </tfoot>
     </table>
+
+    @if(isset($itemLines) && $itemLines->count())
+    <div class="mt-30">
+        <h4 class="mb-15">@lang('academics.items_purchased')</h4>
+        <table class="table border_table mb_30 description_table">
+            <thead>
+                <tr>
+                    <th>@lang('common.sl')</th>
+                    <th>@lang('academics.description')</th>
+                    <th>@lang('inventory.quantity')</th>
+                    <th class="text-right-print">@lang('accounts.amount')</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($itemLines as $i => $itemLine)
+                <tr>
+                    <td>{{$i + 1}}</td>
+                    <td>{{ optional($itemLine->item)->item_name ?? $itemLine->note }}</td>
+                    <td>{{$itemLine->quantity}}</td>
+                    <td class="text-right-print">{{currency_format($itemLine->amount) ?: number_format($itemLine->amount, 2)}}</td>
+                </tr>
+                @endforeach
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3"></td>
+                    <td>
+                        <p class="total_count"><span>@lang('academics.items_total')</span> <span>{{currency_format($itemsTotal) ?: number_format($itemsTotal, 2)}}</span></p>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    @endif
+
+    @if(isset($dueNow) && $dueNow > 0)
+    <div class="mt-30">
+        <p class="total_count"><span><strong>@lang('academics.due_now')</strong></span> <span><strong>{{currency_format($dueNow) ?: number_format($dueNow, 2)}}</strong></span></p>
+        <p class="text-muted">@lang('academics.due_now_hint')</p>
+    </div>
+    @endif
 
     @if($paymentPlan)
     <div class="mt-30">

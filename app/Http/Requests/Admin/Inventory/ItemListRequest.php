@@ -27,6 +27,7 @@ class ItemListRequest extends FormRequest
             'item_name' => "required",
             'category_name' => "required",
             'description' =>'sometimes|nullable',
+            'unit_price' => 'sometimes|nullable|numeric|min:0',
         ];
     }
 }

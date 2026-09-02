@@ -64,6 +64,8 @@ class Kernel extends ConsoleKernel
             if (moduleStatusCheck("University") == true) {
                 $schedule->command('payment:reminder')->everyTenMinutes()->withoutOverlapping();
             }
+
+            $schedule->command('payment:installment-reminder')->dailyAt('08:00')->withoutOverlapping();
         }
     }
 

@@ -8,6 +8,7 @@ use App\SmBook;
 use App\SmExam;
 use ZipArchive;
 use App\SmClass;
+use App\Models\StudentProgramHistory;
 use App\SmEvent;
 use App\SmRoute;
 use App\SmStaff;
@@ -368,6 +369,15 @@ class SmStudentPanelController extends Controller
             $studentBehaviourRecords = (moduleStatusCheck('BehaviourRecords')) ? AssignIncident::where('student_id', auth()->user()->student->id)->with('incident', 'user', 'academicYear')->get() : null;
             $behaviourRecordSetting = BehaviourRecordSetting::where('id', 1)->first();
 
+            // A student's own read of the same shift history admin sees on the
+            // Student Info profile screen - e.g. moving from an undergraduate
+            // program into a graduate one.
+            $programHistories = StudentProgramHistory::where('student_id', $student_detail->id)
+                ->where('school_id', $student_detail->school_id)
+                ->with(['previousCourse', 'currentCourse', 'previousCurriculumVersion', 'currentCurriculumVersion'])
+                ->orderByDesc('id')
+                ->get();
+
             if (moduleStatusCheck('University')) {
                 $student_id = $student_detail->id;
                 $studentDetails = SmStudent::find($student_id);
@@ -376,12 +386,12 @@ class SmStudentPanelController extends Controller
                 $print = 1;
                 return view(
                     'backEnd.studentPanel.my_profile',
-                    compact('next_subjects', 'unSettings', 'departmentSubjects', 'next_semester_label', 'canChoose', 'driver', 'academic_year', 'student_detail', 'fees_assigneds', 'fees_discounts', 'exams', 'documents', 'timelines', 'siblings', 'grades', 'exam_terms', 'result_views', 'leave_details', 'optional_subject_setup', 'student_optional_subject', 'maxgpa', 'failgpaname', 'custom_field_values', 'paymentMethods', 'walletAmounts', 'bankAccounts', 'records', 'studentDetails', 'studentRecordDetails', 'studentRecords', 'print', 'payment_gateway', 'student', 'data', 'studentBehaviourRecords', 'behaviourRecordSetting')
+                    compact('next_subjects', 'unSettings', 'departmentSubjects', 'next_semester_label', 'canChoose', 'driver', 'academic_year', 'student_detail', 'fees_assigneds', 'fees_discounts', 'exams', 'documents', 'timelines', 'siblings', 'grades', 'exam_terms', 'result_views', 'leave_details', 'optional_subject_setup', 'student_optional_subject', 'maxgpa', 'failgpaname', 'custom_field_values', 'paymentMethods', 'walletAmounts', 'bankAccounts', 'records', 'studentDetails', 'studentRecordDetails', 'studentRecords', 'print', 'payment_gateway', 'student', 'data', 'studentBehaviourRecords', 'behaviourRecordSetting', 'programHistories')
                 );
             } else {
                 return view(
                     'backEnd.studentPanel.my_profile',
-                    compact('next_subjects', 'unSettings', 'departmentSubjects', 'next_semester_label', 'canChoose', 'driver', 'academic_year', 'student_detail', 'fees_assigneds', 'fees_discounts', 'exams', 'documents', 'timelines', 'siblings', 'grades', 'exam_terms', 'result_views', 'leave_details', 'optional_subject_setup', 'student_optional_subject', 'maxgpa', 'failgpaname', 'custom_field_values', 'paymentMethods', 'walletAmounts', 'bankAccounts', 'records', 'payment_gateway', 'student', 'data', 'attendance', 'subjectAttendance', 'days', 'year', 'month', 'studentBehaviourRecords', 'behaviourRecordSetting')
+                    compact('next_subjects', 'unSettings', 'departmentSubjects', 'next_semester_label', 'canChoose', 'driver', 'academic_year', 'student_detail', 'fees_assigneds', 'fees_discounts', 'exams', 'documents', 'timelines', 'siblings', 'grades', 'exam_terms', 'result_views', 'leave_details', 'optional_subject_setup', 'student_optional_subject', 'maxgpa', 'failgpaname', 'custom_field_values', 'paymentMethods', 'walletAmounts', 'bankAccounts', 'records', 'payment_gateway', 'student', 'data', 'attendance', 'subjectAttendance', 'days', 'year', 'month', 'studentBehaviourRecords', 'behaviourRecordSetting', 'programHistories')
                 );
             }
         } catch (\Exception $e) {

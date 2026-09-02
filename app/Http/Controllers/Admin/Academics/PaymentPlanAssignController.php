@@ -5,16 +5,17 @@ namespace App\Http\Controllers\Admin\Academics;
 use App\SmStudent;
 use App\PaymentPlanType;
 use App\PaymentPlanAssign;
+use App\PaymentPlanInstallment;
 use App\Models\StudentRecord;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Traits\EnrollmentBalanceBreakdown;
-use App\Traits\EnrollmentInvoicing;
 use Brian2694\Toastr\Facades\Toastr;
+use Modules\Fees\Entities\FmFeesInvoice;
 
 class PaymentPlanAssignController extends Controller
 {
-    use EnrollmentBalanceBreakdown, EnrollmentInvoicing;
+    use EnrollmentBalanceBreakdown;
 
     public function __construct()
     {
@@ -35,12 +36,13 @@ class PaymentPlanAssignController extends Controller
 
             $assignedPlans = PaymentPlanAssign::where('school_id', $schoolId)
                 ->where('active_status', 1)
-                ->with(['planType', 'student', 'invoices.invoiceDetails'])
+                ->with(['planType', 'student', 'installments', 'invoice'])
                 ->orderByDesc('id')
                 ->get();
 
             $assignedPlans->each(function ($assign) {
-                $assign->paidCount = $assign->invoices->where('payment_status', 'paid')->count();
+                $assign->schedule = $this->installmentSchedule($assign);
+                $assign->paidCount = $assign->schedule->where('status', 'paid')->count();
             });
 
             return view('backEnd.academics.payment_plan_assign', compact(
@@ -58,46 +60,72 @@ class PaymentPlanAssignController extends Controller
     {
         try {
             $request->validate([
-                'student_id' => 'required|exists:sm_students,id',
+                'invoice_id' => 'required_without:student_id|nullable|exists:fm_fees_invoices,id',
+                'student_id' => 'required_without:invoice_id|nullable|exists:sm_students,id',
                 'payment_plan_type_id' => 'required|exists:payment_plan_types,id',
                 'first_due_date' => 'required|date',
                 'days_between_installments' => 'required|integer|min:1',
             ]);
 
             $schoolId = auth()->user()->school_id;
-            $student = SmStudent::where('school_id', $schoolId)->findOrFail($request->student_id);
 
-            if ($student->enrollment_status !== 'enrolled') {
-                Toastr::error('This student must have their down payment paid (enrolled) before a payment plan can be assigned.', 'Failed');
-                return redirect()->back();
+            if ($request->filled('invoice_id')) {
+                // Assigned directly from that invoice's own page (e.g. by reception) -
+                // works for any invoice, enrollment or item-store alike, not just tuition.
+                $invoice = FmFeesInvoice::where('school_id', $schoolId)->findOrFail($request->invoice_id);
+                $student = SmStudent::where('school_id', $schoolId)->findOrFail($invoice->student_id);
+                $context = $invoice->type === 'store' ? 'store' : 'tuition';
+            } else {
+                $student = SmStudent::where('school_id', $schoolId)->findOrFail($request->student_id);
+
+                if ($student->enrollment_status !== 'enrolled') {
+                    Toastr::error('This student must have their down payment paid (enrolled) before a payment plan can be assigned.', 'Failed');
+                    return redirect()->back();
+                }
+
+                $context = $request->context ?: 'tuition';
+
+                $record = StudentRecord::where('school_id', $schoolId)
+                    ->where('student_id', $student->id)
+                    ->where('academic_id', getAcademicId())
+                    ->where('is_promote', 0)
+                    ->first();
+
+                if (!$record) {
+                    Toastr::error('No active student record found. Cannot assign a payment plan.', 'Failed');
+                    return redirect()->back();
+                }
+
+                $invoice = FmFeesInvoice::where('school_id', $schoolId)
+                    ->where('record_id', $record->id)
+                    ->where('type', 'fees')
+                    ->first();
+
+                if (!$invoice) {
+                    Toastr::error('Generate the enrollment invoice first.', 'Failed');
+                    return redirect()->back();
+                }
             }
 
-            $alreadyOnPlan = PaymentPlanAssign::where('school_id', $schoolId)
-                ->where('student_id', $student->id)
-                ->where('course_id', $student->course_id)
+            // Uniqueness is per invoice, not per student+context - one invoice, one
+            // active plan at a time, regardless of which screen created it.
+            $alreadyOnPlan = PaymentPlanAssign::where('fm_fees_invoice_id', $invoice->id)
                 ->where('active_status', 1)
                 ->exists();
 
             if ($alreadyOnPlan) {
-                Toastr::error('This student already has an active payment plan.', 'Failed');
+                Toastr::error('This invoice already has an active payment plan.', 'Failed');
                 return redirect()->back();
             }
 
-            $record = StudentRecord::where('school_id', $schoolId)
-                ->where('student_id', $student->id)
-                ->where('academic_id', getAcademicId())
-                ->where('is_promote', 0)
-                ->first();
-
-            if (!$record) {
-                Toastr::error('No active student record found. Cannot create installment invoices.', 'Failed');
-                return redirect()->back();
-            }
-
-            $remainingBalance = $this->balanceBreakdownFor($student)['remainingBalance'];
+            // Installments are partial payments against the invoice's existing lines,
+            // not new invoices. Those lines are already fully billed (tuition/misc, or
+            // items), so the invoice's own live due amount IS the balance to split - no
+            // separate "installment" line needs to be added.
+            $remainingBalance = round((float) $invoice->Tamount - (float) $invoice->Tpaidamount, 2);
 
             if ($remainingBalance <= 0) {
-                Toastr::error('This student has no remaining balance to split into a payment plan.', 'Failed');
+                Toastr::error('This invoice has no remaining balance to split into a payment plan.', 'Failed');
                 return redirect()->back();
             }
 
@@ -106,10 +134,13 @@ class PaymentPlanAssignController extends Controller
 
             $planAssign = new PaymentPlanAssign();
             $planAssign->payment_plan_type_id = $planType->id;
+            $planAssign->context = $context;
+            $planAssign->fm_fees_invoice_id = $invoice->id;
             $planAssign->student_id = $student->id;
-            $planAssign->record_id = $record->id;
+            $planAssign->record_id = $invoice->record_id;
             $planAssign->course_id = $student->course_id;
             $planAssign->total_amount = $remainingBalance;
+            $planAssign->baseline_paid_amount = (float) $invoice->Tpaidamount;
             $planAssign->number_of_installments = $installments;
             $planAssign->active_status = 1;
             $planAssign->created_by = auth()->user()->id;
@@ -117,9 +148,7 @@ class PaymentPlanAssignController extends Controller
             $planAssign->academic_id = getAcademicId();
             $planAssign->save();
 
-            $this->splitAndCreateInstallments(
-                $student,
-                $record,
+            $this->buildInstallmentSchedule(
                 $planAssign,
                 $remainingBalance,
                 $installments,
@@ -128,8 +157,11 @@ class PaymentPlanAssignController extends Controller
                 (int) $request->days_between_installments
             );
 
-            Toastr::success("Payment plan assigned. {$installments} installment invoice(s) created, totaling " . number_format($remainingBalance, 2) . '.', 'Success');
-            return redirect()->back();
+            Toastr::success("Payment plan assigned. {$installments} installment(s) scheduled, totaling " . number_format($remainingBalance, 2) . '.', 'Success');
+
+            return $request->filled('invoice_id')
+                ? redirect()->route('fees.fees-invoice-view', ['id' => $invoice->id, 'state' => 'view'])
+                : redirect()->back();
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -142,23 +174,24 @@ class PaymentPlanAssignController extends Controller
             $schoolId = auth()->user()->school_id;
 
             $planAssign = PaymentPlanAssign::where('school_id', $schoolId)
-                ->with(['planType', 'student', 'invoices.invoiceDetails'])
+                ->with(['planType', 'student', 'installments', 'invoice'])
                 ->findOrFail($id);
 
-            $unpaidInvoices = $planAssign->invoices->where('payment_status', '!=', 'paid')->values();
+            $schedule = $this->installmentSchedule($planAssign);
+            $unpaid = $schedule->where('status', '!=', 'paid')->values();
 
-            if ($unpaidInvoices->isEmpty()) {
+            if ($unpaid->isEmpty()) {
                 Toastr::error('This payment plan is already fully paid — nothing left to reschedule.', 'Failed');
                 return redirect()->route('payment-plan-assign');
             }
 
             $paymentPlanTypes = PaymentPlanType::where('school_id', $schoolId)->orderBy('id')->get();
 
-            $firstUnpaidDueDate = $unpaidInvoices->first()->due_date;
+            $firstUnpaidDueDate = $unpaid->first()['due_date'];
             $daysBetween = 30;
-            if ($unpaidInvoices->count() > 1) {
-                $daysBetween = \Carbon\Carbon::parse($unpaidInvoices[0]->due_date)
-                    ->diffInDays(\Carbon\Carbon::parse($unpaidInvoices[1]->due_date));
+            if ($unpaid->count() > 1) {
+                $daysBetween = \Carbon\Carbon::parse($unpaid[0]['due_date'])
+                    ->diffInDays(\Carbon\Carbon::parse($unpaid[1]['due_date']));
             }
 
             return view('backEnd.academics.payment_plan_assign_edit', compact(
@@ -186,36 +219,28 @@ class PaymentPlanAssignController extends Controller
             $schoolId = auth()->user()->school_id;
 
             $planAssign = PaymentPlanAssign::where('school_id', $schoolId)
-                ->with('invoices.invoiceDetails')
+                ->with(['installments', 'invoice'])
                 ->findOrFail($request->id);
 
-            $student = SmStudent::where('school_id', $schoolId)->findOrFail($planAssign->student_id);
-            $record = StudentRecord::where('school_id', $schoolId)->findOrFail($planAssign->record_id);
+            $schedule = $this->installmentSchedule($planAssign);
 
-            $paidInvoices = $planAssign->invoices->where('payment_status', 'paid');
-            $partialInvoices = $planAssign->invoices->where('payment_status', 'partial');
-            $unpaidInvoices = $planAssign->invoices->where('payment_status', 'unpaid');
-
-            $partialOutstanding = $partialInvoices->sum(function ($invoice) {
-                return $invoice->invoiceDetails->sum('amount') - $invoice->invoiceDetails->sum('paid_amount');
-            });
-            $amountRemaining = $unpaidInvoices->sum(fn ($invoice) => $invoice->invoiceDetails->sum('amount')) + $partialOutstanding;
+            $amountRemaining = $planAssign->invoice
+                ? round((float) $planAssign->invoice->Tamount - (float) $planAssign->invoice->Tpaidamount, 2)
+                : 0;
 
             if ($amountRemaining <= 0) {
                 Toastr::error('This payment plan is already fully paid — nothing left to reschedule.', 'Failed');
                 return redirect()->route('payment-plan-assign');
             }
 
-            $paidCount = $paidInvoices->count() + $partialInvoices->count();
+            $paidCount = $schedule->where('status', 'paid')->count();
 
-            // Only fully-unpaid installments are replaced; anything with a payment on
-            // it (paid OR partial) is left untouched so we never destroy payment history
-            // or re-bill money already collected. A partial invoice's outstanding portion
-            // is folded into the new schedule's total instead.
-            foreach ($unpaidInvoices as $invoice) {
-                \Modules\Fees\Entities\FmFeesInvoiceChield::where('fees_invoice_id', $invoice->id)->delete();
-                $invoice->delete();
-            }
+            // Only not-yet-fully-paid schedule rows are replaced; a "paid" row is left
+            // untouched. Real payment history lives on the invoice's own lines, not on
+            // these schedule rows, so replacing a "partial" row loses nothing -
+            // amountRemaining above already reflects the true live due amount.
+            $toReplace = $schedule->where('status', '!=', 'paid')->pluck('id');
+            PaymentPlanInstallment::whereIn('id', $toReplace)->delete();
 
             $planType = PaymentPlanType::where('school_id', $schoolId)->findOrFail($request->payment_plan_type_id);
             $newCount = $planType->number_of_installments;
@@ -225,9 +250,7 @@ class PaymentPlanAssignController extends Controller
             $planAssign->updated_by = auth()->user()->id;
             $planAssign->save();
 
-            $this->splitAndCreateInstallments(
-                $student,
-                $record,
+            $this->buildInstallmentSchedule(
                 $planAssign,
                 $amountRemaining,
                 $newCount,
@@ -244,9 +267,8 @@ class PaymentPlanAssignController extends Controller
         }
     }
 
-    private function splitAndCreateInstallments(SmStudent $student, StudentRecord $record, PaymentPlanAssign $planAssign, $amount, $count, $startingInstallmentNo, $firstDueDate, $daysBetween)
+    private function buildInstallmentSchedule(PaymentPlanAssign $planAssign, $amount, $count, $startingInstallmentNo, $firstDueDate, $daysBetween)
     {
-        $installmentType = $this->tuitionInstallmentFeesType();
         $perInstallment = floor(($amount / $count) * 100) / 100;
         $runningTotal = 0;
 
@@ -255,9 +277,15 @@ class PaymentPlanAssignController extends Controller
             $runningTotal += $installmentAmount;
 
             $dueDate = $firstDueDate->copy()->addDays(($i - 1) * $daysBetween);
-            $dueInDays = now()->startOfDay()->diffInDays($dueDate, false);
 
-            $this->createInvoiceLine($student, $record, $installmentType, $installmentAmount, $dueInDays, $planAssign->id, $startingInstallmentNo + $i - 1);
+            $installment = new PaymentPlanInstallment();
+            $installment->payment_plan_assign_id = $planAssign->id;
+            $installment->installment_no = $startingInstallmentNo + $i - 1;
+            $installment->due_date = $dueDate->toDateString();
+            $installment->amount = $installmentAmount;
+            $installment->school_id = $planAssign->school_id;
+            $installment->academic_id = $planAssign->academic_id;
+            $installment->save();
         }
     }
 }

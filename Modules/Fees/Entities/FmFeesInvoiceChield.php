@@ -21,4 +21,9 @@ class FmFeesInvoiceChield extends Model
     {
         return $this->belongsTo(FmFeesType::class,'fees_type','id');
     }
+
+    public function item()
+    {
+        return $this->belongsTo(\App\SmItem::class, 'sm_item_id', 'id');
+    }
 }

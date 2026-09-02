@@ -198,7 +198,12 @@
                                         href="#studentTimeline" role="tab" data-toggle="tab">@lang('student.record')</a>
                                 </li>
                             @endif
-    
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="#programHistory" role="tab"
+                                    data-toggle="tab">@lang('academics.program_history')</a>
+                            </li>
+
                             @if (userPermission('studentTimeline') && moduleStatusCheck('University'))
                                 <li class="nav-item">
                                     <a class="nav-link {{ Session::get('chooseSubject') == 'active' ? 'active' : '' }} "
@@ -1922,7 +1927,48 @@
                             </div>
                         </div>
                         <!-- End Timeline Tab -->
-    
+
+                        <!-- Start Program History Tab -->
+                        <div role="tabpanel" class="tab-pane fade" id="programHistory">
+                            <div>
+                                <table id="" class="table simple-table table-responsive school-table" cellspacing="0">
+                                    <thead class="d-block">
+                                        <tr class="d-flex">
+                                            <th class="col-2">@lang('academics.date')</th>
+                                            <th class="col-5">@lang('academics.program')</th>
+                                            <th class="col-5">@lang('academics.curriculum_version')</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="d-block">
+                                        @forelse ($programHistories as $history)
+                                            <tr class="d-flex">
+                                                <td class="col-2">{{ $history->created_at->format('M d, Y') }}</td>
+                                                <td class="col-5">
+                                                    @if ($history->previous_course_id)
+                                                        {{ optional($history->previousCourse)->course_name }} &rarr; {{ optional($history->currentCourse)->course_name }}
+                                                    @else
+                                                        {{ __('academics.initial_enrollment') }}: {{ optional($history->currentCourse)->course_name }}
+                                                    @endif
+                                                </td>
+                                                <td class="col-5">
+                                                    @if ($history->previous_curriculum_version_id)
+                                                        {{ optional($history->previousCurriculumVersion)->version_label }} &rarr; {{ optional($history->currentCurriculumVersion)->version_label }}
+                                                    @else
+                                                        {{ optional($history->currentCurriculumVersion)->version_label }}
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr class="d-flex">
+                                                <td class="col-12">@lang('reports.no_data_found')</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- End Program History Tab -->
+
                         <!-- Start Attendance Tab -->
                         @include('backEnd.studentPanel.inc._student_attendance_tab')
                         <!-- End Attendance Tab -->

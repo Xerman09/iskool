@@ -26,8 +26,11 @@ use Modules\Fees\Entities\FmFeesTransactionChield;
 use Modules\CcAveune\Http\Controllers\CcAveuneController;
 use Modules\Fees\Http\Controllers\FeesExtendedController;
 use Modules\ToyyibPay\Http\Controllers\ToyyibPayController;
+use App\Traits\EnrollmentBalanceBreakdown;
 class StudentFeesController extends Controller
 {
+    use EnrollmentBalanceBreakdown;
+
     public function studentFeesList()
     {
         $user = auth()->user();
@@ -118,7 +121,13 @@ class StudentFeesController extends Controller
                     ->first();
             }
 
-            return view('fees::student.studentAddPayment',compact('classes','feesGroups','feesTypes','paymentMethods','bankAccounts','invoiceInfo','invoiceDetails','stripe_info', 'razorpay_info'));
+            $activePlan = $this->activePlanForInvoice($invoiceInfo->id);
+            // Suggested default: this cycle's installment if there's a plan,
+            // otherwise the full remaining balance (i.e. "pay it all" by default).
+            $suggestedAmount = $activePlan ? $activePlan['dueThisCycle'] : (float) $invoiceDetails->sum('due_amount');
+            $suggestedPaidAmounts = $this->allocateAcrossLines($invoiceDetails, $suggestedAmount);
+
+            return view('fees::student.studentAddPayment',compact('classes','feesGroups','feesTypes','paymentMethods','bankAccounts','invoiceInfo','invoiceDetails','stripe_info', 'razorpay_info', 'activePlan', 'suggestedPaidAmounts'));
         }catch(\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Modules\Fees\Entities\FmFeesWeaver;
 use Modules\Fees\Entities\FmFeesInvoice;
+use App\Traits\EnrollmentBalanceBreakdown;
 use Modules\Fees\Entities\FmFeesTransaction;
 use Modules\Fees\Entities\FmFeesInvoiceChield;
 use Modules\Wallet\Entities\WalletTransaction;
@@ -23,6 +24,8 @@ use Modules\University\Repositories\Interfaces\UnCommonRepositoryInterface;
 
 class FeesExtendedController extends Controller
 {
+    use EnrollmentBalanceBreakdown;
+
 
     public function invStore($request)
     {
@@ -271,8 +274,12 @@ class FeesExtendedController extends Controller
     }
 
     /**
-     * First time a student's invoice is fully paid, flip them from "pending" to "enrolled".
-     * Only fires once (guarded by the pending check) so later-term invoices don't re-trigger it.
+     * Flip a student from "pending" to "enrolled" the first time enough has been
+     * paid on their enrollment invoice to cover the down payment threshold -
+     * cumulative across however the cashier splits the payment across that
+     * invoice's lines, not tied to any one specific line. Paying off an unrelated
+     * store/item invoice alone never enrolls a still-pending student, since only
+     * the 'fees'-type enrollment invoice is checked.
      */
     public function markStudentEnrolledIfPending($studentId)
     {
@@ -281,7 +288,25 @@ class FeesExtendedController extends Controller
         }
 
         $student = SmStudent::find($studentId);
-        if ($student && $student->course_id && $student->enrollment_status === 'pending') {
+        if (!$student || !$student->course_id || $student->enrollment_status !== 'pending') {
+            return;
+        }
+
+        $enrollmentInvoice = FmFeesInvoice::where('school_id', $student->school_id)
+            ->where('student_id', $student->id)
+            ->where('course_id', $student->course_id)
+            ->where('type', 'fees')
+            ->first();
+
+        if (!$enrollmentInvoice) {
+            return;
+        }
+
+        $downPayment = $this->balanceBreakdownFor($student)['downPayment'];
+
+        $isSettled = $downPayment <= 0 || (float) $enrollmentInvoice->Tpaidamount >= $downPayment - 0.01;
+
+        if ($isSettled) {
             $student->enrollment_status = 'enrolled';
             $student->enrolled_at = now();
             $student->save();

@@ -78,6 +78,18 @@
                                 </div>
                                 <div class="row mt-15">
                                     <div class="col-lg-12">
+                                        <label class="primary_input_label" for="">@lang('academics.program_level') <span class="text-danger"> *</span></label>
+                                        <select class="primary_select form-control{{ @$errors->has('level') ? ' is-invalid' : '' }}" name="level">
+                                            <option value="undergraduate" {{ (isset($course) ? $course->level : old('level')) == 'undergraduate' ? 'selected' : '' }}>@lang('academics.undergraduate')</option>
+                                            <option value="graduate" {{ (isset($course) ? $course->level : old('level')) == 'graduate' ? 'selected' : '' }}>@lang('academics.graduate')</option>
+                                        </select>
+                                        @if ($errors->has('level'))
+                                            <span class="text-danger">{{ @$errors->first('level') }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="row mt-15">
+                                    <div class="col-lg-12">
                                         <div class="primary_input">
                                             <label class="primary_input_label" for="">@lang('academics.price_per_unit')</label>
                                             <input class="primary_input_field form-control{{ @$errors->has('price_per_unit') ? ' is-invalid' : '' }}"
@@ -135,6 +147,7 @@
                                             <th>@lang('common.sl')</th>
                                             <th>@lang('academics.program_name')</th>
                                             <th>@lang('academics.program_code')</th>
+                                            <th>@lang('academics.program_level')</th>
                                             <th>@lang('academics.price_per_unit')</th>
                                             <th>@lang('common.action')</th>
                                         </tr>
@@ -146,6 +159,13 @@
                                             <td>{{++$i}}</td>
                                             <td>{{@$course->course_name}}</td>
                                             <td>{{@$course->course_code}}</td>
+                                            <td>
+                                                @if($course->level == 'graduate')
+                                                    <span class="badge badge-info">@lang('academics.graduate')</span>
+                                                @else
+                                                    <span class="badge badge-secondary">@lang('academics.undergraduate')</span>
+                                                @endif
+                                            </td>
                                             <td>{{$course->price_per_unit ? currency_format($course->price_per_unit) ?: number_format($course->price_per_unit, 2) : '-'}}</td>
                                             <td>
                                                 @php

@@ -68,7 +68,13 @@ class FmFeesInvoice extends Model
         return $this->belongsTo('App\Models\StudentRecord', 'record_id', 'id');
     }
 
+    /**
+     * The plan (if any) splitting THIS invoice's balance into installments - keyed
+     * off PaymentPlanAssign.fm_fees_invoice_id, the live FK. payment_plan_assign_id
+     * on this table is a leftover from an earlier one-invoice-per-installment design
+     * and is never set, so it can't be used to find a plan.
+     */
     public function paymentPlanAssign(){
-        return $this->belongsTo('App\PaymentPlanAssign', 'payment_plan_assign_id', 'id');
+        return $this->hasOne('App\PaymentPlanAssign', 'fm_fees_invoice_id', 'id');
     }
 }

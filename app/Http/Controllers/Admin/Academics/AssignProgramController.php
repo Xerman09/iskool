@@ -16,6 +16,7 @@ use App\Traits\EnrollmentInvoicing;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
 use Modules\Fees\Entities\FmFeesInvoice;
+use Modules\Fees\Entities\FmFeesInvoiceChield;
 
 class AssignProgramController extends Controller
 {
@@ -35,6 +36,19 @@ class AssignProgramController extends Controller
             $curriculumVersions = CurriculumVersion::where('school_id', $schoolId)->get();
             $students = SmStudent::where('school_id', $schoolId)->with('course')->orderBy('first_name')->get();
 
+            // So the Program dropdown can hide graduate-level programs for anyone
+            // who hasn't actually graduated from an undergraduate one yet - the
+            // same rule store() enforces, just surfaced before the click instead
+            // of after.
+            $graduatedStudentIds = \App\Models\Graduate::whereIn('student_id', $students->pluck('id'))
+                ->distinct()
+                ->pluck('student_id');
+
+            $students->each(function ($s) use ($graduatedStudentIds) {
+                $s->hasGraduated = $graduatedStudentIds->contains($s->id)
+                    && optional($s->course)->level === 'undergraduate';
+            });
+
             $assignedStudents = SmStudent::where('school_id', $schoolId)
                 ->whereNotNull('course_id')
                 ->with(['course', 'curriculumVersion', 'class', 'academicYear'])
@@ -51,6 +65,7 @@ class AssignProgramController extends Controller
                 $s->hasRegisteredSubjects = $registeredStudentIds->contains($s->id);
                 $s->remainingBalance = null;
                 $s->paymentPlan = null;
+                $s->priorYearBalance = $this->priorYearBalanceFor($s);
 
                 if ($s->hasRegisteredSubjects && $s->class_id) {
                     $breakdown = $this->balanceBreakdownFor($s);
@@ -88,6 +103,18 @@ class AssignProgramController extends Controller
             $previousCourseId = $student->course_id;
             $previousCurriculumVersionId = $student->curriculum_version_id;
 
+            $newCourse = Course::where('school_id', auth()->user()->school_id)->find($request->course_id);
+
+            if ($newCourse && $newCourse->level === 'graduate') {
+                $previousCourse = Course::where('school_id', auth()->user()->school_id)->find($previousCourseId);
+                $hasGraduated = \App\Models\Graduate::where('student_id', $student->id)->exists();
+
+                if (!$hasGraduated || !$previousCourse || $previousCourse->level !== 'undergraduate') {
+                    Toastr::error(__('academics.must_graduate_undergrad_first'), 'Failed');
+                    return redirect()->back();
+                }
+            }
+
             $student->course_id = $request->course_id;
             $student->curriculum_version_id = $request->curriculum_version_id;
             if (!$student->class_id) {
@@ -95,12 +122,17 @@ class AssignProgramController extends Controller
                     ->where('curriculum_version_id', $request->curriculum_version_id)
                     ->min('class_id');
             }
-            if ($student->enrollment_status === null) {
+
+            $isShift = $previousCourseId && $previousCourseId != $student->course_id;
+
+            // A shift into a different program (including a graduate program after
+            // finishing undergrad) starts a new enrollment from scratch - the
+            // downpayment/invoicing gate shouldn't be skipped just because the
+            // student was already 'enrolled' in their previous program.
+            if ($isShift || $student->enrollment_status === null) {
                 $student->enrollment_status = 'pending';
             }
             $student->save();
-
-            $isShift = $previousCourseId && $previousCourseId != $student->course_id;
 
             if ($previousCourseId != $student->course_id || $previousCurriculumVersionId != $student->curriculum_version_id) {
                 StudentProgramHistory::create([
@@ -160,29 +192,42 @@ class AssignProgramController extends Controller
                 return redirect()->back();
             }
 
-            $breakdown = $this->balanceBreakdownFor($student);
-            $downPaymentAmount = $breakdown['downPayment'];
-            $remainingBalance = $breakdown['remainingBalance'];
+            $tuitionType = $this->tuitionFeesType();
 
-            $downPaymentType = $this->downPaymentFeesType();
-
-            $downPaymentInvoice = FmFeesInvoice::where('school_id', auth()->user()->school_id)
+            $existingInvoice = FmFeesInvoice::where('school_id', auth()->user()->school_id)
                 ->where('record_id', $record->id)
-                ->where('course_id', $student->course_id)
-                ->whereHas('invoiceDetails', fn ($q) => $q->where('fees_type', $downPaymentType->id))
+                ->whereHas('invoiceDetails', fn ($q) => $q->where('fees_type', $tuitionType->id))
                 ->first();
 
-            $alreadyHadDownPayment = (bool) $downPaymentInvoice;
-            $downPaymentInvoice = $downPaymentInvoice ?: $this->createInvoiceLine($student, $record, $downPaymentType, $downPaymentAmount, 3);
+            if ($existingInvoice) {
+                Toastr::success('This student already has an enrollment invoice for this program. Showing it below.', 'Success');
+                return redirect()->route('fees.fees-invoice-view', ['id' => $existingInvoice->id, 'state' => 'view']);
+            }
 
-            // enrollment_status flips to 'enrolled' only once this invoice is actually paid in full —
-            // see FeesExtendedController::markStudentEnrolledIfPending(), hooked into the payment-recording flow.
+            $breakdown = $this->balanceBreakdownFor($student);
 
-            Toastr::success($alreadyHadDownPayment
-                ? 'This student already has a pending down payment invoice for this program. Showing it below.'
-                : ('Down payment invoice created for ' . number_format($downPaymentAmount, 2) . '. Remaining balance of ' . number_format($remainingBalance, 2) . ' will be arranged separately by the Registrar once the down payment is settled. The student will be marked enrolled once this invoice is paid.'), 'Success');
+            // One invoice for the whole order, itemized (tuition + each misc fee) for
+            // the full amount - not capped to the down payment. The down payment is
+            // just the threshold that has to be paid on THIS invoice for the student
+            // to be considered enrolled (see FeesExtendedController::
+            // markStudentEnrolledIfPending()), not a billed line of its own.
+            //
+            // If the student already bought something from the item store before this
+            // invoice was ever generated (order of operations shouldn't matter), reuse
+            // that still-open invoice instead of starting a separate one, and promote
+            // it to 'fees' now that it carries the enrollment gate.
+            $invoice = $this->openOrderInvoiceFor($record) ?: $this->newOrderInvoice($student, $record, 'fees', 3);
+            $invoice->type = 'fees';
+            $invoice->save();
 
-            return redirect()->route('fees.fees-invoice-view', ['id' => $downPaymentInvoice->id, 'state' => 'view']);
+            foreach ($breakdown['lines'] as $line) {
+                $feesType = $line['feesType'] ?? $tuitionType;
+                $this->addChieldLine($invoice, $feesType, $line['amount']);
+            }
+
+            Toastr::success('Enrollment invoice created for ' . number_format($breakdown['totalAmount'], 2) . '. Pay the down payment of ' . number_format($breakdown['downPayment'], 2) . ' for this student to be considered enrolled; the rest can be arranged into a payment plan afterwards.', 'Success');
+
+            return redirect()->route('fees.fees-invoice-view', ['id' => $invoice->id, 'state' => 'view']);
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -194,14 +239,47 @@ class AssignProgramController extends Controller
         try {
             $student = SmStudent::where('school_id', auth()->user()->school_id)->findOrFail($studentId);
             $breakdown = $this->balanceBreakdownFor($student);
+
+            $record = StudentRecord::where('school_id', auth()->user()->school_id)
+                ->where('student_id', $student->id)
+                ->where('academic_id', getAcademicId())
+                ->where('is_promote', 0)
+                ->first();
+
+            $itemLines = collect();
+            if ($record) {
+                $invoiceIds = FmFeesInvoice::where('record_id', $record->id)->pluck('id');
+                $itemLines = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoiceIds)
+                    ->whereNotNull('sm_item_id')
+                    ->with('item')
+                    ->get();
+            }
+
             $data = array_merge($breakdown, [
                 'student' => $student,
+                'itemLines' => $itemLines,
+                'itemsTotal' => $breakdown['itemsBilled'],
                 'printUrl' => route('assign-program-balance-summary', ['student' => $student->id, 'state' => 'print']),
             ]);
 
             return $state == 'print'
                 ? view('backEnd.academics.balanceSummaryPrint', $data)
                 : view('backEnd.academics.balanceSummary', $data);
+        } catch (\Exception $e) {
+            Toastr::error('Operation Failed', 'Failed');
+            return redirect()->back();
+        }
+    }
+
+    public function ledger($studentId)
+    {
+        try {
+            $student = SmStudent::where('school_id', auth()->user()->school_id)->findOrFail($studentId);
+            $ledger = $this->ledgerFor($student);
+
+            return view('backEnd.academics.transactionLedger', array_merge($ledger, [
+                'student' => $student,
+            ]));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

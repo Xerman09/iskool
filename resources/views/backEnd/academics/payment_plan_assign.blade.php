@@ -128,7 +128,7 @@
                                                 @php
                                                     $routeList = [
                                                         '<a class="dropdown-item" data-toggle="modal" data-target="#viewInstallmentsModal'.$assign->id.'" href="#">'.__('academics.view').'</a>',
-                                                        $assign->invoices->contains(fn ($i) => $i->payment_status != 'paid') ?
+                                                        $assign->schedule->contains(fn ($i) => $i['status'] != 'paid') ?
                                                         '<a class="dropdown-item" href="'.route('payment-plan-assign-edit', [$assign->id]).'">'.__('academics.edit_payment_plan').'</a>' : null,
                                                     ];
                                                 @endphp
@@ -156,39 +156,33 @@
                         <button type="button" class="close" data-dismiss="modal">&times;</button>
                     </div>
                     <div class="modal-body">
+                        <p class="text-muted">@lang('academics.installment_schedule_hint')</p>
                         <div class="table-responsive">
                             <table class="table">
                                 <thead>
                                     <tr>
                                         <th>@lang('academics.installment_no')</th>
                                         <th>@lang('academics.due_date')</th>
-                                        <th>@lang('academics.total_amount_due')</th>
-                                        <th>@lang('academics.down_payment_paid')</th>
-                                        <th>@lang('academics.remaining_balance')</th>
+                                        <th>@lang('accounts.amount')</th>
                                         <th>@lang('student.status')</th>
                                         <th>@lang('student.action')</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($assign->invoices as $invoice)
+                                    @foreach($assign->schedule as $installment)
                                     @php
-                                        $installmentAmount = $invoice->invoiceDetails->sum('amount');
-                                        $installmentPaid = $invoice->invoiceDetails->sum('paid_amount');
-                                        $installmentBalance = max(0, $installmentAmount - $installmentPaid);
                                         $viewRouteList = [
-                                            '<a class="dropdown-item" target="_blank" href="'.route('fees.fees-invoice-view', ['id' => $invoice->id, 'state' => 'view']).'">'.__('academics.view').'</a>',
+                                            '<a class="dropdown-item" target="_blank" href="'.route('fees.fees-invoice-view', ['id' => $assign->fm_fees_invoice_id, 'state' => 'view']).'">'.__('academics.view_invoice').'</a>',
                                         ];
                                     @endphp
-                                    <tr>
-                                        <td>{{$invoice->installment_no}} @lang('academics.of') {{$assign->number_of_installments}}</td>
-                                        <td>{{ \Carbon\Carbon::parse($invoice->due_date)->format('M d, Y') }}</td>
-                                        <td>{{ currency_format($installmentAmount) ?: number_format($installmentAmount, 2) }}</td>
-                                        <td>{{ currency_format($installmentPaid) ?: number_format($installmentPaid, 2) }}</td>
-                                        <td>{{ currency_format($installmentBalance) ?: number_format($installmentBalance, 2) }}</td>
+                                    <tr @if($installment['is_next']) style="font-weight:bold;" @endif>
+                                        <td>{{$installment['installment_no']}} @lang('academics.of') {{$assign->number_of_installments}}</td>
+                                        <td>{{ \Carbon\Carbon::parse($installment['due_date'])->format('M d, Y') }}</td>
+                                        <td>{{ currency_format($installment['amount']) ?: number_format($installment['amount'], 2) }}</td>
                                         <td>
-                                            @if($invoice->payment_status == 'paid')
+                                            @if($installment['status'] == 'paid')
                                                 <span class="badge badge-success">@lang('academics.paid_status')</span>
-                                            @elseif($invoice->payment_status == 'partial')
+                                            @elseif($installment['status'] == 'partial')
                                                 <span class="badge badge-warning">@lang('academics.partial_status')</span>
                                             @else
                                                 <span class="badge badge-secondary">@lang('academics.unpaid_status')</span>

@@ -313,10 +313,28 @@
                         <div class="col-lg-12">  
                             
                             <input type="hidden" class="weaverType" value="amount">
-                            <div class="big-table"> 
-                                <h4 class="text-danger" id="serviceChargeTitle"></h4> 
-                                <span id="payable_amount"></span>                          
-                                <table class="table school-table-style p-0" cellspacing="0" width="100%">                                
+                            <div class="big-table">
+                                @if(isset($activePlan) && $activePlan)
+                                <div class="alert alert-info">
+                                    @lang('academics.due_now'): <strong>{{currency_format($activePlan['dueThisCycle']) ?: number_format($activePlan['dueThisCycle'], 2)}}</strong>
+                                    &mdash; @lang('academics.installment_schedule_hint')
+                                </div>
+                                @endif
+                                @if(isset($suggestedPaidAmounts) && count($suggestedPaidAmounts))
+                                <div class="row mb-20">
+                                    <div class="col-lg-4">
+                                        <div class="primary_input">
+                                            <label class="primary_input_label">@lang('fees::feesModule.paid_amount')</label>
+                                            <input class="primary_input_field form-control" type="text" id="singlePaymentAmount"
+                                                autocomplete="off" value="{{ array_sum($suggestedPaidAmounts) ?: '' }}">
+                                            <small class="text-muted">Enter one amount - it's automatically applied across the lines below, oldest first.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+                                <h4 class="text-danger" id="serviceChargeTitle"></h4>
+                                <span id="payable_amount"></span>
+                                <table class="table school-table-style p-0" cellspacing="0" width="100%">
                                     <thead>
                                     <tr>
                                         <th>@lang('common.sl')</th>
@@ -368,7 +386,8 @@
                                                 </td>
                                                 <td>
                                                     <input class="primary_input_field form-control addFeesPaidAmount" type="text"
-                                                        name="paid_amount[]" autocomplete="off">
+                                                        name="paid_amount[]" autocomplete="off" readonly
+                                                        value="{{ isset($suggestedPaidAmounts[$invoiceDetail->id]) && $suggestedPaidAmounts[$invoiceDetail->id] > 0 ? $suggestedPaidAmounts[$invoiceDetail->id] : '' }}">
                                                 </td>
                                                 <td>
                                                     @if (isset($role) && $role == 'admin')
@@ -589,6 +608,39 @@
 <script>
     selectPosition({!! feesInvoiceSettings()->invoice_positions !!});
 </script>
+@if(isset($suggestedPaidAmounts) && count($suggestedPaidAmounts))
+<script>
+    // One visible "Payment Amount" field - typing here waterfalls the amount
+    // across the (readonly) per-line paid_amount[] inputs below, oldest line
+    // first and capped at each line's own due, same rule the server-side
+    // pre-fill used. The per-line breakdown stays visible for transparency,
+    // just not directly editable.
+    function allocateSinglePayment() {
+        var remaining = parseFloat($('#singlePaymentAmount').val());
+        if (isNaN(remaining) || remaining < 0) {
+            remaining = 0;
+        }
+
+        $('.addFeesPaidAmount').each(function () {
+            var due = parseFloat($(this).closest('tr').find('.dueAmount').val());
+            if (isNaN(due)) {
+                due = 0;
+            }
+
+            var take = remaining > 0 ? Math.min(remaining, due) : 0;
+            $(this).val(take > 0 ? take.toFixed(2) : '');
+            remaining = Math.round((remaining - take) * 100) / 100;
+        });
+
+        $('.addFeesPaidAmount').first().trigger('keyup');
+    }
+
+    $(document).on('input', '#singlePaymentAmount', allocateSinglePayment);
+    $(function () {
+        allocateSinglePayment();
+    });
+</script>
+@endif
 <script>
     $(document).on('submit', 'form[action*="fees-payment-store"], form[action*="student-fees-payment-store"]', function () {
         var total = 0;

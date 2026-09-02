@@ -28,6 +28,21 @@
     <div class="container-fluid p-0">
         <div class="row mb-20">
             <div class="col-lg-12 text-right">
+                @if(auth()->user()->role_id == 2)
+                <a href="{{route('student-item-store')}}" class="primary-btn small fix-gr-bg">
+                    <span class="ti-shopping-cart pr-2"></span>
+                    @lang('academics.browse_item_store')
+                </a>
+                <a href="{{route('student-transaction-ledger')}}" class="primary-btn small fix-gr-bg">
+                    <span class="ti-list pr-2"></span>
+                    @lang('academics.transaction_ledger')
+                </a>
+                @else
+                <a href="{{route('assign-program-ledger', $student->id)}}" class="primary-btn small fix-gr-bg">
+                    <span class="ti-list pr-2"></span>
+                    @lang('academics.transaction_ledger')
+                </a>
+                @endif
                 <a href="{{$printUrl}}" target="_blank" class="primary-btn small fix-gr-bg">
                     <span class="ti-printer pr-2"></span>
                     @lang('academics.print')

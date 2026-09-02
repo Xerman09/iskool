@@ -33,6 +33,7 @@ class CourseController extends Controller
             $course = new Course();
             $course->course_name = $request->course_name;
             $course->course_code = $request->course_code;
+            $course->level = $request->level ?: 'undergraduate';
             $course->description = $request->description;
             $course->price_per_unit = is_numeric($request->price_per_unit) ? $request->price_per_unit : null;
             $course->active_status = 1;
@@ -66,6 +67,7 @@ class CourseController extends Controller
             $course = Course::where('school_id', auth()->user()->school_id)->findOrFail($request->id);
             $course->course_name = $request->course_name;
             $course->course_code = $request->course_code;
+            $course->level = $request->level ?: 'undergraduate';
             $course->description = $request->description;
             $course->price_per_unit = is_numeric($request->price_per_unit) ? $request->price_per_unit : null;
             $course->updated_by = auth()->user()->id;

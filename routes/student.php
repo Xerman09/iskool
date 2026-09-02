@@ -90,6 +90,14 @@ Route::group(['middleware' => ['XSS', 'subdomain']], function () {
         Route::get('student-subject-registration', ['as' => 'student-subject-registration', 'uses' => 'Student\StudentSubjectRegistrationController@index'])->middleware('userRolePermission:student-subject-registration');
         Route::post('student-subject-registration-store', ['as' => 'student-subject-registration-store', 'uses' => 'Student\StudentSubjectRegistrationController@register'])->middleware('userRolePermission:student-subject-registration');
         Route::get('student-balance-summary/{state}', ['as' => 'student-balance-summary', 'uses' => 'Student\StudentSubjectRegistrationController@balanceSummary'])->middleware('userRolePermission:student-subject-registration');
+        Route::get('student-balance-summary', ['as' => 'student-balance-summary-menu', 'uses' => 'Student\StudentSubjectRegistrationController@balanceSummary'])->middleware('userRolePermission:student-balance-summary-menu');
+
+        // Student Item Store (books, uniforms, etc. - added to the same invoice as subjects/misc)
+        Route::get('student-item-store', ['as' => 'student-item-store', 'uses' => 'Student\StudentItemPurchaseController@index'])->middleware('userRolePermission:student-item-store');
+        Route::post('student-item-store/add-to-invoice', ['as' => 'student-item-store-add', 'uses' => 'Student\StudentItemPurchaseController@addToInvoice'])->middleware('userRolePermission:student-item-store');
+
+        // Student Transaction Ledger (all receipts + combined balance across every invoice)
+        Route::get('student-transaction-ledger', ['as' => 'student-transaction-ledger', 'uses' => 'Student\StudentTransactionLedgerController@index'])->middleware('userRolePermission:student-transaction-ledger');
 
         // Online Exam
         Route::get('student-answer-script/{exam_id}/{s_id}', ['as' => 'student_answer_script', 'uses' => 'Student\SmOnlineExamController@studentAnswerScript']);

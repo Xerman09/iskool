@@ -48,6 +48,15 @@
     </section>
     <section class="admin-visitor-area up_st_admin_visitor">
         <div class="max_1200 text-right">
+            @php
+                $invoiceDueBalance = (float) $invoiceInfo->Tamount - (float) $invoiceInfo->Tpaidamount;
+            @endphp
+            @if(isset($paymentPlanTypes) && empty($activePaymentPlan) && userPermission('payment-plan-assign') && $invoiceDueBalance > 0)
+                <a href="#" class="primary-btn small fix-gr-bg" data-toggle="modal" data-target="#assignPaymentPlanModal">
+                    <span class="ti-calendar pr-2"></span>
+                    @lang('academics.payment_plan_assign')
+                </a>
+            @endif
             <a href="{{route('fees.fees-invoice-view',['id'=>$invoiceInfo->id,'state'=>'print'])}}" class="primary-btn small fix-gr-bg" target="_blank">
                 <span class="ti-printer pr-2"></span>
                 @lang('common.print')
@@ -163,35 +172,58 @@
                     $service_charge = 0;
                     $grand_total = 0;
                     $balance = 0;
+
+                    // Only group into Items/Tuition/Misc for invoices this enrollment
+                    // feature actually produced - any other invoice (exam fees, a
+                    // manual one-off charge, etc.) keeps the plain flat list below.
+                    $isEnrollmentStyleInvoice = $invoiceDetails->contains(fn ($d) => $d->sm_item_id || optional($d->feesType)->name === 'Tuition');
+
+                    $sections = $isEnrollmentStyleInvoice
+                        ? collect([
+                            'academics.items_purchased' => $invoiceDetails->filter(fn ($d) => $d->sm_item_id),
+                            'academics.tuition' => $invoiceDetails->filter(fn ($d) => !$d->sm_item_id && optional($d->feesType)->name === 'Tuition'),
+                            'academics.miscellaneous_fees' => $invoiceDetails->filter(fn ($d) => !$d->sm_item_id && optional($d->feesType)->name !== 'Tuition'),
+                        ])->filter(fn ($group) => $group->count() > 0)
+                        : collect([null => $invoiceDetails]);
+
+                    $rowNo = 0;
                 @endphp
-                @foreach ($invoiceDetails as $key=>$invoiceDetail)
-                    @php
-                        $amount += $invoiceDetail->amount;
-                        $weaver += $invoiceDetail->weaver;
-                        $fine += $invoiceDetail->fine;
-                        $service_charge += $invoiceDetail->service_charge;
-                        $paid_amount += $invoiceDetail->paid_amount;
-
-                        $totalAmount = ($invoiceDetail->amount + $invoiceDetail->fine) - $invoiceDetail->weaver;
-                        $grand_total += $totalAmount ;
-
-                        $total = ($invoiceDetail->amount+ $invoiceDetail->fine) - ($invoiceDetail->paid_amount + $invoiceDetail->weaver) ;
-                        $balance += $total;
-                    @endphp
-                    <tr>
-                        <td>{{$key+1}}</td>
-                        <td>
-                            {{@$invoiceDetail->feesType->name}} 
-                            @if($invoiceDetail->note)
-                                <i class="fa fa-info-circle" aria-hidden="true"data-tooltip="tooltip" title="{{$invoiceDetail->note}}" style="courser:help;"></i>
-                            @endif
-                        </td>
-                        <td>{{($invoiceDetail)? $invoiceDetail->amount : 0.00}}</td>
-                        <td>{{($invoiceDetail->weaver)? $invoiceDetail->weaver : 0}}</td>
-                        <td>{{($invoiceDetail->fine)? $invoiceDetail->fine : 0}}</td>
-                        <td>{{($invoiceDetail->paid_amount)? $invoiceDetail->paid_amount : 0}}</td>
-                        <td class="text-right pr-0">{{currency_format($total)}}</td>
+                @foreach ($sections as $sectionLabel => $sectionLines)
+                    @if($sectionLabel)
+                    <tr class="table-group-header">
+                        <td colspan="7"><strong>@lang($sectionLabel)</strong></td>
                     </tr>
+                    @endif
+                    @foreach ($sectionLines as $invoiceDetail)
+                        @php
+                            $rowNo++;
+                            $amount += $invoiceDetail->amount;
+                            $weaver += $invoiceDetail->weaver;
+                            $fine += $invoiceDetail->fine;
+                            $service_charge += $invoiceDetail->service_charge;
+                            $paid_amount += $invoiceDetail->paid_amount;
+
+                            $totalAmount = ($invoiceDetail->amount + $invoiceDetail->fine) - $invoiceDetail->weaver;
+                            $grand_total += $totalAmount ;
+
+                            $total = ($invoiceDetail->amount+ $invoiceDetail->fine) - ($invoiceDetail->paid_amount + $invoiceDetail->weaver) ;
+                            $balance += $total;
+                        @endphp
+                        <tr>
+                            <td>{{$rowNo}}</td>
+                            <td>
+                                {{ $invoiceDetail->sm_item_id ? optional($invoiceDetail->item)->item_name : @$invoiceDetail->feesType->name }}
+                                @if($invoiceDetail->note)
+                                    <i class="fa fa-info-circle" aria-hidden="true"data-tooltip="tooltip" title="{{$invoiceDetail->note}}" style="courser:help;"></i>
+                                @endif
+                            </td>
+                            <td>{{($invoiceDetail)? $invoiceDetail->amount : 0.00}}</td>
+                            <td>{{($invoiceDetail->weaver)? $invoiceDetail->weaver : 0}}</td>
+                            <td>{{($invoiceDetail->fine)? $invoiceDetail->fine : 0}}</td>
+                            <td>{{($invoiceDetail->paid_amount)? $invoiceDetail->paid_amount : 0}}</td>
+                            <td class="text-right pr-0">{{currency_format($total)}}</td>
+                        </tr>
+                    @endforeach
                 @endforeach
                 </tbody>
                 <tfoot>
@@ -269,6 +301,54 @@
             @endif
         </div>
     </section>
+
+    @if(isset($paymentPlanTypes) && empty($activePaymentPlan) && userPermission('payment-plan-assign') && $invoiceDueBalance > 0)
+    <div class="modal fade admin-query" id="assignPaymentPlanModal">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                {{ Form::open(['route' => 'payment-plan-assign-store', 'method' => 'POST']) }}
+                <input type="hidden" name="invoice_id" value="{{$invoiceInfo->id}}">
+                <div class="modal-header">
+                    <h4 class="modal-title">@lang('academics.payment_plan_assign')</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">@lang('academics.remaining_balance'): {{currency_format($invoiceDueBalance) ?: number_format($invoiceDueBalance, 2)}} &mdash; @lang('academics.installment_schedule_hint')</p>
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <label class="primary_input_label">@lang('academics.payment_plan_type') <span class="text-danger"> *</span></label>
+                            <select class="primary_select form-control" name="payment_plan_type_id" required>
+                                <option value="">@lang('academics.payment_plan_type')</option>
+                                @foreach($paymentPlanTypes as $type)
+                                <option value="{{$type->id}}">{{$type->name}} ({{$type->number_of_installments}}x)</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-15">
+                        <div class="col-lg-12">
+                            <label class="primary_input_label">@lang('academics.first_due_date') <span class="text-danger"> *</span></label>
+                            <input class="primary_input_field form-control" type="date" name="first_due_date" value="{{ now()->addDays(14)->toDateString() }}" required>
+                        </div>
+                    </div>
+                    <div class="row mt-15">
+                        <div class="col-lg-12">
+                            <label class="primary_input_label">@lang('academics.days_between_installments') <span class="text-danger"> *</span></label>
+                            <input class="primary_input_field form-control" type="number" min="1" name="days_between_installments" value="30" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="primary-btn fix-gr-bg submit">
+                        <span class="ti-check"></span>
+                        @lang('academics.save')
+                    </button>
+                </div>
+                {{ Form::close() }}
+            </div>
+        </div>
+    </div>
+    @endif
 @endsection
 @push('script')
     <script>

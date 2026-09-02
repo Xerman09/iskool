@@ -234,15 +234,26 @@
 
                         <div class="profile_info_iner">
                             <p class="email"> {{ Auth::user()->email }}</p>
-                            <h5>{{ Auth::user()->full_name }} @if (isset(Auth::user()->wallet_balance))
-                                    @if (Auth::user()->role_id == 2 || Auth::user()->role_id == 3)
+                            <h5>{{ Auth::user()->full_name }}
+                                @if (Auth::user()->role_id == 2)
+                                    @php
+                                        $feesRemainingBalance = studentFeesRemainingBalance(Auth::user()->student);
+                                    @endphp
+                                    @if ($feesRemainingBalance !== null)
                                         <p class="message">
                                             <strong>
-                                                @lang('common.balance'):
-                                                {{ Auth::user()->wallet_balance != null ? currency_format(Auth::user()->wallet_balance) : currency_format(0.0) }}
+                                                @lang('academics.remaining_balance'):
+                                                {{ currency_format($feesRemainingBalance) ?: number_format($feesRemainingBalance, 2) }}
                                             </strong>
                                         </p>
                                     @endif
+                                @elseif (isset(Auth::user()->wallet_balance) && Auth::user()->role_id == 3)
+                                    <p class="message">
+                                        <strong>
+                                            @lang('common.balance'):
+                                            {{ Auth::user()->wallet_balance != null ? currency_format(Auth::user()->wallet_balance) : currency_format(0.0) }}
+                                        </strong>
+                                    </p>
                                 @endif
                             </h5>
                             <div class="profile_info_details">

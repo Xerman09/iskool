@@ -36,6 +36,7 @@ class SmItemController extends Controller
             $items->item_name = $request->item_name;
             $items->item_category_id = $request->category_name;
             $items->total_in_stock = 0;
+            $items->unit_price = $request->unit_price;
             $items->description = $request->description;
             $items->school_id = Auth::user()->school_id;
             if(moduleStatusCheck('University')){
@@ -80,6 +81,7 @@ class SmItemController extends Controller
             }
             $items->item_name = $request->item_name;
             $items->item_category_id = $request->category_name;
+            $items->unit_price = $request->unit_price;
             $items->description = $request->description;
             if(moduleStatusCheck('University')){
                 $items->un_academic_id = getAcademicId();

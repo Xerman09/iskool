@@ -14,6 +14,8 @@ use App\Traits\EnrollmentBalanceBreakdown;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Modules\Fees\Entities\FmFeesInvoice;
+use Modules\Fees\Entities\FmFeesInvoiceChield;
 
 class StudentSubjectRegistrationController extends Controller
 {
@@ -310,8 +312,26 @@ class StudentSubjectRegistrationController extends Controller
             }
 
             $breakdown = $this->balanceBreakdownFor($student);
+
+            $record = StudentRecord::where('student_id', $student->id)
+                ->where('school_id', $student->school_id)
+                ->where('academic_id', getAcademicId())
+                ->where('is_promote', 0)
+                ->first();
+
+            $itemLines = collect();
+            if ($record) {
+                $invoiceIds = FmFeesInvoice::where('record_id', $record->id)->pluck('id');
+                $itemLines = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoiceIds)
+                    ->whereNotNull('sm_item_id')
+                    ->with('item')
+                    ->get();
+            }
+
             $data = array_merge($breakdown, [
                 'student' => $student,
+                'itemLines' => $itemLines,
+                'itemsTotal' => $breakdown['itemsBilled'],
                 'printUrl' => route('student-balance-summary', ['state' => 'print']),
             ]);
 

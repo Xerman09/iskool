@@ -29,12 +29,13 @@
                         <div class="row">
                             <div class="col-lg-12">
                                 <label class="primary_input_label">@lang('academics.program') <span class="text-danger"> *</span></label>
-                                <select class="primary_select form-control{{ @$errors->has('course_id') ? ' is-invalid' : '' }}" name="course_id" required>
+                                <select class="primary_select form-control{{ @$errors->has('course_id') ? ' is-invalid' : '' }}" name="course_id" id="assignProgramCourseSelect" required>
                                     <option value="">@lang('academics.program') *</option>
                                     @foreach($courses as $c)
-                                    <option value="{{$c->id}}">{{$c->course_name}}</option>
+                                    <option value="{{$c->id}}" data-level="{{$c->level}}">{{$c->course_name}} @if($c->level == 'graduate')(@lang('academics.graduate'))@endif</option>
                                     @endforeach
                                 </select>
+                                <small class="text-muted" id="graduateProgramHint" style="display:none;">@lang('academics.must_graduate_undergrad_first')</small>
                                 @if ($errors->has('course_id'))
                                 <span class="text-danger invalid-select" role="alert">{{ @$errors->first('course_id') }}</span>
                                 @endif
@@ -57,10 +58,10 @@
                         <div class="row mt-15">
                             <div class="col-lg-12">
                                 <label class="primary_input_label">@lang('academics.select_student') <span class="text-danger"> *</span></label>
-                                <select class="primary_select form-control{{ @$errors->has('student_id') ? ' is-invalid' : '' }}" name="student_id" required>
+                                <select class="primary_select form-control{{ @$errors->has('student_id') ? ' is-invalid' : '' }}" name="student_id" id="assignProgramStudentSelect" required>
                                     <option value="">@lang('academics.select_student')</option>
                                     @foreach($students as $s)
-                                    <option value="{{$s->id}}" {{ (string) @$selectedStudentId === (string) $s->id ? 'selected' : '' }}>{{$s->first_name}} {{$s->last_name}} ({{$s->admission_no}}){{ $s->course ? ' - ' . __('academics.currently') . ': ' . $s->course->course_name : '' }}</option>
+                                    <option value="{{$s->id}}" data-graduated="{{ $s->hasGraduated ? '1' : '0' }}" {{ (string) @$selectedStudentId === (string) $s->id ? 'selected' : '' }}>{{$s->first_name}} {{$s->last_name}} ({{$s->admission_no}}){{ $s->course ? ' - ' . __('academics.currently') . ': ' . $s->course->course_name : '' }}</option>
                                     @endforeach
                                 </select>
                                 @if ($errors->has('student_id'))
@@ -100,6 +101,7 @@
                                         <tr>
                                             <th>@lang('academics.student')</th>
                                             <th>@lang('academics.program')</th>
+                                            <th>@lang('academics.program_level')</th>
                                             <th>@lang('academics.curriculum_version')</th>
                                             <th>@lang('academics.academic_year_added')</th>
                                             <th>@lang('academics.year_level')</th>
@@ -115,6 +117,15 @@
                                         <tr>
                                             <td valign="top">{{$s->first_name}} {{$s->last_name}} ({{$s->admission_no}})</td>
                                             <td valign="top">{{ optional($s->course)->course_name }}</td>
+                                            <td valign="top">
+                                                @if(optional($s->course)->level == 'graduate')
+                                                    <span class="badge badge-info">@lang('academics.graduate')</span>
+                                                @elseif($s->course)
+                                                    <span class="badge badge-secondary">@lang('academics.undergraduate')</span>
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
                                             <td valign="top">{{ optional($s->curriculumVersion)->version_label }}</td>
                                             <td valign="top">{{ optional($s->academicYear)->year }}</td>
                                             <td valign="top">{{ optional($s->class)->class_name }}</td>
@@ -125,6 +136,12 @@
                                                     {{ currency_format($s->remainingBalance) ?: number_format($s->remainingBalance, 2) }}
                                                 @else
                                                     -
+                                                @endif
+                                                @if($s->priorYearBalance > 0)
+                                                    <br>
+                                                    <span class="badge badge-danger" data-tooltip="tooltip" title="@lang('academics.prior_year_balance')">
+                                                        &#9888; @lang('academics.prior_year_balance'): {{ currency_format($s->priorYearBalance) ?: number_format($s->priorYearBalance, 2) }}
+                                                    </span>
                                                 @endif
                                             </td>
                                             <td valign="top">
@@ -169,6 +186,7 @@
                                                     $routeList = [
                                                         $generateInvoiceForm,
                                                         '<a class="dropdown-item" target="_blank" href="'.route('assign-program-balance-summary', ['student' => $s->id, 'state' => 'view']).'">'.__('academics.balance_summary').'</a>',
+                                                        '<a class="dropdown-item" target="_blank" href="'.route('assign-program-ledger', ['student' => $s->id]).'">'.__('academics.view_ledger').'</a>',
                                                     ];
                                                 @endphp
                                                 <x-drop-down-action-component :routeList="$routeList" />
@@ -223,5 +241,30 @@
 
     bindStatusSwitch('.program_status_switch', "{{ route('assign-program-status-update') }}", 'program_status');
     bindStatusSwitch('.alumni_status_switch', "{{ route('assign-program-alumni-status-update') }}", 'alumni_active_status');
+
+    // A graduate-level Program only stays selectable once the chosen student has
+    // actually graduated from an undergraduate one - mirrors the server-side
+    // guard in AssignProgramController::store(), just enforced before the click.
+    function refreshGraduateProgramOptions() {
+        var studentSelect = $('#assignProgramStudentSelect');
+        var courseSelect = $('#assignProgramCourseSelect');
+        var selectedOption = studentSelect.find('option:selected');
+        var hasGraduated = selectedOption.data('graduated') == 1;
+
+        courseSelect.find('option[data-level="graduate"]').each(function () {
+            $(this).prop('disabled', !hasGraduated);
+        });
+
+        if (!hasGraduated && courseSelect.find('option:selected').data('level') === 'graduate') {
+            courseSelect.val('');
+        }
+
+        $('#graduateProgramHint').toggle(!hasGraduated);
+    }
+
+    $(document).on('change', '#assignProgramStudentSelect', refreshGraduateProgramOptions);
+    $(function () {
+        refreshGraduateProgramOptions();
+    });
 </script>
 @endsection

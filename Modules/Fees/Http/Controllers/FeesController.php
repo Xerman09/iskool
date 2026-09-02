@@ -33,9 +33,12 @@ use Modules\Fees\Http\Requests\BankFeesPayment;
 use Modules\Fees\Entities\FmFeesInvoiceSettings;
 use Modules\Fees\Entities\FmFeesTransactionChield;
 use Modules\Fees\Http\Controllers\FeesExtendedController;
+use App\Traits\EnrollmentBalanceBreakdown;
 
 class FeesController extends Controller
 {
+    use EnrollmentBalanceBreakdown;
+
     public function feesGroup()
     {
         $feesGroups = FmFeesGroup::where('school_id', Auth::user()->school_id)
@@ -852,13 +855,19 @@ class FeesController extends Controller
         $invoiceDetails = FmFeesInvoiceChield::where('fees_invoice_id', $invoiceInfo->id)
             ->where('school_id', Auth::user()->school_id)
             ->where('academic_id', getAcademicId())
+            ->with('feesType', 'item')
             ->get();
         $banks = SmBankAccount::where('active_status', '=', 1)
             ->where('school_id', Auth::user()->school_id)
             ->get();
 
         if ($state == 'view') {
-            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks'));
+            $paymentPlanTypes = \App\PaymentPlanType::where('school_id', Auth::user()->school_id)->orderBy('id')->get();
+            $activePaymentPlan = \App\PaymentPlanAssign::where('fm_fees_invoice_id', $invoiceInfo->id)
+                ->where('active_status', 1)
+                ->first();
+
+            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan'));
         } else {
             return view('fees::feesInvoice.feesInvoicePrint', compact('invoiceInfo', 'invoiceDetails', 'banks'));
         }
@@ -919,7 +928,13 @@ class FeesController extends Controller
                 ->where('school_id', Auth::user()->school_id)
                 ->first();
 
-            return view('fees::addFessPayment', compact('classes', 'feesGroups', 'feesTypes', 'paymentMethods', 'bankAccounts', 'invoiceInfo', 'invoiceDetails', 'stripe_info'));
+            $activePlan = $this->activePlanForInvoice($invoiceInfo->id);
+            // Suggested default: this cycle's installment if there's a plan,
+            // otherwise the full remaining balance (i.e. "pay it all" by default).
+            $suggestedAmount = $activePlan ? $activePlan['dueThisCycle'] : (float) $invoiceDetails->sum('due_amount');
+            $suggestedPaidAmounts = $this->allocateAcrossLines($invoiceDetails, $suggestedAmount);
+
+            return view('fees::addFessPayment', compact('classes', 'feesGroups', 'feesTypes', 'paymentMethods', 'bankAccounts', 'invoiceInfo', 'invoiceDetails', 'stripe_info', 'activePlan', 'suggestedPaidAmounts'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

@@ -93,6 +93,20 @@
 
                                     <div class="col-lg-12 mb-15">
                                         <div class="primary_input">
+                                            <label class="primary_input_label" for="">@lang('academics.unit_price') <span></span> </label>
+                                            <input class="primary_input_field form-control{{ $errors->has('unit_price') ? ' is-invalid' : '' }}"
+                                            type="number" step="0.01" min="0" name="unit_price" autocomplete="off" value="{{isset($editData)? $editData->unit_price : '' }}">
+
+                                            @if ($errors->has('unit_price'))
+                                            <span class="text-danger" >
+                                                {{ $errors->first('unit_price') }}
+                                            </span>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-12 mb-15">
+                                        <div class="primary_input">
                                             <label class="primary_input_label" for="">@lang('common.description') <span></span> </label>
                                             <textarea class="primary_input_field form-control" cols="0" rows="4" name="description" id="description">{{isset($editData) ? $editData->description : ''}}</textarea>
                                             
@@ -148,6 +162,7 @@
                                             <th>@lang('student.category') </th>
                                             <th>@lang('common.description') </th>
                                             <th>@lang('inventory.total_in_stock') </th>
+                                            <th>@lang('academics.unit_price') </th>
                                             <th>@lang('common.action')</th>
                                         </tr>
                                     </thead>
@@ -180,6 +195,7 @@
                     {data: 'category.category_name', name: 'category.category_name'},
                     {data: 'description', name: 'description'},
                     {data: 'total_in_stock', name: 'total_in_stock'},
+                    {data: 'unit_price', name: 'unit_price'},
                     {data: 'action', name: 'action', orderable: false, searchable: true},
                 ],
                 bLengthChange: false,

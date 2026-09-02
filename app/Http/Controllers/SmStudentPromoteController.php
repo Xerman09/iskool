@@ -15,6 +15,7 @@ use App\Models\StudentRecord;
 use App\SmAssignClassTeacher;
 use App\SmTemporaryMeritlist;
 use App\Traits\NotificationSend;
+use App\Traits\EnrollmentBalanceBreakdown;
 use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,7 @@ use Illuminate\Support\Facades\Validator;
 class SmStudentPromoteController extends Controller
 {
     //
-    use NotificationSend;
+    use NotificationSend, EnrollmentBalanceBreakdown;
 
     public function index()
     {
@@ -469,6 +470,8 @@ class SmStudentPromoteController extends Controller
         $request->validate($validationRules);
 
         try {
+            $priorBalanceWarnings = [];
+
             foreach ($request->promote as $student_id => $student_data) {
                 if ( gv($student_data, 'student') && gv($student_data, 'class') && gv($student_data, 'section')) {
                     $roll_number = gv($student_data, 'roll_number');
@@ -493,6 +496,15 @@ class SmStudentPromoteController extends Controller
                     }
             
                     $current_student = SmStudent::where('id', $student_id)->first();
+
+                    if ($current_student) {
+                        $priorBalance = $this->priorYearBalanceFor($current_student);
+                        if ($priorBalance > 0) {
+                            $priorBalanceWarnings[] = trim($current_student->first_name . ' ' . $current_student->last_name)
+                                . ' (' . number_format($priorBalance, 2) . ')';
+                        }
+                    }
+
                     $pre_record = StudentRecord::where('student_id', $student_id)
                         ->where('class_id', $request->pre_class)
                         ->where('section_id', $request->pre_section)
@@ -606,6 +618,10 @@ class SmStudentPromoteController extends Controller
                         return back();
                     }
                 }
+            }
+
+            if (!empty($priorBalanceWarnings)) {
+                Toastr::warning('Promoted with unpaid balance carried from a prior year: ' . implode(', ', $priorBalanceWarnings), 'Note');
             }
 
             Toastr::success('Operation Successful', 'Success');

@@ -17,6 +17,7 @@ class CourseRequest extends FormRequest
         return [
             'course_name' => ['required', 'max:255', Rule::unique('courses', 'course_name')->where('school_id', auth()->user()->school_id)->ignore($this->id)],
             'course_code' => ['sometimes', 'nullable', 'max:50', Rule::unique('courses', 'course_code')->where('school_id', auth()->user()->school_id)->ignore($this->id)],
+            'level' => ['sometimes', 'nullable', Rule::in(['undergraduate', 'graduate'])],
             'description' => ['sometimes', 'nullable'],
             'price_per_unit' => ['sometimes', 'nullable', 'numeric', 'min:0'],
         ];

@@ -25,4 +25,14 @@ class PaymentPlanAssign extends Model
     {
         return $this->hasMany('Modules\Fees\Entities\FmFeesInvoice', 'payment_plan_assign_id', 'id')->orderBy('installment_no');
     }
+
+    public function invoice()
+    {
+        return $this->belongsTo('Modules\Fees\Entities\FmFeesInvoice', 'fm_fees_invoice_id', 'id');
+    }
+
+    public function installments()
+    {
+        return $this->hasMany('App\PaymentPlanInstallment', 'payment_plan_assign_id', 'id')->orderBy('installment_no');
+    }
 }

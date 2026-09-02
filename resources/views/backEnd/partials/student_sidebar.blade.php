@@ -25,19 +25,29 @@
         </a>
     </li>
 @endif
-@if(generalSetting()->fees_status == 0)
-    @if(userPermission('fees') && menuStatus(20))
-        <li data-position="{{menuPosition(20)}}" class="sortable_li">
-            <a href="javascript:void(0)" class="has-arrow" aria-expanded="false">                
-                <div class="nav_icon_small">
-                    <span class="flaticon-wallet"></span>
-                </div>
-                <div class="nav_title">
-                    <span>@lang('fees.fees')</span>
-                </div>
-            </a>
-            <ul class="list-unstyled" >
-                @if(moduleStatusCheck('FeesCollection')== false )
+@php
+    // The section shows if any one of its links would - "fees" only gates the
+    // fees_status=0 pay-fees link, so requiring it alone hid this whole section
+    // (including Balance Summary/Transaction History) for fees_status=1 schools,
+    // whose students are granted 'fees.student-fees-list' instead.
+    $canSeeFeesSection = (generalSetting()->fees_status == 0 && userPermission('fees'))
+        || (generalSetting()->fees_status == 1 && userPermission('fees.student-fees-list'))
+        || userPermission('student-balance-summary')
+        || userPermission('student-transaction-ledger');
+@endphp
+@if($canSeeFeesSection && menuStatus(20))
+    <li data-position="{{menuPosition(20)}}" class="sortable_li">
+        <a href="javascript:void(0)" class="has-arrow" aria-expanded="false">
+            <div class="nav_icon_small">
+                <span class="flaticon-wallet"></span>
+            </div>
+            <div class="nav_title">
+                <span>@lang('fees.fees')</span>
+            </div>
+        </a>
+        <ul class="list-unstyled" id="subMenuFees">
+            @if(generalSetting()->fees_status == 0)
+                @if(moduleStatusCheck('FeesCollection') == false)
                     <li data-position="{{menuPosition('student_fees')}}">
                         <a href="{{route('student_fees')}}">@lang('fees.pay_fees')</a>
                     </li>
@@ -45,15 +55,24 @@
                     <li data-position="{{ menuPosition(21) }}">
                         <a href="{{ route('feescollection/student-fees') }}">@lang('fees.pay_fees')</a>
                     </li>
-
                 @endif
-            </ul>
-        </li>
-    @endif
-@endif
-
-@if (generalSetting()->fees_status == 1 && isMenuAllowToShow('fees'))
-    @includeIf('fees::sidebar.feesStudentSidebar')
+            @elseif(userPermission('fees.student-fees-list') && menuStatus(1156))
+                <li data-position="{{menuPosition(1156)}}">
+                    <a href="{{route('fees.student-fees-list',[auth()->user()->student->id])}}">@lang('fees.pay_fees')</a>
+                </li>
+            @endif
+            @if(userPermission('student-balance-summary') && menuStatus(6012))
+                <li data-position="{{menuPosition(6012)}}">
+                    <a href="{{route('student-balance-summary-menu')}}">@lang('academics.balance_summary')</a>
+                </li>
+            @endif
+            @if(userPermission('student-transaction-ledger') && menuStatus(6014))
+                <li data-position="{{menuPosition(6014)}}">
+                    <a href="{{route('student-transaction-ledger')}}">@lang('academics.transaction_ledger')</a>
+                </li>
+            @endif
+        </ul>
+    </li>
 @endif
 
 
@@ -267,7 +286,24 @@
                     <a href="{{route('student-course-curriculum')}}">@lang('academics.curriculum_layout')</a>
                 </li>
             @endif
+            @if(userPermission('student-subject-registration') && menuStatus(6011))
+                <li data-position="{{menuPosition(6011)}}">
+                    <a href="{{route('student-subject-registration')}}">@lang('academics.enroll_subjects')</a>
+                </li>
+            @endif
         </ul>
+    </li>
+@endif
+@if(userPermission('student-item-store') && menuStatus(6013))
+    <li data-position="{{menuPosition(6013)}}" class="sortable_li">
+        <a href="{{route('student-item-store')}}">
+            <div class="nav_icon_small">
+                <span class="flaticon-inventory"></span>
+            </div>
+            <div class="nav_title">
+                <span>@lang('academics.item_store')</span>
+            </div>
+        </a>
     </li>
 @endif
 @if(userPermission('student_teacher') && menuStatus(50))

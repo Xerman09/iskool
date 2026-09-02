@@ -4180,3 +4180,35 @@ if (!function_exists('asset_path')) {
         return 'public/' . $path;
     }
 }
+
+if (!function_exists('studentFeesRemainingBalance')) {
+    /**
+     * A student's total remaining fees balance across tuition/misc and any
+     * items - the same figure EnrollmentBalanceBreakdown::balanceBreakdownFor()
+     * computes for the Balance Summary page, exposed as a plain helper so it can
+     * be shown from the shared profile-card partial without needing a controller.
+     */
+    function studentFeesRemainingBalance($student)
+    {
+        if (!$student || !$student->course_id) {
+            return null;
+        }
+
+        static $calculator = null;
+        if (!$calculator) {
+            $calculator = new class {
+                use \App\Traits\EnrollmentBalanceBreakdown;
+                public function remainingBalanceFor($student)
+                {
+                    return $this->balanceBreakdownFor($student)['remainingBalance'];
+                }
+            };
+        }
+
+        try {
+            return $calculator->remainingBalanceFor($student);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+}
