@@ -95,6 +95,7 @@ Route::group(['middleware' => ['XSS', 'subdomain']], function () {
         // Student Item Store (books, uniforms, etc. - added to the same invoice as subjects/misc)
         Route::get('student-item-store', ['as' => 'student-item-store', 'uses' => 'Student\StudentItemPurchaseController@index'])->middleware('userRolePermission:student-item-store');
         Route::post('student-item-store/add-to-invoice', ['as' => 'student-item-store-add', 'uses' => 'Student\StudentItemPurchaseController@addToInvoice'])->middleware('userRolePermission:student-item-store');
+        Route::post('student-item-store/cancel/{id}', ['as' => 'student-item-store-cancel', 'uses' => 'Student\StudentItemPurchaseController@cancel'])->middleware('userRolePermission:student-item-store');
 
         // Student Transaction Ledger (all receipts + combined balance across every invoice)
         Route::get('student-transaction-ledger', ['as' => 'student-transaction-ledger', 'uses' => 'Student\StudentTransactionLedgerController@index'])->middleware('userRolePermission:student-transaction-ledger');

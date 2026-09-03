@@ -1092,11 +1092,15 @@ class FeesController extends Controller
             if ($balance <= 0) {
                 $fees_invoice->payment_status = 'paid';
                 $fees_invoice->update();
-                (new FeesExtendedController())->markStudentEnrolledIfPending($fees_invoice->student_id);
             } else {
                 $fees_invoice->payment_status = 'partial';
                 $fees_invoice->update();
             }
+
+            // Checked regardless of full vs. partial - the down payment threshold
+            // inside markStudentEnrolledIfPending() can be met well before the
+            // invoice balance reaches zero.
+            (new FeesExtendedController())->markStudentEnrolledIfPending($fees_invoice->student_id);
         }
 
         if ($transcation->add_wallet_money > 0) {

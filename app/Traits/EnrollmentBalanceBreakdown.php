@@ -161,6 +161,35 @@ trait EnrollmentBalanceBreakdown
     }
 
     /**
+     * Default suggested payment for an invoice with no payment plan yet. For a
+     * not-yet-enrolled student's own enrollment invoice, that's the remaining down
+     * payment (the actual threshold that flips them to "enrolled" - see
+     * FeesExtendedController::markStudentEnrolledIfPending()), not the invoice's
+     * full balance - a student paying a down payment shouldn't be nudged into
+     * paying the whole semester up front. Everything else (store invoices, an
+     * enrollment invoice for an already-enrolled student topping it up) still
+     * defaults to "pay it all".
+     */
+    protected function suggestedAmountForInvoice(FmFeesInvoice $invoice, $invoiceDetails)
+    {
+        $totalDue = (float) $invoiceDetails->sum('due_amount');
+
+        if ($invoice->type !== 'fees') {
+            return $totalDue;
+        }
+
+        $student = SmStudent::find($invoice->student_id);
+        if (!$student || $student->enrollment_status === 'enrolled') {
+            return $totalDue;
+        }
+
+        $downPayment = $this->balanceBreakdownFor($student)['downPayment'];
+        $downPaymentRemaining = max(0, $downPayment - (float) $invoice->Tpaidamount);
+
+        return min($downPaymentRemaining, $totalDue);
+    }
+
+    /**
      * The active plan (if any) on a specific invoice, plus how much is due this
      * cycle - used by the generic Fees payment-collection screen, which only has
      * an invoice id to work with, not a student's full balance breakdown.
@@ -281,10 +310,17 @@ trait EnrollmentBalanceBreakdown
                 $nextFound = true;
             }
 
+            // How much of paidSoFar actually landed inside this installment's own
+            // bucket (before, runningTotal] - lets a partial installment show what's
+            // still actually owed for it, not just its flat scheduled amount.
+            $appliedToThis = max(0, min($paidSoFar, $runningTotal) - $before);
+            $remaining = round((float) $installment->amount - $appliedToThis, 2);
+
             return [
                 'id' => $installment->id,
                 'installment_no' => $installment->installment_no,
                 'amount' => (float) $installment->amount,
+                'remaining' => $remaining,
                 'due_date' => $installment->due_date,
                 'status' => $status,
                 'is_next' => $isNext,

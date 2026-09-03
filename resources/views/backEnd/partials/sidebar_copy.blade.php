@@ -22,7 +22,9 @@
         @else
             <a href="{{ url('/') }}" id="admin-dashboard">
         @endif
-        @if (!is_null($school_config->logo))
+        @if (!empty($school_config->dashboard_logo))
+            <img src="{{ asset($school_config->dashboard_logo) }}" alt="logo">
+        @elseif (!is_null($school_config->logo))
             <img src="{{ asset($school_config->logo) }}" alt="logo">
         @else
             <img src="{{ asset('public/uploads/settings/logo.png') }}" alt="logo">

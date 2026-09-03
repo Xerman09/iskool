@@ -33,7 +33,9 @@
             <div class="header_iner d-flex justify-content-between align-items-center">
                 <div class="small_logo_crm d-lg-none">
                     <a href="#">
-                        @if (!is_null($generalSetting->logo))
+                        @if (!empty($generalSetting->dashboard_logo))
+                            <img src="{{ asset($generalSetting->dashboard_logo) }}" alt="logo">
+                        @elseif (!is_null($generalSetting->logo))
                             <img src="{{ asset($generalSetting->logo) }}" alt="logo">
                         @else
                             <img src="{{ asset('public/uploads/settings/logo.png') }}" alt="logo">

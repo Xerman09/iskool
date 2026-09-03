@@ -314,10 +314,10 @@
                             
                             <input type="hidden" class="weaverType" value="amount">
                             <div class="big-table">
-                                @if(isset($activePlan) && $activePlan)
+                                @if(isset($suggestedPaidAmounts) && array_sum($suggestedPaidAmounts) > 0)
                                 <div class="alert alert-info">
-                                    @lang('academics.due_now'): <strong>{{currency_format($activePlan['dueThisCycle']) ?: number_format($activePlan['dueThisCycle'], 2)}}</strong>
-                                    &mdash; @lang('academics.installment_schedule_hint')
+                                    @lang('academics.due_now'): <strong>{{currency_format(array_sum($suggestedPaidAmounts)) ?: number_format(array_sum($suggestedPaidAmounts), 2)}}</strong>
+                                    &mdash; @lang(isset($activePlan) && $activePlan ? 'academics.installment_schedule_hint' : 'academics.due_now_hint')
                                 </div>
                                 @endif
                                 @if(isset($suggestedPaidAmounts) && count($suggestedPaidAmounts))
@@ -632,7 +632,11 @@
             remaining = Math.round((remaining - take) * 100) / 100;
         });
 
-        $('.addFeesPaidAmount').first().trigger('keyup');
+        // Every row that received a share of the payment needs its own "Due"
+        // column recalculated, not just the first - triggering only .first()
+        // left every later row's due_amount stuck at its pre-payment value once
+        // saved, even though its paid_amount was correctly updated.
+        $('.addFeesPaidAmount').trigger('keyup');
     }
 
     $(document).on('input', '#singlePaymentAmount', allocateSinglePayment);

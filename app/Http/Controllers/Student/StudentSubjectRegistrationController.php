@@ -36,12 +36,10 @@ class StudentSubjectRegistrationController extends Controller
                 if ($activeSemester && $student->class_id) {
                     $subjects = $this->requiredSubjects($student, $activeSemester);
 
-                    $existingChoices = SmOptionalSubjectAssign::where('student_id', $student->id)
-                        ->whereIn('subject_id', $subjects->pluck('id'))
-                        ->pluck('assign_subject_id', 'subject_id');
+                    $subjects->each(function ($subject) use ($student) {
+                        $equivalentIds = $this->equivalentSubjectIds($subject);
 
-                    $subjects->each(function ($subject) use ($student, $existingChoices) {
-                        $blocks = SmAssignSubject::whereIn('subject_id', $this->equivalentSubjectIds($subject))
+                        $blocks = SmAssignSubject::whereIn('subject_id', $equivalentIds)
                             ->with('teacher', 'section', 'subject.course')
                             ->get();
 
@@ -58,7 +56,12 @@ class StudentSubjectRegistrationController extends Controller
                         });
 
                         $subject->blocks = $blocks;
-                        $subject->chosenAssignSubjectId = $existingChoices->get($subject->id);
+                        // Matched via equivalentSubjectIds(), not $subject->id directly - a chosen
+                        // block may belong to another course's equivalent curriculum row (cross-program
+                        // minor), which is saved under that row's own subject_id, not this one's.
+                        $subject->chosenAssignSubjectId = SmOptionalSubjectAssign::where('student_id', $student->id)
+                            ->whereIn('subject_id', $equivalentIds)
+                            ->value('assign_subject_id');
                         $subject->unmetPrerequisites = $this->unmetPrerequisites($student->id, $subject);
                     });
                 }
@@ -174,7 +177,14 @@ class StudentSubjectRegistrationController extends Controller
             // Don't touch existing registrations for subjects that are locked this submission -
             // a prerequisite may have been attached after the student already registered/was
             // graded for it, and that record shouldn't be silently wiped.
-            $editableSubjectIds = $subjects->pluck('id')->diff($lockedSubjectIds);
+            // Expanded through equivalentSubjectIds() so a previously-saved cross-program pick
+            // (saved under the other course's curriculum row id, not this subject's own id) is
+            // actually found and replaced instead of left behind as an orphaned duplicate.
+            $editableSubjectIds = $subjects
+                ->reject(fn ($s) => in_array($s->id, $lockedSubjectIds))
+                ->flatMap(fn ($s) => $this->equivalentSubjectIds($s))
+                ->unique()
+                ->values();
 
             DB::transaction(function () use ($editableSubjectIds, $selectedBlocks, $student, $schoolId, $record) {
                 SmOptionalSubjectAssign::where('student_id', $student->id)

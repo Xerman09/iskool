@@ -9,6 +9,7 @@ use App\SmAddIncome;
 use App\SmBankAccount;
 use App\SmBankStatement;
 use App\SmPaymentMethhod;
+use App\Models\StudentRecord;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
@@ -137,7 +138,9 @@ class FeesExtendedController extends Controller
             $storeWeaver->save();
         }
 
-        if ($storeFeesInvoice->payment_status === 'paid') {
+        if ($request->paid_amount > 0) {
+            // Not gated on payment_status === 'paid' - a partial payment that already
+            // covers the down payment threshold should enroll just as well as a full one.
             $this->markStudentEnrolledIfPending($storeFeesInvoice->student_id);
         }
     }
@@ -232,11 +235,14 @@ class FeesExtendedController extends Controller
                 $fees_invoice->payment_status = "paid";
                 $fees_invoice->update();
                 Cache::forget('have_due_fees_'.$transcation->user_id);
-                $this->markStudentEnrolledIfPending($fees_invoice->student_id);
             }else{
-                $fees_invoice->payment_status = "partial"; 
+                $fees_invoice->payment_status = "partial";
                 $fees_invoice->update();
             }
+            // Checked on every payment, not just once the invoice is fully paid - the
+            // down payment threshold inside markStudentEnrolledIfPending() can be met
+            // by a partial payment well before the invoice balance reaches zero.
+            $this->markStudentEnrolledIfPending($fees_invoice->student_id);
         }
       
         if ($transcation->add_wallet_money > 0) {
@@ -280,6 +286,13 @@ class FeesExtendedController extends Controller
      * invoice's lines, not tied to any one specific line. Paying off an unrelated
      * store/item invoice alone never enrolls a still-pending student, since only
      * the 'fees'-type enrollment invoice is checked.
+     *
+     * Matched via the student's current active StudentRecord (is_promote = 0,
+     * this academic year), not course_id - a program shift updates the
+     * student's course_id but leaves their existing invoice's course_id as it
+     * was when generated, so matching on course_id would silently stop finding
+     * the right invoice the moment a student switches programs after already
+     * having one.
      */
     public function markStudentEnrolledIfPending($studentId)
     {
@@ -292,9 +305,18 @@ class FeesExtendedController extends Controller
             return;
         }
 
-        $enrollmentInvoice = FmFeesInvoice::where('school_id', $student->school_id)
+        $record = StudentRecord::where('school_id', $student->school_id)
             ->where('student_id', $student->id)
-            ->where('course_id', $student->course_id)
+            ->where('academic_id', getAcademicId())
+            ->where('is_promote', 0)
+            ->first();
+
+        if (!$record) {
+            return;
+        }
+
+        $enrollmentInvoice = FmFeesInvoice::where('school_id', $student->school_id)
+            ->where('record_id', $record->id)
             ->where('type', 'fees')
             ->first();
 

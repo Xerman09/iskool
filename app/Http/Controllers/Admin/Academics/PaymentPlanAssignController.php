@@ -75,6 +75,16 @@ class PaymentPlanAssignController extends Controller
                 $invoice = FmFeesInvoice::where('school_id', $schoolId)->findOrFail($request->invoice_id);
                 $student = SmStudent::where('school_id', $schoolId)->findOrFail($invoice->student_id);
                 $context = $invoice->type === 'store' ? 'store' : 'tuition';
+
+                // For the enrollment invoice specifically, this shortcut must not let
+                // the down payment get folded into the plan - splitting the invoice's
+                // full total (instead of what's left after the down payment) before
+                // enrollment is even settled. Item-store invoices have no down payment
+                // concept, so they're exempt.
+                if ($invoice->type !== 'store' && $student->enrollment_status !== 'enrolled') {
+                    Toastr::error('This student must have their down payment paid (enrolled) before a payment plan can be assigned.', 'Failed');
+                    return redirect()->back();
+                }
             } else {
                 $student = SmStudent::where('school_id', $schoolId)->findOrFail($request->student_id);
 
@@ -233,7 +243,8 @@ class PaymentPlanAssignController extends Controller
                 return redirect()->route('payment-plan-assign');
             }
 
-            $paidCount = $schedule->where('status', 'paid')->count();
+            $paidInstallments = $schedule->where('status', 'paid');
+            $paidCount = $paidInstallments->count();
 
             // Only not-yet-fully-paid schedule rows are replaced; a "paid" row is left
             // untouched. Real payment history lives on the invoice's own lines, not on
@@ -247,6 +258,12 @@ class PaymentPlanAssignController extends Controller
 
             $planAssign->payment_plan_type_id = $planType->id;
             $planAssign->number_of_installments = $paidCount + $newCount;
+            // Whatever's already settled (kept installments) plus what's being
+            // redistributed now - not "Tamount minus baseline_paid_amount", since a
+            // plan created before its down payment was actually paid (baseline still
+            // 0) would otherwise keep reporting the invoice's full original total
+            // forever, even after rescheduling around the true remaining balance.
+            $planAssign->total_amount = round($paidInstallments->sum('amount') + $amountRemaining, 2);
             $planAssign->updated_by = auth()->user()->id;
             $planAssign->save();
 

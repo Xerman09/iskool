@@ -123,8 +123,9 @@ class StudentFeesController extends Controller
 
             $activePlan = $this->activePlanForInvoice($invoiceInfo->id);
             // Suggested default: this cycle's installment if there's a plan,
-            // otherwise the full remaining balance (i.e. "pay it all" by default).
-            $suggestedAmount = $activePlan ? $activePlan['dueThisCycle'] : (float) $invoiceDetails->sum('due_amount');
+            // otherwise the remaining down payment for an enrollment invoice still
+            // awaiting enrollment, or the full remaining balance otherwise.
+            $suggestedAmount = $activePlan ? $activePlan['dueThisCycle'] : $this->suggestedAmountForInvoice($invoiceInfo, $invoiceDetails);
             $suggestedPaidAmounts = $this->allocateAcrossLines($invoiceDetails, $suggestedAmount);
 
             return view('fees::student.studentAddPayment',compact('classes','feesGroups','feesTypes','paymentMethods','bankAccounts','invoiceInfo','invoiceDetails','stripe_info', 'razorpay_info', 'activePlan', 'suggestedPaidAmounts'));
@@ -274,6 +275,18 @@ class StudentFeesController extends Controller
                 $add_income->school_id = Auth::user()->school_id;
                 $add_income->academic_id = getAcademicId();
                 $add_income->save();
+
+                // Wallet payments are approved immediately (no pending bank/cheque step),
+                // so the invoice status and enrollment check need to run right here rather
+                // than waiting on a later addFeesAmount()/approval call that never comes.
+                $paidInvoice = FmFeesInvoice::find($request->invoice_id);
+                if ($paidInvoice) {
+                    $balance = ($paidInvoice->Tamount + $paidInvoice->Tfine) - ($paidInvoice->Tpaidamount + $paidInvoice->Tweaver);
+                    $paidInvoice->payment_status = $balance <= 0 ? 'paid' : 'partial';
+                    $paidInvoice->update();
+
+                    (new FeesExtendedController())->markStudentEnrolledIfPending($paidInvoice->student_id);
+                }
             }elseif($request->payment_method == "Cheque" || $request->payment_method == "Bank" || $request->payment_method == "MercadoPago") {
                 $storeTransaction = new FmFeesTransaction();
                 $storeTransaction->fees_invoice_id = $request->invoice_id;

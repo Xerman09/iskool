@@ -124,6 +124,165 @@
                         </div>
                         {{ Form::close() }}
                     </div>
+                    <div class="col-sm-6 col-lg-12">
+
+                        @if(Illuminate\Support\Facades\Config::get('app.app_sync'))
+                        {{ Form::open(['class' => 'form-horizontal', 'files' => true, 'route' => 'admin-dashboard', 'method' => 'GET', 'enctype' => 'multipart/form-data']) }}
+                        @else
+                        @if(userPermission('update-school-logo'))
+                            {{ Form::open(['class' => 'form-horizontal', 'files' => true, 'route' => 'update-school-logo', 'method' => 'POST', 'enctype' => 'multipart/form-data']) }}
+                            @endif
+                        @endif
+
+                        <div class="white-box">
+                            <div class="main-title">
+                                <h3 class="mb-15">@lang('system_settings.change_dashboard_logo')</h3>
+                            </div>
+                            <input type="hidden" name="url" id="url" value="{{URL::to('/')}}">
+                            <div class="text-center">
+                            @if(!empty($editData->dashboard_logo))
+                                <img id="upload_dashboard_logo_preview" class="img-fluid Img-100" src="{{asset($editData->dashboard_logo)}}" alt="" >
+                            @elseif(!empty($editData->logo))
+                                <img id="upload_dashboard_logo_preview" class="img-fluid Img-100" src="{{asset($editData->logo)}}" alt="" >
+                            @else
+                                <img id="upload_dashboard_logo_preview" class="img-fluid" src="{{asset('public/uploads/settings/logo.png')}}" alt="">
+                            @endif
+                            </div>
+
+                            <div class="mt-40">
+                                <div class="text-center">
+                                    <label class="primary-btn small fix-gr-bg" for="upload_dashboard_logo">@lang('system_settings.upload')</label>
+                                    <input type="file" class="d-none form-control" name="main_dashboard_logo" id="upload_dashboard_logo">
+                                </div>
+                            </div>
+                            <div class="col-lg-12 text-center">
+                                @if(Illuminate\Support\Facades\Config::get('app.app_sync'))
+                                    <span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Disabled For Demo "> <button class="primary-btn small fix-gr-bg  demo_view" style="pointer-events: none;" type="button" >@lang('system_settings.change_dashboard_logo')</button></span>
+                                @else
+                                    @if(userPermission('update-school-logo'))
+                                    <button class="primary-btn fix-gr-bg small">
+                                        <span class="ti-check"></span>
+                                        @lang('common.save')
+                                    </button>
+                                    @endif
+                                @endif
+
+                                @if ($errors->has('main_dashboard_logo'))
+                                    <span class="text-danger d-block" >
+                                        {{ $errors->first('main_dashboard_logo') }}
+                                    </span>
+                                @endif
+                                <small class="text-muted d-block mt-10">@lang('system_settings.dashboard_logo_hint')</small>
+                            </div>
+                        </div>
+                        {{ Form::close() }}
+                    </div>
+                    <div class="col-sm-6 col-lg-12">
+
+                        @if(Illuminate\Support\Facades\Config::get('app.app_sync'))
+                        {{ Form::open(['class' => 'form-horizontal', 'files' => true, 'route' => 'admin-dashboard', 'method' => 'GET', 'enctype' => 'multipart/form-data']) }}
+                        @else
+                        @if(userPermission('update-school-logo'))
+                            {{ Form::open(['class' => 'form-horizontal', 'files' => true, 'route' => 'update-school-logo', 'method' => 'POST', 'enctype' => 'multipart/form-data']) }}
+                            @endif
+                        @endif
+
+                        <div class="white-box">
+                            <div class="main-title">
+                                <h3 class="mb-15">@lang('system_settings.change_login_logo')</h3>
+                            </div>
+                            <input type="hidden" name="url" id="url" value="{{URL::to('/')}}">
+                            <div class="text-center">
+                            @if(!empty($editData->login_logo))
+                                <img id="upload_login_logo_preview" class="img-fluid Img-100" src="{{asset($editData->login_logo)}}" alt="" >
+                            @elseif(!empty($editData->logo))
+                                <img id="upload_login_logo_preview" class="img-fluid Img-100" src="{{asset($editData->logo)}}" alt="" >
+                            @else
+                                <img id="upload_login_logo_preview" class="img-fluid" src="{{asset('public/uploads/settings/logo.png')}}" alt="">
+                            @endif
+                            </div>
+
+                            <div class="mt-40">
+                                <div class="text-center">
+                                    <label class="primary-btn small fix-gr-bg" for="upload_login_logo">@lang('system_settings.upload')</label>
+                                    <input type="file" class="d-none form-control" name="main_login_logo" id="upload_login_logo">
+                                </div>
+                            </div>
+                            <div class="col-lg-12 text-center">
+                                @if(Illuminate\Support\Facades\Config::get('app.app_sync'))
+                                    <span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Disabled For Demo "> <button class="primary-btn small fix-gr-bg  demo_view" style="pointer-events: none;" type="button" >@lang('system_settings.change_login_logo')</button></span>
+                                @else
+                                    @if(userPermission('update-school-logo'))
+                                    <button class="primary-btn fix-gr-bg small">
+                                        <span class="ti-check"></span>
+                                        @lang('common.save')
+                                    </button>
+                                    @endif
+                                @endif
+
+                                @if ($errors->has('main_login_logo'))
+                                    <span class="text-danger d-block" >
+                                        {{ $errors->first('main_login_logo') }}
+                                    </span>
+                                @endif
+                                <small class="text-muted d-block mt-10">@lang('system_settings.login_logo_hint')</small>
+                            </div>
+                        </div>
+                        {{ Form::close() }}
+                    </div>
+                    <div class="col-sm-6 col-lg-12">
+
+                        @if(Illuminate\Support\Facades\Config::get('app.app_sync'))
+                        {{ Form::open(['class' => 'form-horizontal', 'files' => true, 'route' => 'admin-dashboard', 'method' => 'GET', 'enctype' => 'multipart/form-data']) }}
+                        @else
+                        @if(userPermission('update-school-logo'))
+                            {{ Form::open(['class' => 'form-horizontal', 'files' => true, 'route' => 'update-school-logo', 'method' => 'POST', 'enctype' => 'multipart/form-data']) }}
+                            @endif
+                        @endif
+
+                        <div class="white-box">
+                            <div class="main-title">
+                                <h3 class="mb-15">@lang('system_settings.change_letterhead_logo')</h3>
+                            </div>
+                            <input type="hidden" name="url" id="url" value="{{URL::to('/')}}">
+                            <div class="text-center">
+                            @if(!empty($editData->letterhead_logo))
+                                <img id="upload_letterhead_logo_preview" class="img-fluid Img-100" src="{{asset($editData->letterhead_logo)}}" alt="" >
+                            @elseif(!empty($editData->logo))
+                                <img id="upload_letterhead_logo_preview" class="img-fluid Img-100" src="{{asset($editData->logo)}}" alt="" >
+                            @else
+                                <img id="upload_letterhead_logo_preview" class="img-fluid" src="{{asset('public/uploads/settings/logo.png')}}" alt="">
+                            @endif
+                            </div>
+
+                            <div class="mt-40">
+                                <div class="text-center">
+                                    <label class="primary-btn small fix-gr-bg" for="upload_letterhead_logo">@lang('system_settings.upload')</label>
+                                    <input type="file" class="d-none form-control" name="main_letterhead_logo" id="upload_letterhead_logo">
+                                </div>
+                            </div>
+                            <div class="col-lg-12 text-center">
+                                @if(Illuminate\Support\Facades\Config::get('app.app_sync'))
+                                    <span class="d-inline-block" tabindex="0" data-toggle="tooltip" title="Disabled For Demo "> <button class="primary-btn small fix-gr-bg  demo_view" style="pointer-events: none;" type="button" >@lang('system_settings.change_letterhead_logo')</button></span>
+                                @else
+                                    @if(userPermission('update-school-logo'))
+                                    <button class="primary-btn fix-gr-bg small">
+                                        <span class="ti-check"></span>
+                                        @lang('common.save')
+                                    </button>
+                                    @endif
+                                @endif
+
+                                @if ($errors->has('main_letterhead_logo'))
+                                    <span class="text-danger d-block" >
+                                        {{ $errors->first('main_letterhead_logo') }}
+                                    </span>
+                                @endif
+                                <small class="text-muted d-block mt-10">@lang('system_settings.letterhead_logo_hint')</small>
+                            </div>
+                        </div>
+                        {{ Form::close() }}
+                    </div>
                 </div>
 
 
@@ -741,6 +900,15 @@
     });
     $(document).on('change', '#upload_favicon', function(event) {
         imageChangeWithFile($(this)[0], '#upload_favicon_preview');
+    });
+    $(document).on('change', '#upload_dashboard_logo', function(event) {
+        imageChangeWithFile($(this)[0], '#upload_dashboard_logo_preview');
+    });
+    $(document).on('change', '#upload_login_logo', function(event) {
+        imageChangeWithFile($(this)[0], '#upload_login_logo_preview');
+    });
+    $(document).on('change', '#upload_letterhead_logo', function(event) {
+        imageChangeWithFile($(this)[0], '#upload_letterhead_logo_preview');
     });
 </script>
 @endsection

@@ -178,7 +178,12 @@
                                     <tr @if($installment['is_next']) style="font-weight:bold;" @endif>
                                         <td>{{$installment['installment_no']}} @lang('academics.of') {{$assign->number_of_installments}}</td>
                                         <td>{{ \Carbon\Carbon::parse($installment['due_date'])->format('M d, Y') }}</td>
-                                        <td>{{ currency_format($installment['amount']) ?: number_format($installment['amount'], 2) }}</td>
+                                        <td>
+                                            {{ currency_format($installment['amount']) ?: number_format($installment['amount'], 2) }}
+                                            @if($installment['status'] == 'partial')
+                                                <br><small class="text-muted">{{ __('academics.installment_remaining_note', ['amount' => currency_format($installment['remaining']) ?: number_format($installment['remaining'], 2)]) }}</small>
+                                            @endif
+                                        </td>
                                         <td>
                                             @if($installment['status'] == 'paid')
                                                 <span class="badge badge-success">@lang('academics.paid_status')</span>

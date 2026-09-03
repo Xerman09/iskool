@@ -1361,6 +1361,9 @@ class SmSystemSettingController extends Controller
         $validator = Validator::make($input, [
             'main_school_logo' => "sometimes|nullable|mimes:jpg,jpeg,png|max:50000",
             'main_school_favicon' => "sometimes|nullable|mimes:jpg,jpeg,png|max:50000",
+            'main_dashboard_logo' => "sometimes|nullable|mimes:jpg,jpeg,png|max:50000",
+            'main_letterhead_logo' => "sometimes|nullable|mimes:jpg,jpeg,png|max:50000",
+            'main_login_logo' => "sometimes|nullable|mimes:jpg,jpeg,png|max:50000",
         ]);
 
         if ($validator->fails()) {
@@ -1428,6 +1431,84 @@ class SmSystemSettingController extends Controller
                 }
 
 
+            } // for upload Dashboard Logo (white/light variant for the dark sidebar - see components/sidebar-component.blade.php)
+            else if ($request->file('main_dashboard_logo') != "") {
+                $maxFileSize = SmGeneralSettings::first('file_size')->file_size;
+                $file = $request->file('main_dashboard_logo');
+                $fileSize = filesize($file);
+                $fileSizeKb = ($fileSize / 1000000);
+                if ($fileSizeKb >= $maxFileSize) {
+                    Toastr::error('Max upload file size ' . $maxFileSize . ' Mb is set in system', 'Failed');
+                    return redirect()->back();
+                }
+                $main_dashboard_logo = "";
+                $file = $request->file('main_dashboard_logo');
+                $main_dashboard_logo = md5($file->getClientOriginalName() . time()) . "." . $file->getClientOriginalExtension();
+                $file->move('public/uploads/settings/', $main_dashboard_logo);
+                $main_dashboard_logo = 'public/uploads/settings/' . $main_dashboard_logo;
+                $generalSettData = SmGeneralSettings::where('school_id', Auth::user()->school_id)->first();
+                $generalSettData->dashboard_logo = $main_dashboard_logo;
+                $results = $generalSettData->update();
+
+                if ($results) {
+                    session()->forget('school_config');
+                    $school_config = SmGeneralSettings::where('school_id', Auth::user()->school_id)->first();
+                    session()->put('school_config', $school_config);
+                    session()->forget('generalSetting');
+                    session()->put('generalSetting', $generalSettData);
+                }
+            } // for upload Login Logo (shown on the login page instead of the main logo)
+            else if ($request->file('main_login_logo') != "") {
+                $maxFileSize = SmGeneralSettings::first('file_size')->file_size;
+                $file = $request->file('main_login_logo');
+                $fileSize = filesize($file);
+                $fileSizeKb = ($fileSize / 1000000);
+                if ($fileSizeKb >= $maxFileSize) {
+                    Toastr::error('Max upload file size ' . $maxFileSize . ' Mb is set in system', 'Failed');
+                    return redirect()->back();
+                }
+                $main_login_logo = "";
+                $file = $request->file('main_login_logo');
+                $main_login_logo = md5($file->getClientOriginalName() . time()) . "." . $file->getClientOriginalExtension();
+                $file->move('public/uploads/settings/', $main_login_logo);
+                $main_login_logo = 'public/uploads/settings/' . $main_login_logo;
+                $generalSettData = SmGeneralSettings::where('school_id', Auth::user()->school_id)->first();
+                $generalSettData->login_logo = $main_login_logo;
+                $results = $generalSettData->update();
+
+                if ($results) {
+                    session()->forget('school_config');
+                    $school_config = SmGeneralSettings::where('school_id', Auth::user()->school_id)->first();
+                    session()->put('school_config', $school_config);
+                    session()->forget('generalSetting');
+                    session()->put('generalSetting', $generalSettData);
+                }
+            } // for upload Letterhead Logo (used on printed documents/invoices instead of the main logo)
+            else if ($request->file('main_letterhead_logo') != "") {
+                $maxFileSize = SmGeneralSettings::first('file_size')->file_size;
+                $file = $request->file('main_letterhead_logo');
+                $fileSize = filesize($file);
+                $fileSizeKb = ($fileSize / 1000000);
+                if ($fileSizeKb >= $maxFileSize) {
+                    Toastr::error('Max upload file size ' . $maxFileSize . ' Mb is set in system', 'Failed');
+                    return redirect()->back();
+                }
+                $main_letterhead_logo = "";
+                $file = $request->file('main_letterhead_logo');
+                $main_letterhead_logo = md5($file->getClientOriginalName() . time()) . "." . $file->getClientOriginalExtension();
+                $file->move('public/uploads/settings/', $main_letterhead_logo);
+                $main_letterhead_logo = 'public/uploads/settings/' . $main_letterhead_logo;
+                $generalSettData = SmGeneralSettings::where('school_id', Auth::user()->school_id)->first();
+                $generalSettData->letterhead_logo = $main_letterhead_logo;
+                $results = $generalSettData->update();
+
+                if ($results) {
+                    session()->forget('school_config');
+                    $school_config = SmGeneralSettings::where('school_id', Auth::user()->school_id)->first();
+                    session()->put('school_config', $school_config);
+                    session()->forget('generalSetting');
+                    session()->put('generalSetting', $generalSettData);
+                }
             } else {
                 if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                     return ApiBaseMethod::sendError('No change applied, please try again');

@@ -399,7 +399,7 @@
                                     <thead>
                                         <td>
                                             <div class="logo_img">
-                                                <img  src="{{asset(generalSetting()->logo)}}" alt="{{generalSetting()->school_name}}">
+                                                <img  src="{{asset(generalSetting()->letterhead_logo ?: generalSetting()->logo)}}" alt="{{generalSetting()->school_name}}">
                                             </div>
                                         </td>
                                         <td class="virtical_middle address_text">

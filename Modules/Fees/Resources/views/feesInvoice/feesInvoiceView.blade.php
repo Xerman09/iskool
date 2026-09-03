@@ -71,7 +71,7 @@
                             <thead>
                             <td>
                                 <div class="logo_img">
-                                    <img  src="{{asset($generalSetting->logo)}}" alt="{{$generalSetting->school_name}}">
+                                    <img  src="{{asset($generalSetting->letterhead_logo ?: $generalSetting->logo)}}" alt="{{$generalSetting->school_name}}">
                                 </div>
                             </td>
                             <td class="virtical_middle address_text">
@@ -273,6 +273,51 @@
                 </tr>
                 </tfoot>
             </table>
+
+            @if(!empty($activePaymentPlan) && $planSchedule)
+            <div class="col-lg-12 mb-30">
+                <h4 class="mb-15">@lang('academics.payment_schedule') &mdash; {{ optional($activePaymentPlan->planType)->name }}</h4>
+                <table class="table border_table mb_30 description_table">
+                    <thead>
+                        <tr>
+                            <th>@lang('academics.installment_no')</th>
+                            <th>@lang('academics.due_date')</th>
+                            <th class="text-right">@lang('accounts.amount')</th>
+                            <th>@lang('student.status')</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($planSchedule as $installment)
+                        <tr @if($installment['is_next']) style="font-weight:bold;" @endif>
+                            <td>
+                                {{$installment['installment_no']}} @lang('academics.of') {{$activePaymentPlan->number_of_installments}}
+                                @if($installment['is_next'])
+                                <span class="badge badge-warning">@lang('academics.next_payment')</span>
+                                @endif
+                            </td>
+                            <td>{{ \Carbon\Carbon::parse($installment['due_date'])->format('M d, Y') }}</td>
+                            <td class="text-right">
+                                {{currency_format($installment['amount']) ?: number_format($installment['amount'], 2)}}
+                                @if($installment['status'] == 'partial')
+                                    <br><small class="text-muted">{{ __('academics.installment_remaining_note', ['amount' => currency_format($installment['remaining']) ?: number_format($installment['remaining'], 2)]) }}</small>
+                                @endif
+                            </td>
+                            <td>
+                                @if($installment['status'] == 'paid')
+                                    <span class="badge badge-success">@lang('academics.paid_status')</span>
+                                @elseif($installment['status'] == 'partial')
+                                    <span class="badge badge-warning">@lang('academics.partial_status')</span>
+                                @else
+                                    <span class="badge badge-secondary">@lang('academics.unpaid_status')</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
+
             @if($banks)
             <div class="col-lg-12">
                 <table class="table border_table mb_30 description_table" >

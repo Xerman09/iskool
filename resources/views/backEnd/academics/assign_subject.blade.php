@@ -70,7 +70,18 @@
                         <div class="row">
                             <input type="hidden" name="url" id="url" value="{{URL::to('/')}}">
                             <div class="col-lg-6 mt-30-md">
-                                <select class="primary_select form-control{{ @$errors->has('class') ? ' is-invalid' : '' }}" id="select_class" name="class">
+                                <select class="primary_select form-control{{ @$errors->has('course_id') ? ' is-invalid' : '' }}" name="course_id" required>
+                                    <option value="">@lang('academics.program') *</option>
+                                    @foreach($courses as $course)
+                                    <option value="{{$course->id}}" {{@$course_id == $course->id ? 'selected' : ''}}>{{$course->course_name}}</option>
+                                    @endforeach
+                                </select>
+                                @if ($errors->has('course_id'))
+                                <span class="text-danger invalid-select" role="alert">{{ @$errors->first('course_id') }}</span>
+                                @endif
+                            </div>
+                            <div class="col-lg-6 mt-30-md">
+                                <select class="primary_select form-control{{ @$errors->has('class') ? ' is-invalid' : '' }}" id="select_class" name="class" required>
                                     <option data-display="@lang('common.select_class')*" value="">@lang('common.select_class') *</option>
                                     @foreach($classes as $class)
                                     <option value="{{@$class->id}}" {{isset($class_id)? ($class_id == $class->id? 'selected':''):''}}>{{@$class->class_name}}</option>
@@ -82,8 +93,30 @@
                                 </span>
                                 @endif
                             </div>
-                            <div class="col-lg-6 mt-30-md" id="select_section_div">
-                                <select class="primary_select form-control{{ @$errors->has('section') ? ' is-invalid' : '' }}" id="select_section" name="section">
+                            <div class="col-lg-4 mt-15">
+                                <select class="primary_select form-control{{ @$errors->has('curriculum_version_id') ? ' is-invalid' : '' }}" name="curriculum_version_id" required>
+                                    <option value="">@lang('academics.curriculum_version') *</option>
+                                    @foreach($curriculumVersions as $curriculumVersion)
+                                    <option value="{{$curriculumVersion->id}}" {{@$curriculum_version_id == $curriculumVersion->id ? 'selected' : ''}}>{{$curriculumVersion->version_label}}</option>
+                                    @endforeach
+                                </select>
+                                @if ($errors->has('curriculum_version_id'))
+                                <span class="text-danger invalid-select" role="alert">{{ @$errors->first('curriculum_version_id') }}</span>
+                                @endif
+                            </div>
+                            <div class="col-lg-4 mt-15">
+                                <select class="primary_select form-control{{ @$errors->has('semester_id') ? ' is-invalid' : '' }}" name="semester_id" required>
+                                    <option value="">@lang('academics.semester') *</option>
+                                    @foreach($semesters as $semester)
+                                    <option value="{{$semester->id}}" {{@$semester_id == $semester->id ? 'selected' : ''}}>{{$semester->semester_name}}</option>
+                                    @endforeach
+                                </select>
+                                @if ($errors->has('semester_id'))
+                                <span class="text-danger invalid-select" role="alert">{{ @$errors->first('semester_id') }}</span>
+                                @endif
+                            </div>
+                            <div class="col-lg-4 mt-15" id="select_section_div">
+                                <select class="primary_select form-control{{ @$errors->has('section') ? ' is-invalid' : '' }}" id="select_section" name="section" required>
                                     <option data-display="@lang('common.select_section') *" value="">@lang('common.select_section')*</option>
                                 </select>
                                 <div class="pull-right loader loader_style" id="select_section_loader">

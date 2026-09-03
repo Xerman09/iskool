@@ -865,9 +865,12 @@ class FeesController extends Controller
             $paymentPlanTypes = \App\PaymentPlanType::where('school_id', Auth::user()->school_id)->orderBy('id')->get();
             $activePaymentPlan = \App\PaymentPlanAssign::where('fm_fees_invoice_id', $invoiceInfo->id)
                 ->where('active_status', 1)
+                ->with('installments', 'planType')
                 ->first();
 
-            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan'));
+            $planSchedule = $activePaymentPlan ? $this->installmentSchedule($activePaymentPlan) : null;
+
+            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan', 'planSchedule'));
         } else {
             return view('fees::feesInvoice.feesInvoicePrint', compact('invoiceInfo', 'invoiceDetails', 'banks'));
         }
@@ -930,8 +933,9 @@ class FeesController extends Controller
 
             $activePlan = $this->activePlanForInvoice($invoiceInfo->id);
             // Suggested default: this cycle's installment if there's a plan,
-            // otherwise the full remaining balance (i.e. "pay it all" by default).
-            $suggestedAmount = $activePlan ? $activePlan['dueThisCycle'] : (float) $invoiceDetails->sum('due_amount');
+            // otherwise the remaining down payment for an enrollment invoice still
+            // awaiting enrollment, or the full remaining balance otherwise.
+            $suggestedAmount = $activePlan ? $activePlan['dueThisCycle'] : $this->suggestedAmountForInvoice($invoiceInfo, $invoiceDetails);
             $suggestedPaidAmounts = $this->allocateAcrossLines($invoiceDetails, $suggestedAmount);
 
             return view('fees::addFessPayment', compact('classes', 'feesGroups', 'feesTypes', 'paymentMethods', 'bankAccounts', 'invoiceInfo', 'invoiceDetails', 'stripe_info', 'activePlan', 'suggestedPaidAmounts'));
@@ -1101,13 +1105,16 @@ class FeesController extends Controller
                 if ($balance <= 0) {
                     $paidInvoice->payment_status = 'paid';
                     $paidInvoice->update();
-
-                    $extendedController = new FeesExtendedController();
-                    $extendedController->markStudentEnrolledIfPending($paidInvoice->student_id);
                 } else {
                     $paidInvoice->payment_status = 'partial';
                     $paidInvoice->update();
                 }
+
+                // Checked regardless of full vs. partial - the down payment threshold
+                // inside markStudentEnrolledIfPending() can be met well before the
+                // invoice balance reaches zero.
+                $extendedController = new FeesExtendedController();
+                $extendedController->markStudentEnrolledIfPending($paidInvoice->student_id);
             }
 
             Toastr::success('Save Successful', 'Success');

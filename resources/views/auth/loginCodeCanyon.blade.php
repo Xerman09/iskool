@@ -132,7 +132,7 @@ $css = 'background:' . $login_background->color;
                     <div class="form-wrap text-center">
                         <div class="logo-container">
                             <a href="{{ url('/') }}">
-                                <img src="{{ asset(generalSetting()->logo) }}" alt="" class="logoimage">
+                                <img src="{{ asset(generalSetting()->login_logo ?: generalSetting()->logo) }}" alt="" class="logoimage">
                             </a>
                         </div>
 

@@ -299,6 +299,10 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('payment-plan-assign-edit/{id}', ['as' => 'payment-plan-assign-edit', 'uses' => 'Admin\Academics\PaymentPlanAssignController@edit'])->middleware('userRolePermission:payment-plan-assign');
         Route::post('payment-plan-assign-update', ['as' => 'payment-plan-assign-update', 'uses' => 'Admin\Academics\PaymentPlanAssignController@update'])->middleware('userRolePermission:payment-plan-assign');
 
+        Route::get('item-order-approval', ['as' => 'item-order-approval', 'uses' => 'Admin\Academics\ItemOrderApprovalController@index'])->middleware('userRolePermission:item-order-approval');
+        Route::post('item-order-approval-approve/{id}', ['as' => 'item-order-approval-approve', 'uses' => 'Admin\Academics\ItemOrderApprovalController@approve'])->middleware('userRolePermission:item-order-approval');
+        Route::post('item-order-approval-reject/{id}', ['as' => 'item-order-approval-reject', 'uses' => 'Admin\Academics\ItemOrderApprovalController@reject'])->middleware('userRolePermission:item-order-approval');
+
         Route::get('misc-fee-assign', ['as' => 'misc-fee-assign', 'uses' => 'Admin\Academics\MiscFeeController@index'])->middleware('userRolePermission:misc-fee-assign');
 
         Route::get('down-payment', ['as' => 'down-payment', 'uses' => 'Admin\Academics\DownPaymentController@index'])->middleware('userRolePermission:down-payment');

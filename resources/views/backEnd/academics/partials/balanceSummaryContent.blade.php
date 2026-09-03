@@ -8,9 +8,9 @@
                 <thead>
                     <tr>
                         <td>
-                            @if(optional($setting)->logo)
+                            @if(!empty(optional($setting)->letterhead_logo) || optional($setting)->logo)
                             <div class="logo_img">
-                                <img src="{{asset($setting->logo)}}" alt="{{optional($setting)->school_name}}">
+                                <img src="{{asset(optional($setting)->letterhead_logo ?: $setting->logo)}}" alt="{{optional($setting)->school_name}}">
                             </div>
                             @endif
                         </td>
@@ -118,14 +118,13 @@
                 <td>
                     <p class="total_count">
                         <span><strong>@lang('academics.remaining_balance')</strong></span>
-                        <span><strong>
-                            @if($paymentPlan)
-                                {{ __('academics.on_payment_plan', ['plan' => $paymentPlan['name'], 'paid' => $paymentPlan['paid'], 'total' => $paymentPlan['total']]) }}
-                            @else
-                                {{currency_format($remainingBalance) ?: number_format($remainingBalance, 2)}}
-                            @endif
-                        </strong></span>
+                        <span><strong>{{currency_format($remainingBalance) ?: number_format($remainingBalance, 2)}}</strong></span>
                     </p>
+                    @if($paymentPlan)
+                    <p class="text-muted">
+                        {{ __('academics.on_payment_plan', ['plan' => $paymentPlan['name'], 'paid' => $paymentPlan['paid'], 'total' => $paymentPlan['total']]) }}
+                    </p>
+                    @endif
                 </td>
             </tr>
         </tfoot>
@@ -194,7 +193,12 @@
                         @endif
                     </td>
                     <td>{{ \Carbon\Carbon::parse($installment['due_date'])->format('M d, Y') }}</td>
-                    <td class="text-right-print">{{currency_format($installment['amount']) ?: number_format($installment['amount'], 2)}}</td>
+                    <td class="text-right-print">
+                        {{currency_format($installment['amount']) ?: number_format($installment['amount'], 2)}}
+                        @if($installment['status'] == 'partial')
+                            <br><small class="text-muted">{{ __('academics.installment_remaining_note', ['amount' => currency_format($installment['remaining']) ?: number_format($installment['remaining'], 2)]) }}</small>
+                        @endif
+                    </td>
                     <td>
                         @if($installment['status'] == 'paid')
                             <span class="badge badge-success">@lang('academics.paid_status')</span>
