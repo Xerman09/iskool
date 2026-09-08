@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Student;
 
+use App\SmItem;
 use App\Semester;
 use App\SmSubject;
 use App\SmAssignSubject;
@@ -67,7 +68,12 @@ class StudentSubjectRegistrationController extends Controller
                 }
             }
 
-            $eligibleSubjects = $subjects->filter(fn ($s) => empty($s->unmetPrerequisites));
+            // Minors are optional - curriculum-wide and skippable by design (see
+            // requiredSubjects()/register()) - so they never gate "awaiting invoice"/
+            // balance-summary. Only majors (which only ever show for the student's
+            // own class_id/year level) are mandatory for this semester's submission.
+            $requiredThisTerm = $subjects->filter(fn ($s) => $s->subject_classification !== 'minor');
+            $eligibleSubjects = $requiredThisTerm->filter(fn ($s) => empty($s->unmetPrerequisites));
             $hasSubmitted = $eligibleSubjects->count() > 0 && $eligibleSubjects->every(fn ($s) => $s->chosenAssignSubjectId !== null);
 
             return view('backEnd.studentPanel.subjectRegistration', compact('student', 'activeSemester', 'subjects', 'hasSubmitted'));
@@ -112,6 +118,13 @@ class StudentSubjectRegistrationController extends Controller
 
                 $assignSubjectId = $choices[$subject->id] ?? null;
                 if (!$assignSubjectId) {
+                    // Minors are optional - curriculum-wide, "pick up a minor you
+                    // skipped, or take one early" (see requiredSubjects()) - so a
+                    // student is free to leave one unchosen entirely, this semester
+                    // or ever. Only majors are mandatory to submit a block for.
+                    if ($subject->subject_classification === 'minor') {
+                        continue;
+                    }
                     Toastr::error("Please select a block for {$subject->subject_name}.", 'Failed');
                     return redirect()->back();
                 }
@@ -338,10 +351,22 @@ class StudentSubjectRegistrationController extends Controller
                     ->get();
             }
 
+            // Only needed for the interactive view (the buy-items modal) - the print
+            // view has no use for it and skips the query entirely.
+            $items = collect();
+            if ($state !== 'print') {
+                $items = SmItem::where('school_id', $student->school_id)
+                    ->whereNotNull('unit_price')
+                    ->where('total_in_stock', '>', 0)
+                    ->with('category')
+                    ->get();
+            }
+
             $data = array_merge($breakdown, [
                 'student' => $student,
                 'itemLines' => $itemLines,
                 'itemsTotal' => $breakdown['itemsBilled'],
+                'items' => $items,
                 'printUrl' => route('student-balance-summary', ['state' => 'print']),
             ]);
 

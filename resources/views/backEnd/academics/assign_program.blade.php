@@ -180,7 +180,7 @@
                                                     $generateInvoiceForm = '<form action="'.route('assign-program-generate-invoice').'" method="POST" style="margin:0;">'
                                                         . csrf_field()
                                                         . '<input type="hidden" name="student_id" value="'.$s->id.'">'
-                                                        . '<button type="submit" class="dropdown-item">'.__('academics.generate_down_payment_invoice').'</button>'
+                                                        . '<button type="submit" class="dropdown-item">'.__('academics.generate_enrollment_invoice').'</button>'
                                                         . '</form>';
 
                                                     $routeList = [

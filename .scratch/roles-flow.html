@@ -1,0 +1,230 @@
+<title>Enrollment & Store Roles</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --surface-2: #f1efe8;
+    --border: #ddd7c9;
+    --text: #1e1c17;
+    --text-muted: #726b5c;
+    --accent: #2b5d52;
+    --accent-soft: #e1ede8;
+    --on-accent: #faf9f6;
+    --radius: 10px;
+    --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141310; --surface: #1b1a15; --surface-2: #221f18; --border: #3a362a;
+      --text: #f1eee5; --text-muted: #a49b89; --accent: #74c2a9; --accent-soft: #1f342d; --on-accent: #10241d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141310; --surface: #1b1a15; --surface-2: #221f18; --border: #3a362a;
+    --text: #f1eee5; --text-muted: #a49b89; --accent: #74c2a9; --accent-soft: #1f342d; --on-accent: #10241d;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-sans); line-height: 1.55; }
+  h1, h2 { text-wrap: balance; font-weight: 700; margin: 0; }
+  p { margin: 0; }
+
+  .topbar { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border); padding: 18px 24px; }
+  .topbar-inner { max-width: 940px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px 24px; }
+  .topbar h1 { font-size: 1.05rem; }
+  .topbar-nav { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--font-mono); font-size: 0.78rem; }
+  .topbar-nav a { text-decoration: none; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+  .topbar-nav a:hover, .topbar-nav a:focus-visible { color: var(--text); border-color: var(--accent); outline: none; }
+
+  main { max-width: 940px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  .intro { display: flex; flex-direction: column; gap: 14px; padding-bottom: 36px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .intro .kicker { font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+  .intro h2 { font-size: 1.6rem; max-width: 36ch; }
+  .intro p { max-width: 66ch; color: var(--text-muted); font-size: 0.98rem; }
+
+  .status-row { display: flex; flex-wrap: wrap; gap: 18px 28px; padding: 16px 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 8px; }
+  .status-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.live { background: var(--accent); }
+  .dot.old { border: 1.5px dashed var(--text-muted); background: transparent; }
+
+  section.flow { padding: 52px 0; border-bottom: 1px solid var(--border); scroll-margin-top: 90px; }
+  section.flow:last-of-type { border-bottom: none; }
+  .flow-head { margin-bottom: 20px; max-width: 70ch; }
+  .flow-head .kicker { font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); display: block; margin-bottom: 8px; }
+  .flow-head h2 { font-size: 1.35rem; margin-bottom: 10px; }
+  .flow-head p { color: var(--text-muted); font-size: 0.95rem; }
+
+  figure { margin: 24px 0 0; }
+  .diagram-panel { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; overflow-x: auto; }
+  .diagram-panel svg { display: block; max-width: 100%; height: auto; color: var(--text); min-width: 640px; }
+  figcaption { margin-top: 10px; font-size: 0.85rem; color: var(--text-muted); max-width: 70ch; }
+
+  footer { max-width: 940px; margin: 0 auto; padding: 0 24px 64px; color: var(--text-muted); font-size: 0.82rem; }
+  footer code { font-family: var(--font-mono); background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: 0.8rem; }
+</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <h1>Enrollment &amp; Store — Who Does What</h1>
+    <nav class="topbar-nav">
+      <a href="#enroll">Enrollment &amp; Payment</a>
+      <a href="#items">Buying Items</a>
+    </nav>
+  </div>
+</div>
+
+<main>
+  <div class="intro">
+    <span class="kicker">Role-based flow · current state</span>
+    <h2>How Admin/Registrar, Student, and Receptionist actually move through the system today</h2>
+    <p>Two swimlane diagrams — one per real-world process, each row is a role. Solid teal boxes are shipped and live right now; dashed muted boxes are today's older screen, still in place until its priority comes up.</p>
+    <div class="status-row">
+      <span class="status-item"><span class="dot live"></span>live now — Priority 1 shipped</span>
+      <span class="status-item"><span class="dot old"></span>today's existing screen — redesign not built yet</span>
+    </div>
+  </div>
+
+  <!-- ================= ENROLLMENT ================= -->
+  <section class="flow" id="enroll">
+    <div class="flow-head">
+      <span class="kicker">Enrollment &amp; payment</span>
+      <h2>From Assign Program to "Enrolled"</h2>
+      <p>It starts with the Admin/Registrar's own call — assigning a program is discretionary and happens before the student can do anything. Only after that can the student register, the invoice get generated, and the Receptionist enroll them one of two ways.</p>
+    </div>
+    <figure>
+      <div class="diagram-panel">
+        <svg viewBox="0 0 1260 470" role="img" aria-label="Admin or Registrar assigns a program at their own discretion. Only then can the student register for subjects. Admin or Registrar then generates the enrollment invoice. Receptionist finally either collects the down payment or assigns a payment plan with any payment made — both lead to the student being enrolled.">
+          <defs>
+            <marker id="arN" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--text-muted)"/>
+            </marker>
+            <marker id="arA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--accent)"/>
+            </marker>
+          </defs>
+
+          <line x1="0" y1="150" x2="1260" y2="150" stroke-width="1" stroke-dasharray="3 5" style="stroke:var(--border)"/>
+          <line x1="0" y1="300" x2="1260" y2="300" stroke-width="1" stroke-dasharray="3 5" style="stroke:var(--border)"/>
+
+          <text x="20" y="28" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="1.2" style="fill:var(--text-muted)">STUDENT</text>
+          <text x="20" y="178" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="1.2" style="fill:var(--text-muted)">ADMIN / REGISTRAR</text>
+          <text x="20" y="328" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="1.2" style="fill:var(--text-muted)">RECEPTIONIST / CASHIER</text>
+
+          <!-- Admin: assign program (discretionary, first) -->
+          <rect x="140" y="195" width="190" height="60" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="235" y="218" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Assign Program</text>
+          <text x="235" y="235" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" style="fill:var(--text-muted)">course + curriculum</text>
+          <text x="235" y="272" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-style="italic" style="fill:var(--text-muted)">admin's discretion —</text>
+          <text x="235" y="285" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" font-style="italic" style="fill:var(--text-muted)">nothing below happens without it</text>
+
+          <!-- to student: register -->
+          <line x1="200" y1="195" x2="400" y2="105" stroke-width="2" marker-end="url(#arN)" style="stroke:var(--text-muted)"/>
+
+          <rect x="350" y="45" width="180" height="60" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="440" y="70" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Register for</text>
+          <text x="440" y="87" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Subjects</text>
+
+          <!-- back down to admin: generate invoice -->
+          <line x1="480" y1="105" x2="655" y2="195" stroke-width="2" marker-end="url(#arN)" style="stroke:var(--text-muted)"/>
+
+          <rect x="560" y="195" width="190" height="60" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="655" y="220" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Generate Enrollment</text>
+          <text x="655" y="237" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Invoice</text>
+
+          <!-- to receptionist: split -->
+          <line x1="640" y1="255" x2="880" y2="305" stroke-width="2" marker-end="url(#arN)" style="stroke:var(--text-muted)"/>
+          <line x1="670" y1="255" x2="880" y2="378" stroke-width="2" marker-end="url(#arN)" style="stroke:var(--text-muted)"/>
+
+          <rect x="790" y="305" width="180" height="55" rx="8" fill="none" style="stroke:var(--accent)"/>
+          <text x="880" y="327" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--accent)">Collect Down</text>
+          <text x="880" y="344" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--accent)">Payment</text>
+
+          <rect x="790" y="378" width="180" height="55" rx="8" fill="none" style="stroke:var(--accent)"/>
+          <text x="880" y="400" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--accent)">Assign Payment</text>
+          <text x="880" y="417" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--accent)">Plan</text>
+
+          <text x="880" y="373" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" style="fill:var(--accent)">meets down payment amount</text>
+          <text x="880" y="447" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" style="fill:var(--accent)">any payment on the plan</text>
+
+          <circle cx="800" cy="293" r="3" style="fill:var(--accent)"/>
+          <text x="812" y="297" font-family="IBM Plex Mono, monospace" font-size="10" style="fill:var(--accent)">shipped — Priority 1</text>
+
+          <!-- back up to student: enrolled -->
+          <line x1="970" y1="320" x2="1010" y2="75" stroke-width="2" marker-end="url(#arA)" style="stroke:var(--accent)"/>
+          <line x1="970" y1="392" x2="1010" y2="90" stroke-width="2" marker-end="url(#arA)" style="stroke:var(--accent)"/>
+
+          <rect x="1010" y="45" width="190" height="60" rx="8" style="fill:var(--accent)"/>
+          <text x="1105" y="70" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--on-accent)">Student</text>
+          <text x="1105" y="87" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--on-accent)">Enrolled</text>
+        </svg>
+      </div>
+      <figcaption>Assign Program and Generate Invoice are both the Admin/Registrar's calls, unchanged by this work. What's new sits entirely with the Receptionist: a payment plan can now be set up on a still-pending invoice, and either action enrolls the student — not just the down payment.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ================= ITEMS ================= -->
+  <section class="flow" id="items">
+    <div class="flow-head">
+      <span class="kicker">Buying items</span>
+      <h2>From the store to the invoice</h2>
+      <p>This one hasn't changed yet — the item store is still today's full-page table with a plain quantity box, submitted for review before it ever touches an invoice or stock. The modal-and-cart redesign is planned but not built.</p>
+    </div>
+    <figure>
+      <div class="diagram-panel">
+        <svg viewBox="0 0 900 300" role="img" aria-label="Student browses today's item store table and submits a pending order. Reception or Admin reviews it, approves or rejects it; an approval bills the item onto the student's invoice and deducts stock.">
+          <defs>
+            <marker id="arN2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--text-muted)"/>
+            </marker>
+            <marker id="arA2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--accent)"/>
+            </marker>
+          </defs>
+
+          <line x1="0" y1="150" x2="900" y2="150" stroke-width="1" stroke-dasharray="3 5" style="stroke:var(--border)"/>
+          <text x="20" y="28" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="1.2" style="fill:var(--text-muted)">STUDENT</text>
+          <text x="20" y="178" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="1.2" style="fill:var(--text-muted)">RECEPTION / ADMIN</text>
+
+          <rect x="160" y="45" width="220" height="60" rx="8" fill="none" stroke-dasharray="4 4" style="stroke:var(--text-muted)"/>
+          <text x="270" y="68" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--text-muted)">Browse Item Store</text>
+          <text x="270" y="84" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--text-muted)">today: full-page table</text>
+
+          <line x1="380" y1="75" x2="424" y2="75" stroke-width="2" marker-end="url(#arN2)" style="stroke:var(--text-muted)"/>
+
+          <rect x="430" y="45" width="190" height="60" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="525" y="70" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--text)">Submit Order</text>
+          <text x="525" y="87" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--text-muted)">status: pending</text>
+
+          <line x1="525" y1="105" x2="525" y2="145" stroke-width="2" marker-end="url(#arN2)" style="stroke:var(--text-muted)"/>
+
+          <rect x="430" y="195" width="190" height="60" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="525" y="230" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--text)">Review Pending Order</text>
+
+          <line x1="620" y1="212" x2="664" y2="185" stroke-width="1.5" marker-end="url(#arA2)" style="stroke:var(--accent)"/>
+          <line x1="620" y1="238" x2="664" y2="255" stroke-width="1.5" marker-end="url(#arN2)" style="stroke:var(--text-muted)"/>
+
+          <rect x="670" y="160" width="150" height="48" rx="8" style="fill:var(--accent)"/>
+          <text x="745" y="189" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" font-weight="600" style="fill:var(--on-accent)">Approve</text>
+
+          <rect x="670" y="230" width="150" height="48" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="745" y="259" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--text-muted)">Reject</text>
+
+          <line x1="745" y1="160" x2="745" y2="105" stroke-width="2" marker-end="url(#arA2)" style="stroke:var(--accent)"/>
+
+          <rect x="650" y="45" width="200" height="60" rx="8" style="fill:var(--accent)"/>
+          <text x="750" y="68" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" font-weight="600" style="fill:var(--on-accent)">Billed onto Invoice,</text>
+          <text x="750" y="85" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" font-weight="600" style="fill:var(--on-accent)">stock deducted</text>
+        </svg>
+      </div>
+      <figcaption>Everything here is the existing screen set — the dashed box is the one due for the modal-and-cart rebuild (Priority 2); the rest is unchanged.</figcaption>
+    </figure>
+  </section>
+</main>
+
+<footer>
+  Reflects the codebase as of this session: Priority 1 (payment-plan-without-down-payment) is live; Priorities 2–5 from <code>elegant-growing-ullman.md</code> are still the older screens shown here in dashed muted boxes.
+</footer>

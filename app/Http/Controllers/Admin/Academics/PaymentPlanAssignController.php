@@ -76,22 +76,16 @@ class PaymentPlanAssignController extends Controller
                 $student = SmStudent::where('school_id', $schoolId)->findOrFail($invoice->student_id);
                 $context = $invoice->type === 'store' ? 'store' : 'tuition';
 
-                // For the enrollment invoice specifically, this shortcut must not let
-                // the down payment get folded into the plan - splitting the invoice's
-                // full total (instead of what's left after the down payment) before
-                // enrollment is even settled. Item-store invoices have no down payment
-                // concept, so they're exempt.
-                if ($invoice->type !== 'store' && $student->enrollment_status !== 'enrolled') {
-                    Toastr::error('This student must have their down payment paid (enrolled) before a payment plan can be assigned.', 'Failed');
-                    return redirect()->back();
-                }
+                // A plan may now be assigned to a still-'pending' student's enrollment
+                // invoice too - that's the whole point of the "payment plan instead of
+                // a down payment" path. There's nothing to fold/protect here: the plan
+                // splits whatever the invoice's live due amount is (see remainingBalance
+                // below), whether that's the full total (no down payment collected yet)
+                // or what's left after a partial down payment. Enrollment itself then
+                // follows from any payment landing past this plan's baseline - see
+                // FeesExtendedController::markStudentEnrolledIfPending().
             } else {
                 $student = SmStudent::where('school_id', $schoolId)->findOrFail($request->student_id);
-
-                if ($student->enrollment_status !== 'enrolled') {
-                    Toastr::error('This student must have their down payment paid (enrolled) before a payment plan can be assigned.', 'Failed');
-                    return redirect()->back();
-                }
 
                 $context = $request->context ?: 'tuition';
 

@@ -6,6 +6,7 @@ use DataTables;
 use App\SmClass;
 use App\SmSchool;
 use App\SmStudent;
+use App\SmItemOrder;
 use App\Models\User;
 use App\SmAddIncome;
 use App\SmBankAccount;
@@ -870,7 +871,26 @@ class FeesController extends Controller
 
             $planSchedule = $activePaymentPlan ? $this->installmentSchedule($activePaymentPlan) : null;
 
-            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan', 'planSchedule'));
+            // Surfaces the "pay down payment OR assign a payment plan" choice
+            // prominently on a still-pending student's own enrollment invoice - once
+            // either happens the student enrolls (see FeesExtendedController::
+            // markStudentEnrolledIfPending()), so this is the one screen where that
+            // choice actually needs to be obvious.
+            $invoiceStudent = SmStudent::find($invoiceInfo->student_id);
+            $isPendingEnrollment = $invoiceInfo->type === 'fees'
+                && optional($invoiceStudent)->enrollment_status === 'pending';
+
+            // Surfaced here so reception can approve/reject a student's item picks
+            // right where they're already looking at that student's invoice, instead
+            // of needing a separate trip to the standalone Item Order Approval page.
+            $pendingItemOrders = SmItemOrder::where('school_id', Auth::user()->school_id)
+                ->where('student_id', $invoiceInfo->student_id)
+                ->where('status', 'pending')
+                ->with('item')
+                ->orderBy('created_at')
+                ->get();
+
+            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan', 'planSchedule', 'isPendingEnrollment', 'pendingItemOrders'));
         } else {
             return view('fees::feesInvoice.feesInvoicePrint', compact('invoiceInfo', 'invoiceDetails', 'banks'));
         }

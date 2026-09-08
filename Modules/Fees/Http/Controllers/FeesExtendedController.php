@@ -326,7 +326,13 @@ class FeesExtendedController extends Controller
 
         $downPayment = $this->balanceBreakdownFor($student)['downPayment'];
 
-        $isSettled = $downPayment <= 0 || (float) $enrollmentInvoice->Tpaidamount >= $downPayment - 0.01;
+        // Two independent ways in: the down-payment threshold is met (the original
+        // path), or - for a school that assigned a payment plan straight onto this
+        // still-pending invoice instead of collecting a down payment - any payment
+        // has landed against that plan at all. See hasPaymentPlanProgress().
+        $isSettled = $downPayment <= 0
+            || (float) $enrollmentInvoice->Tpaidamount >= $downPayment - 0.01
+            || $this->hasPaymentPlanProgress($enrollmentInvoice);
 
         if ($isSettled) {
             $student->enrollment_status = 'enrolled';

@@ -1,5 +1,6 @@
 <?php
-    return [    "school_name" => "School Name",
+    return [    "search" => "Search",
+    "school_name" => "School Name",
     "school_code" => "School Code",
     "dashboard" => "Dashboard",
     "people" => "People",

@@ -216,6 +216,29 @@ trait EnrollmentBalanceBreakdown
     }
 
     /**
+     * Whether this invoice has an active tuition payment plan that's seen any
+     * payment past its baseline - the alternate route to enrollment alongside the
+     * down-payment threshold (see FeesExtendedController::markStudentEnrolledIfPending()).
+     * A school using "assign a plan instead of a down payment" has no down-payment
+     * figure to hit, so enrollment instead follows the first payment landing on
+     * the plan, however small - baseline_paid_amount already snapshots whatever
+     * was paid before the plan existed, so this only fires on payment made after.
+     */
+    protected function hasPaymentPlanProgress(FmFeesInvoice $invoice)
+    {
+        $assign = PaymentPlanAssign::where('fm_fees_invoice_id', $invoice->id)
+            ->where('active_status', 1)
+            ->where('context', 'tuition')
+            ->first();
+
+        if (!$assign) {
+            return false;
+        }
+
+        return (float) $invoice->Tpaidamount > (float) $assign->baseline_paid_amount + 0.001;
+    }
+
+    /**
      * Spread an amount (e.g. this cycle's installment) across an invoice's lines,
      * oldest line first, capped at each line's own due_amount - a starting
      * suggestion for the payment-collection screen, not a hard split; the cashier

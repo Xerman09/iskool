@@ -75,7 +75,12 @@
         <div class="row mt-20">
             <div class="col-lg-12">
                 <div class="white-box">
-                    <h5 class="mb-15">{{$subject->subject_name}} ({{$subject->subject_code}}) &mdash; {{$subject->units}} @lang('academics.units')</h5>
+                    <h5 class="mb-15">
+                        {{$subject->subject_name}} ({{$subject->subject_code}}) &mdash; {{$subject->units}} @lang('academics.units')
+                        @if($subject->subject_classification === 'minor')
+                        <span class="badge badge-info">@lang('academics.optional_minor')</span>
+                        @endif
+                    </h5>
 
                     @if(!empty($subject->unmetPrerequisites))
                     <p class="text-danger mb-15">
@@ -114,7 +119,7 @@
                                             data-slots="{{ $block->scheduleSlots->map(fn($s) => ['day' => $s->day, 'start' => $s->start_time, 'end' => $s->end_time])->toJson() }}"
                                             {{ $subject->chosenAssignSubjectId == $block->id ? 'checked' : '' }}
                                             {{ $isFull ? 'disabled' : '' }}
-                                            required>
+                                            {{ $subject->subject_classification === 'minor' ? '' : 'required' }}>
                                     </td>
                                     <td>{{ optional(optional($block->subject)->course)->course_name }}</td>
                                     <td>{{ optional($block->section)->section_name }}</td>

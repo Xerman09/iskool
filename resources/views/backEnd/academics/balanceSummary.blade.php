@@ -29,7 +29,7 @@
         <div class="row mb-20">
             <div class="col-lg-12 text-right">
                 @if(auth()->user()->role_id == 2)
-                <a href="{{route('student-item-store')}}" class="primary-btn small fix-gr-bg">
+                <a href="#" class="primary-btn small fix-gr-bg" data-toggle="modal" data-target="#itemStoreModal">
                     <span class="ti-shopping-cart pr-2"></span>
                     @lang('academics.browse_item_store')
                 </a>
@@ -59,4 +59,8 @@
         </div>
     </div>
 </section>
+
+@if(auth()->user()->role_id == 2 && isset($items))
+@include('backEnd.academics.partials.itemStoreModal')
+@endif
 @endsection

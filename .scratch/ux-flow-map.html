@@ -1,0 +1,582 @@
+<title>Iskoolify Flow Map</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --surface-2: #f1efe8;
+    --border: #ddd7c9;
+    --text: #1e1c17;
+    --text-muted: #726b5c;
+    --accent: #2b5d52;
+    --accent-soft: #e1ede8;
+    --on-accent: #faf9f6;
+    --radius: 10px;
+    --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141310;
+      --surface: #1b1a15;
+      --surface-2: #221f18;
+      --border: #3a362a;
+      --text: #f1eee5;
+      --text-muted: #a49b89;
+      --accent: #74c2a9;
+      --accent-soft: #1f342d;
+      --on-accent: #10241d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141310;
+    --surface: #1b1a15;
+    --surface-2: #221f18;
+    --border: #3a362a;
+    --text: #f1eee5;
+    --text-muted: #a49b89;
+    --accent: #74c2a9;
+    --accent-soft: #1f342d;
+    --on-accent: #10241d;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.55;
+  }
+  h1, h2, h3 { text-wrap: balance; font-weight: 700; margin: 0; }
+  p { margin: 0; }
+
+  a { color: inherit; }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px;
+  }
+  .topbar-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px 24px;
+  }
+  .topbar h1 { font-size: 1.05rem; letter-spacing: 0.01em; }
+  .topbar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  .topbar-nav a {
+    text-decoration: none;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    white-space: nowrap;
+  }
+  .topbar-nav a:hover, .topbar-nav a:focus-visible {
+    color: var(--text);
+    border-color: var(--accent);
+    outline: none;
+  }
+
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 56px;
+  }
+  .intro .kicker {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  .intro h2 { font-size: 1.7rem; max-width: 34ch; }
+  .intro p { max-width: 62ch; color: var(--text-muted); font-size: 0.98rem; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px 28px;
+    padding: 16px 20px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-top: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .swatch {
+    width: 22px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .swatch.neutral { border: 1.5px solid var(--text-muted); background: transparent; }
+  .swatch.accent-outline { border: 1.5px solid var(--accent); background: transparent; }
+  .swatch.accent-fill { background: var(--accent); }
+  .swatch.muted-dashed { border: 1.5px dashed var(--text-muted); background: transparent; }
+
+  section.flow {
+    padding: 56px 0;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 90px;
+  }
+  section.flow:last-of-type { border-bottom: none; }
+
+  .flow-head { margin-bottom: 20px; max-width: 68ch; }
+  .flow-head .kicker {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .flow-head h2 { font-size: 1.35rem; margin-bottom: 10px; }
+  .flow-head p { color: var(--text-muted); font-size: 0.95rem; }
+  .flow-head p + p { margin-top: 8px; }
+
+  figure {
+    margin: 24px 0 0;
+  }
+  .diagram-panel {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    overflow-x: auto;
+  }
+  .diagram-panel svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    color: var(--text);
+    min-width: 560px;
+  }
+  figcaption {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    max-width: 68ch;
+  }
+
+  .photo-compare {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .photo-card {
+    flex: 1 1 220px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .photo-card .tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: block;
+  }
+  .photo-card.is-new .tag { color: var(--accent); }
+  .thumb {
+    width: 100%;
+    height: 96px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .thumb.placeholder {
+    background: var(--surface-2);
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    font-size: 1.6rem;
+  }
+  .thumb.photo {
+    background: linear-gradient(135deg, var(--accent-soft), var(--accent) 140%);
+  }
+  .item-name { font-weight: 600; font-size: 0.95rem; }
+  .item-price {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  footer {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 64px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+  footer code {
+    font-family: var(--font-mono);
+    background: var(--surface-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <h1>Enrollment &amp; Store UX Overhaul</h1>
+    <nav class="topbar-nav">
+      <a href="#p1">1 · Payment plan</a>
+      <a href="#p2">2 · Item cart</a>
+      <a href="#p3">3 · Store access</a>
+      <a href="#p4">4 · Item photos</a>
+      <a href="#p5">5 · Invoice search</a>
+    </nav>
+  </div>
+</div>
+
+<main>
+  <div class="intro">
+    <span class="kicker">UI flow reference</span>
+    <h2>How each of the five approved changes moves through the screens</h2>
+    <p>Five diagrams, one per priority in the approved plan — each shows the actual mechanism that changes: what the screen does today, what's added, and where the flow ends up. Read top to bottom, left to right.</p>
+    <div class="legend">
+      <span class="legend-item"><span class="swatch neutral"></span>existing, unchanged</span>
+      <span class="legend-item"><span class="swatch accent-outline"></span>new or newly enabled path</span>
+      <span class="legend-item"><span class="swatch accent-fill"></span>end state</span>
+      <span class="legend-item"><span class="swatch muted-dashed"></span>blocked / removed</span>
+    </div>
+  </div>
+
+  <!-- ================= PRIORITY 1 ================= -->
+  <section class="flow" id="p1">
+    <div class="flow-head">
+      <span class="kicker">Priority 1 of 5</span>
+      <h2>Payment plan without a down payment</h2>
+      <p>Today, assigning a payment plan requires the student to already be "enrolled" — but the only way to enroll is paying the down payment. That's a dead end. The fix removes the block and gives enrollment two independent doors instead of one.</p>
+    </div>
+    <figure>
+      <div class="diagram-panel">
+        <svg viewBox="0 0 900 420" role="img" aria-label="Before: a payment plan cannot be assigned until the student is enrolled, but enrollment requires the down payment, so the plan path is blocked. After: paying the down payment or assigning a payment plan are two independent paths that both enroll the student.">
+          <defs>
+            <marker id="arN1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--text-muted)"/>
+            </marker>
+            <marker id="arA1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--accent)"/>
+            </marker>
+          </defs>
+
+          <text x="20" y="22" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="1.5" style="fill:var(--text-muted)">BEFORE</text>
+          <text x="20" y="232" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="1.5" style="fill:var(--text-muted)">AFTER</text>
+
+          <!-- BEFORE lane -->
+          <rect x="20" y="40" width="210" height="54" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="125" y="61" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Enrollment Invoice</text>
+          <text x="125" y="78" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Generated</text>
+
+          <rect x="290" y="40" width="180" height="54" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="380" y="61" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Pay Down</text>
+          <text x="380" y="78" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Payment</text>
+
+          <rect x="530" y="40" width="170" height="54" rx="8" style="fill:var(--accent)"/>
+          <text x="615" y="61" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--on-accent)">Student</text>
+          <text x="615" y="78" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--on-accent)">Enrolled</text>
+
+          <rect x="290" y="152" width="180" height="54" rx="8" fill="none" stroke-dasharray="4 4" style="stroke:var(--text-muted)"/>
+          <text x="380" y="173" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text-muted)">Assign Payment</text>
+          <text x="380" y="190" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text-muted)">Plan</text>
+
+          <line x1="230" y1="67" x2="284" y2="67" stroke-width="2" marker-end="url(#arN1)" style="stroke:var(--text-muted)"/>
+          <line x1="470" y1="67" x2="524" y2="67" stroke-width="2" marker-end="url(#arN1)" style="stroke:var(--text-muted)"/>
+          <line x1="380" y1="94" x2="380" y2="146" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arN1)" style="stroke:var(--text-muted)"/>
+          <text x="392" y="120" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--text-muted)">requires enrolled</text>
+          <text x="392" y="133" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--text-muted)">— blocked today</text>
+
+          <!-- AFTER lane -->
+          <rect x="20" y="262" width="210" height="54" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="125" y="283" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Enrollment Invoice</text>
+          <text x="125" y="300" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Generated</text>
+
+          <rect x="290" y="262" width="180" height="54" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="380" y="283" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Pay Down</text>
+          <text x="380" y="300" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Payment</text>
+
+          <rect x="290" y="352" width="180" height="54" rx="8" fill="none" style="stroke:var(--accent)"/>
+          <text x="380" y="373" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--accent)">Assign Payment</text>
+          <text x="380" y="390" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--accent)">Plan</text>
+
+          <rect x="580" y="300" width="170" height="54" rx="8" style="fill:var(--accent)"/>
+          <text x="665" y="321" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--on-accent)">Student</text>
+          <text x="665" y="338" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--on-accent)">Enrolled</text>
+
+          <line x1="230" y1="285" x2="284" y2="285" stroke-width="2" marker-end="url(#arN1)" style="stroke:var(--text-muted)"/>
+          <line x1="230" y1="292" x2="284" y2="376" stroke-width="2" marker-end="url(#arA1)" style="stroke:var(--accent)"/>
+
+          <line x1="470" y1="288" x2="576" y2="322" stroke-width="2" marker-end="url(#arA1)" style="stroke:var(--accent)"/>
+          <text x="478" y="300" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--accent)">down payment met</text>
+
+          <line x1="470" y1="373" x2="576" y2="343" stroke-width="2" marker-end="url(#arA1)" style="stroke:var(--accent)"/>
+          <text x="478" y="368" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--accent)">any payment made</text>
+        </svg>
+      </div>
+      <figcaption>Removing the "must already be enrolled" check turns one required gate into two independent triggers — either one flips <code>enrollment_status</code> to enrolled.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ================= PRIORITY 2 ================= -->
+  <section class="flow" id="p2">
+    <div class="flow-head">
+      <span class="kicker">Priority 2 of 5</span>
+      <h2>Item store: modal, steppers, one order = one card</h2>
+      <p>The buying part reuses the existing array-based submit as-is. What's new is the shopping experience — a modal with a running cart instead of a bare table — and a shared batch id that makes a multi-item checkout show up as one grouped order instead of loose, unrelated rows.</p>
+    </div>
+    <figure>
+      <div class="diagram-panel">
+        <svg viewBox="0 0 740 260" role="img" aria-label="Buying flow: open the cart modal, search and adjust quantities with steppers, place the order, which stamps every item with one shared batch id, groups them into one order card with one subtotal, then goes to reception for approval before being billed onto the invoice.">
+          <defs>
+            <marker id="arN2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--text-muted)"/>
+            </marker>
+          </defs>
+
+          <rect x="20" y="30" width="150" height="60" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="95" y="56" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Buy Items</text>
+          <text x="95" y="73" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--text-muted)">(opens modal)</text>
+
+          <rect x="210" y="30" width="210" height="60" rx="8" fill="none" style="stroke:var(--accent)"/>
+          <text x="315" y="53" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--accent)">Search + − / + steppers</text>
+          <text x="315" y="70" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--accent)">running cart &amp; subtotal</text>
+
+          <rect x="460" y="30" width="150" height="60" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="535" y="65" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Place Order</text>
+
+          <line x1="170" y1="60" x2="204" y2="60" stroke-width="2" marker-end="url(#arN2)" style="stroke:var(--text-muted)"/>
+          <line x1="420" y1="60" x2="454" y2="60" stroke-width="2" marker-end="url(#arN2)" style="stroke:var(--accent)"/>
+
+          <polyline points="535,90 535,120 150,120 150,150" fill="none" stroke-width="2" marker-end="url(#arN2)" style="stroke:var(--accent)"/>
+
+          <!-- stacked card effect -->
+          <rect x="32" y="158" width="230" height="70" rx="8" fill="none" style="stroke:var(--accent)" opacity="0.35"/>
+          <rect x="26" y="164" width="230" height="70" rx="8" fill="none" style="stroke:var(--accent)" opacity="0.6"/>
+          <rect x="20" y="170" width="230" height="70" rx="8" style="fill:var(--accent)"/>
+          <text x="135" y="198" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--on-accent)">Order Batch</text>
+          <text x="135" y="215" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" style="fill:var(--on-accent)">1 card · 1 subtotal</text>
+
+          <line x1="260" y1="205" x2="284" y2="205" stroke-width="2" marker-end="url(#arN2)" style="stroke:var(--text-muted)"/>
+
+          <rect x="290" y="175" width="170" height="60" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="375" y="210" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" style="fill:var(--text)">Reception Approves</text>
+
+          <line x1="460" y1="205" x2="494" y2="205" stroke-width="2" marker-end="url(#arN2)" style="stroke:var(--text-muted)"/>
+
+          <rect x="500" y="175" width="220" height="60" rx="8" style="fill:var(--accent)"/>
+          <text x="610" y="210" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--on-accent)">Billed onto the Invoice</text>
+        </svg>
+      </div>
+      <figcaption>Today, three items ordered together show up as three unrelated rows in "My Orders." The shared batch id groups them back into the one checkout they actually were.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ================= PRIORITY 3 ================= -->
+  <section class="flow" id="p3">
+    <div class="flow-head">
+      <span class="kicker">Priority 3 of 5</span>
+      <h2>One cart, three settlement paths</h2>
+      <p>The same cart UI from Priority 2 is reused for Parents (buying for their child) and Employees (buying for themselves) — but what happens at checkout genuinely differs, because only two of the three paths touch a student's invoice at all.</p>
+    </div>
+    <figure>
+      <div class="diagram-panel">
+        <svg viewBox="0 0 900 500" role="img" aria-label="One shared item cart branches three ways. Student: pending order, reception approval, billed onto the student's invoice. Parent: select a child, pending order, reception approval, billed onto the child's invoice. Employee: pay now, stock deducted and income recorded immediately, with no invoice created.">
+          <defs>
+            <marker id="arN3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--text-muted)"/>
+            </marker>
+          </defs>
+
+          <rect x="280" y="20" width="340" height="60" rx="8" fill="none" style="stroke:var(--accent)"/>
+          <text x="450" y="46" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--accent)">Item Cart UI</text>
+          <text x="450" y="63" text-anchor="middle" font-family="IBM Plex Sans" font-size="11.5" style="fill:var(--accent)">shared: search + steppers + subtotal</text>
+
+          <line x1="340" y1="80" x2="160" y2="106" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--text-muted)"/>
+          <line x1="450" y1="80" x2="450" y2="106" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--text-muted)"/>
+          <line x1="560" y1="80" x2="740" y2="106" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--text-muted)"/>
+
+          <!-- Lane headers -->
+          <rect x="50" y="110" width="200" height="44" rx="8" fill="none" style="stroke:var(--text)"/>
+          <text x="150" y="137" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--text)">Student</text>
+
+          <rect x="350" y="110" width="200" height="44" rx="8" fill="none" style="stroke:var(--text)"/>
+          <text x="450" y="137" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--text)">Parent</text>
+
+          <rect x="650" y="110" width="200" height="44" rx="8" fill="none" style="stroke:var(--text)"/>
+          <text x="750" y="137" text-anchor="middle" font-family="IBM Plex Sans" font-size="13" font-weight="600" style="fill:var(--text)">Employee</text>
+
+          <!-- Student lane -->
+          <line x1="150" y1="154" x2="150" y2="176" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--text-muted)"/>
+          <rect x="50" y="182" width="200" height="50" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="150" y="203" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--text)">Pending Order</text>
+          <text x="150" y="219" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--text-muted)">SmItemOrder</text>
+
+          <line x1="150" y1="232" x2="150" y2="254" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--text-muted)"/>
+          <rect x="50" y="260" width="200" height="50" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="150" y="290" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--text)">Reception Approves</text>
+
+          <line x1="150" y1="310" x2="150" y2="332" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--accent)"/>
+          <rect x="50" y="338" width="200" height="52" rx="8" style="fill:var(--accent)"/>
+          <text x="150" y="360" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-weight="600" style="fill:var(--on-accent)">Billed onto</text>
+          <text x="150" y="376" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-weight="600" style="fill:var(--on-accent)">Student's Invoice</text>
+
+          <!-- Parent lane -->
+          <line x1="450" y1="154" x2="450" y2="176" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--accent)"/>
+          <rect x="350" y="182" width="200" height="50" rx="8" fill="none" style="stroke:var(--accent)"/>
+          <text x="450" y="212" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--accent)">Select Child</text>
+
+          <line x1="450" y1="232" x2="450" y2="254" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--text-muted)"/>
+          <rect x="350" y="260" width="200" height="50" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="450" y="281" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--text)">Pending Order</text>
+          <text x="450" y="297" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--text-muted)">for that child</text>
+
+          <line x1="450" y1="310" x2="450" y2="332" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--text-muted)"/>
+          <rect x="350" y="338" width="200" height="50" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="450" y="368" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--text)">Reception Approves</text>
+
+          <line x1="450" y1="388" x2="450" y2="410" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--accent)"/>
+          <rect x="350" y="416" width="200" height="52" rx="8" style="fill:var(--accent)"/>
+          <text x="450" y="438" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-weight="600" style="fill:var(--on-accent)">Billed onto</text>
+          <text x="450" y="454" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-weight="600" style="fill:var(--on-accent)">Child's Invoice</text>
+
+          <!-- Employee lane -->
+          <line x1="750" y1="154" x2="750" y2="176" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--accent)"/>
+          <rect x="650" y="182" width="200" height="50" rx="8" fill="none" style="stroke:var(--accent)"/>
+          <text x="750" y="203" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--accent)">Pay Now</text>
+          <text x="750" y="219" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" style="fill:var(--accent)">cash / bank</text>
+
+          <line x1="750" y1="232" x2="750" y2="254" stroke-width="1.5" marker-end="url(#arN3)" style="stroke:var(--accent)"/>
+          <rect x="650" y="260" width="200" height="52" rx="8" style="fill:var(--accent)"/>
+          <text x="750" y="282" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-weight="600" style="fill:var(--on-accent)">Stock deducted +</text>
+          <text x="750" y="298" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" font-weight="600" style="fill:var(--on-accent)">income recorded</text>
+
+          <text x="750" y="332" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-style="italic" style="fill:var(--text-muted)">no invoice created —</text>
+          <text x="750" y="347" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-style="italic" style="fill:var(--text-muted)">nothing to approve</text>
+        </svg>
+      </div>
+      <figcaption>Student and Parent both end at an invoice and both need reception's sign-off; Employee never touches an invoice at all — there's no minor's money involved, so nothing to review.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ================= PRIORITY 4 ================= -->
+  <section class="flow" id="p4">
+    <div class="flow-head">
+      <span class="kicker">Priority 4 of 5</span>
+      <h2>Item photos</h2>
+      <p>No flow changes here — items get an optional image field, shown on every card built for Priorities 2 and 3. An item with no photo still renders cleanly with a placeholder, since older stock won't have one.</p>
+    </div>
+    <div class="photo-compare">
+      <div class="photo-card">
+        <span class="tag">Today</span>
+        <div class="thumb placeholder">🏷️</div>
+        <div class="item-name">School Lanyard</div>
+        <div class="item-price">₱ 75.00</div>
+      </div>
+      <div class="photo-card is-new">
+        <span class="tag">New</span>
+        <div class="thumb photo"></div>
+        <div class="item-name">School Lanyard</div>
+        <div class="item-price">₱ 75.00</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRIORITY 5 ================= -->
+  <section class="flow" id="p5">
+    <div class="flow-head">
+      <span class="kicker">Priority 5 of 5</span>
+      <h2>Search-first invoice lookup — extending, not replacing</h2>
+      <p>The existing Collect Fees search already does "search a student, then see their fees" — it just shows the legacy fee model. A new branch detects students on the newer enrollment pipeline and renders the same balance summary used everywhere else in this plan.</p>
+    </div>
+    <figure>
+      <div class="diagram-panel">
+        <svg viewBox="0 0 900 350" role="img" aria-label="The existing Collect Fees search returns matching students. Selecting one checks which fee pipeline they are on: the legacy pipeline keeps its current, unchanged view, while a student on the new enrollment pipeline now renders the shared balance summary partial instead.">
+          <defs>
+            <marker id="arN5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--text-muted)"/>
+            </marker>
+            <marker id="arA5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" style="fill:var(--accent)"/>
+            </marker>
+          </defs>
+
+          <rect x="20" y="40" width="230" height="70" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="135" y="68" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--text)">Collect Fees search</text>
+          <text x="135" y="85" text-anchor="middle" font-family="IBM Plex Sans" font-size="11.5" style="fill:var(--text-muted)">class/section + keyword</text>
+
+          <line x1="250" y1="75" x2="284" y2="75" stroke-width="2" marker-end="url(#arN5)" style="stroke:var(--text-muted)"/>
+
+          <rect x="290" y="40" width="190" height="70" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="385" y="80" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--text)">Matching Students</text>
+
+          <line x1="480" y1="75" x2="504" y2="75" stroke-width="2" marker-end="url(#arN5)" style="stroke:var(--text-muted)"/>
+
+          <rect x="510" y="40" width="190" height="70" rx="8" fill="none" style="stroke:var(--text-muted)"/>
+          <text x="605" y="80" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" style="fill:var(--text)">Select One Student</text>
+
+          <line x1="565" y1="110" x2="450" y2="164" stroke-width="1.5" marker-end="url(#arN5)" style="stroke:var(--text-muted)"/>
+          <line x1="645" y1="110" x2="740" y2="164" stroke-width="1.5" marker-end="url(#arA5)" style="stroke:var(--accent)"/>
+
+          <rect x="335" y="170" width="230" height="60" rx="8" fill="none" stroke-dasharray="4 4" style="stroke:var(--text-muted)"/>
+          <text x="450" y="196" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--text-muted)">Legacy pipeline view</text>
+          <text x="450" y="212" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--text-muted)">unchanged</text>
+
+          <rect x="625" y="170" width="230" height="60" rx="8" fill="none" style="stroke:var(--accent)"/>
+          <text x="740" y="196" text-anchor="middle" font-family="IBM Plex Sans" font-size="12" style="fill:var(--accent)">New pipeline detected</text>
+          <text x="740" y="212" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--accent)">FmFeesInvoice found</text>
+
+          <line x1="740" y1="230" x2="740" y2="256" stroke-width="2" marker-end="url(#arA5)" style="stroke:var(--accent)"/>
+
+          <rect x="600" y="262" width="280" height="66" rx="8" style="fill:var(--accent)"/>
+          <text x="740" y="288" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" font-weight="600" style="fill:var(--on-accent)">Renders shared Balance</text>
+          <text x="740" y="304" text-anchor="middle" font-family="IBM Plex Sans" font-size="12.5" font-weight="600" style="fill:var(--on-accent)">Summary partial</text>
+          <text x="740" y="319" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" style="fill:var(--on-accent)">balanceSummaryContent.blade.php</text>
+        </svg>
+      </div>
+      <figcaption>No new search box — the fork happens after a student is found, so the one screen staff already use now works for both fee models.</figcaption>
+    </figure>
+  </section>
+</main>
+
+<footer>
+  Reflects the approved plan at <code>elegant-growing-ullman.md</code>. Priority 1 is implemented; 2–5 are pending.
+</footer>

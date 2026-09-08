@@ -47,10 +47,21 @@
         </div>
     </section>
     <section class="admin-visitor-area up_st_admin_visitor">
+        @php
+            $invoiceDueBalance = (float) $invoiceInfo->Tamount - (float) $invoiceInfo->Tpaidamount;
+        @endphp
+        @if(!empty($isPendingEnrollment) && empty($activePaymentPlan) && $invoiceDueBalance > 0)
+        <div class="max_1200 text-right mb-10">
+            <p class="text-muted mb-10">@lang('academics.pending_enrollment_choice_hint')</p>
+        </div>
+        @endif
         <div class="max_1200 text-right">
-            @php
-                $invoiceDueBalance = (float) $invoiceInfo->Tamount - (float) $invoiceInfo->Tpaidamount;
-            @endphp
+            @if(!empty($isPendingEnrollment) && empty($activePaymentPlan) && $invoiceDueBalance > 0 && userPermission('fees.add-fees-payment'))
+                <a href="{{route('fees.add-fees-payment', $invoiceInfo->id)}}" class="primary-btn small fix-gr-bg">
+                    <span class="ti-wallet pr-2"></span>
+                    @lang('fees.add_fees')
+                </a>
+            @endif
             @if(isset($paymentPlanTypes) && empty($activePaymentPlan) && userPermission('payment-plan-assign') && $invoiceDueBalance > 0)
                 <a href="#" class="primary-btn small fix-gr-bg" data-toggle="modal" data-target="#assignPaymentPlanModal">
                     <span class="ti-calendar pr-2"></span>
@@ -346,6 +357,77 @@
             @endif
         </div>
     </section>
+
+    @if(!empty($pendingItemOrders) && $pendingItemOrders->count() > 0 && userPermission('item-order-approval'))
+    <section class="admin-visitor-area up_st_admin_visitor">
+        <div class="max_1200">
+            <div class="white-box">
+                <div class="main-title">
+                    <h3 class="mb-15">@lang('academics.pending_item_orders')</h3>
+                </div>
+                <x-table>
+                    <table class="table Crm_table_active3" cellspacing="0" width="100%">
+                        <thead>
+                            <tr>
+                                <th>@lang('inventory.item_name')</th>
+                                <th>@lang('inventory.quantity')</th>
+                                <th>@lang('accounts.amount')</th>
+                                <th>@lang('common.date')</th>
+                                <th>@lang('student.action')</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($pendingItemOrders as $order)
+                            <tr>
+                                <td>{{ optional($order->item)->item_name }}</td>
+                                <td>{{ $order->quantity }}</td>
+                                <td>{{ currency_format($order->amount) ?: number_format($order->amount, 2) }}</td>
+                                <td>{{ $order->created_at->format('M d, Y h:i A') }}</td>
+                                <td>
+                                    <div class="d-flex">
+                                        {{ Form::open(['route' => ['item-order-approval-approve', $order->id], 'method' => 'POST', 'class' => 'mr-10']) }}
+                                        <button type="submit" class="primary-btn small fix-gr-bg" onclick="return confirm('{{ __('common.are_you_sure_to_approve') }}')">
+                                            @lang('academics.approve')
+                                        </button>
+                                        {{ Form::close() }}
+
+                                        <a href="#" class="primary-btn small tr-bg ml-10" data-toggle="modal" data-target="#rejectItemOrderModal{{ $order->id }}">
+                                            @lang('academics.reject')
+                                        </a>
+                                    </div>
+
+                                    <div class="modal fade admin-query" id="rejectItemOrderModal{{ $order->id }}">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content">
+                                                {{ Form::open(['route' => ['item-order-approval-reject', $order->id], 'method' => 'POST']) }}
+                                                <div class="modal-header">
+                                                    <h4 class="modal-title">@lang('academics.reject')</h4>
+                                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="primary_input">
+                                                        <label class="primary_input_label">@lang('academics.reject_reason')</label>
+                                                        <input class="primary_input_field form-control" type="text" name="reject_reason">
+                                                    </div>
+                                                    <div class="mt-40 d-flex justify-content-between">
+                                                        <button type="button" class="primary-btn tr-bg" data-dismiss="modal">@lang('common.cancel')</button>
+                                                        <button type="submit" class="primary-btn fix-gr-bg">@lang('academics.reject')</button>
+                                                    </div>
+                                                </div>
+                                                {{ Form::close() }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </x-table>
+            </div>
+        </div>
+    </section>
+    @endif
 
     @if(isset($paymentPlanTypes) && empty($activePaymentPlan) && userPermission('payment-plan-assign') && $invoiceDueBalance > 0)
     <div class="modal fade admin-query" id="assignPaymentPlanModal">

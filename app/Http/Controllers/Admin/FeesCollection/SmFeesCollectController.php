@@ -16,17 +16,21 @@ use App\Models\StudentRecord;
 use App\SmFeesAssignDiscount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\App;
+use App\Traits\EnrollmentBalanceBreakdown;
 use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\DirectFeesInstallmentAssign;
+use Modules\Fees\Entities\FmFeesInvoice;
+use Modules\Fees\Entities\FmFeesInvoiceChield;
 use Modules\University\Entities\UnFeesInstallmentAssign;
 use App\Http\Requests\Admin\FeesCollection\SmFeesCollectSearchRequest;
 use Modules\University\Repositories\Interfaces\UnCommonRepositoryInterface;
 
 class SmFeesCollectController extends Controller
 {
+    use EnrollmentBalanceBreakdown;
 
     public function __construct()
     {
@@ -117,6 +121,17 @@ class SmFeesCollectController extends Controller
         try {
 
             $student = StudentRecord::with('studentDetail', 'feesDiscounts', 'fees')->find($id);
+
+            // A student on the newer enrollment pipeline (course_id assigned) is
+            // never billed through SmFeesAssign at all - that's the older direct-fees
+            // model this method otherwise assumes. Without this branch, every such
+            // student hits the "Fees not assigned yet!" bail-out below and bounces
+            // back to search, making this the one screen staff can't actually use to
+            // look up their payables.
+            if ($student && optional($student->studentDetail)->course_id) {
+                return $this->collectFeesStudentEnrollmentPipeline($student);
+            }
+
             $fees_assigneds = SmFeesAssign::with('feesGroupMaster')
                 ->where('student_id', $student->student_id)
                 ->where('record_id', $id)
@@ -162,6 +177,35 @@ class SmFeesCollectController extends Controller
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
+    }
+
+    /**
+     * Renders the exact same balance summary AssignProgramController::balanceSummary()
+     * already builds for a student on the enrollment pipeline (tuition/misc/items,
+     * payment plan schedule, amounts due) - reused as-is rather than rebuilt, so this
+     * search screen and the assign-program dropdown action always show the same
+     * numbers for the same student.
+     */
+    private function collectFeesStudentEnrollmentPipeline(StudentRecord $record)
+    {
+        $student = $record->studentDetail;
+
+        $breakdown = $this->balanceBreakdownFor($student);
+
+        $invoiceIds = FmFeesInvoice::where('record_id', $record->id)->pluck('id');
+        $itemLines = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoiceIds)
+            ->whereNotNull('sm_item_id')
+            ->with('item')
+            ->get();
+
+        $data = array_merge($breakdown, [
+            'student' => $student,
+            'itemLines' => $itemLines,
+            'itemsTotal' => $breakdown['itemsBilled'],
+            'printUrl' => route('assign-program-balance-summary', ['student' => $student->id, 'state' => 'print']),
+        ]);
+
+        return view('backEnd.academics.balanceSummary', $data);
     }
 
     public function collectFeesStudentApi(Request $request, $id)

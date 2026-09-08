@@ -225,7 +225,7 @@ class AssignProgramController extends Controller
                 $this->addChieldLine($invoice, $feesType, $line['amount']);
             }
 
-            Toastr::success('Enrollment invoice created for ' . number_format($breakdown['totalAmount'], 2) . '. Pay the down payment of ' . number_format($breakdown['downPayment'], 2) . ' for this student to be considered enrolled; the rest can be arranged into a payment plan afterwards.', 'Success');
+            Toastr::success('Enrollment invoice created for ' . number_format($breakdown['totalAmount'], 2) . '. Collect the down payment of ' . number_format($breakdown['downPayment'], 2) . ' below to enroll this student now, or assign a payment plan instead - either one enrolls the student.', 'Success');
 
             return redirect()->route('fees.fees-invoice-view', ['id' => $invoice->id, 'state' => 'view']);
         } catch (\Exception $e) {
