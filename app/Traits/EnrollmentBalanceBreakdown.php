@@ -352,21 +352,43 @@ trait EnrollmentBalanceBreakdown
     }
 
     /**
-     * Everything billed/paid/still due across ALL of a student's current-academic-
-     * year invoices (the enrollment invoice plus any mid-year store invoices),
-     * plus every individual payment/receipt across them, chronologically - the
-     * combined statement the per-invoice pages don't show.
+     * Everything billed/paid/still due across a student's invoices, plus every
+     * individual payment/receipt across them, chronologically - the combined
+     * statement the per-invoice pages don't show.
+     *
+     * $scope 'semester' (default) stays within the current academic year (as
+     * before) and, when $semesterId is given, narrows further to invoices tagged
+     * with that semester - only invoices created after semester tagging shipped
+     * carry that tag, so older ones simply won't match a semester filter.
+     * $scope 'whole_stay' lifts the academic-year scoping entirely (both
+     * FmFeesInvoice and FmFeesTransaction default to the current academic year
+     * via AcademicSchoolScope) to show the student's entire enrollment history.
      */
-    protected function ledgerFor(SmStudent $student)
+    protected function ledgerFor(SmStudent $student, $scope = 'semester', $semesterId = null)
     {
-        $invoices = FmFeesInvoice::where('student_id', $student->id)
-            ->where('school_id', $student->school_id)
-            ->with('invoiceDetails.feesType', 'invoiceDetails.item')
+        $wholeStay = $scope === 'whole_stay';
+
+        $invoiceQuery = FmFeesInvoice::where('student_id', $student->id)
+            ->where('school_id', $student->school_id);
+
+        if ($wholeStay) {
+            $invoiceQuery->withoutGlobalScope(AcademicSchoolScope::class);
+        } elseif ($semesterId) {
+            $invoiceQuery->where('semester_id', $semesterId);
+        }
+
+        $invoices = $invoiceQuery->with('invoiceDetails.feesType', 'invoiceDetails.item', 'semester')
             ->get();
 
         $invoiceIds = $invoices->pluck('id');
 
-        $transactions = FmFeesTransaction::whereIn('fees_invoice_id', $invoiceIds)
+        $transactionQuery = FmFeesTransaction::whereIn('fees_invoice_id', $invoiceIds);
+
+        if ($wholeStay) {
+            $transactionQuery->withoutGlobalScope(AcademicSchoolScope::class);
+        }
+
+        $transactions = $transactionQuery
             ->with('transcationDetails.transcationFeesType', 'feesInvoiceInfo')
             ->orderBy('created_at')
             ->get();

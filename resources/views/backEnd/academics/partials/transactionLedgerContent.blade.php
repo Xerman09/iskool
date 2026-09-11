@@ -39,7 +39,7 @@
         ])->filter(fn ($group) => $group->count() > 0);
     @endphp
     <div class="mt-30">
-        <h4 class="mb-15">@lang('academics.order') &mdash; {{$invoice->invoice_id}} <small class="text-muted">({{ $invoice->create_date ? \Carbon\Carbon::parse($invoice->create_date)->format('M d, Y') : '' }})</small></h4>
+        <h4 class="mb-15">@lang('academics.order') &mdash; {{$invoice->invoice_id}} <small class="text-muted">({{ $invoice->create_date ? \Carbon\Carbon::parse($invoice->create_date)->format('M d, Y') : '' }}{{ optional($invoice->semester)->semester_name ? ' — ' . $invoice->semester->semester_name : '' }})</small></h4>
         <table class="table border_table mb_30 description_table">
             <thead>
                 <tr>

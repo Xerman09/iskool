@@ -127,6 +127,7 @@ trait EnrollmentInvoicing
         $invoice = new FmFeesInvoice();
         $invoice->class_id = $student->class_id;
         $invoice->course_id = $student->course_id;
+        $invoice->semester_id = $student->semester_id;
         $invoice->type = $type;
         $invoice->record_id = $record->id;
         $invoice->student_id = $student->id;

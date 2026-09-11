@@ -26,6 +26,11 @@ class SmItemOrder extends Model
         return $this->belongsTo('App\SmStaff', 'approved_by', 'user_id');
     }
 
+    public function invoice()
+    {
+        return $this->belongsTo('Modules\Fees\Entities\FmFeesInvoice', 'fm_fees_invoice_id', 'id');
+    }
+
     public function scopePending($query)
     {
         return $query->where('status', 'pending');

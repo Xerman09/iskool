@@ -1,4 +1,4 @@
-@charset "UTF-8";
+ @charset "UTF-8";
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&display=swap");
 @font-face {
   font-family: 'Eudoxus Sans';
@@ -1592,7 +1592,7 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .heading_sub_left ul li a:hover {
-  color: #FC8840;
+  color: #32608f;
 }
 
 .heading_sub_left ul li a::after {
@@ -1728,11 +1728,11 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .heading_sub_right ul li a:hover {
-  color: #FC8840;
+  color: #32608f;
 }
 
 .heading_sub_right ul li a:hover svg path {
-  stroke: #FC8840;
+  stroke: #32608f;
 }
 
 .heading_sub_right ul li a i {
@@ -1812,7 +1812,7 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .heading_sub_right .social-links li a:hover {
-  color: #FC8840;
+  color: #32608f;
 }
 
 .heading_sub_right .social-links li a::after {
@@ -5236,7 +5236,7 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .course .orange {
-  background-color: #FC8840;
+  background-color: #32608f;
 }
 
 .course .sunset-orange {

@@ -880,9 +880,9 @@ class FeesController extends Controller
             $isPendingEnrollment = $invoiceInfo->type === 'fees'
                 && optional($invoiceStudent)->enrollment_status === 'pending';
 
-            // Surfaced here so reception can approve/reject a student's item picks
-            // right where they're already looking at that student's invoice, instead
-            // of needing a separate trip to the standalone Item Order Approval page.
+            // Surfaced here only as a heads-up notice pointing to the standalone
+            // Item Order Approval page - that page is the one place approve/reject
+            // actually happens, so this invoice view never duplicates that queue.
             $pendingItemOrders = SmItemOrder::where('school_id', Auth::user()->school_id)
                 ->where('student_id', $invoiceInfo->student_id)
                 ->where('status', 'pending')
@@ -1392,7 +1392,7 @@ class FeesController extends Controller
         }
     }
 
-    public function feesInvoiceDatatable()
+    public function feesInvoiceDatatable(Request $request)
     {
         $previous_url = url()->previous();
         $previous_route = app('router')->getRoutes()->match(app('request')->create($previous_url))->getName();
@@ -1402,13 +1402,34 @@ class FeesController extends Controller
         }else{
             $fees_type='fees';
         }
-        
+
         $studentInvoices = FmFeesInvoice::where('type', $fees_type)
             ->with('studentInfo', 'course')
             ->select('fm_fees_invoices.*')
             ->where('school_id', Auth::user()->school_id)
-            ->where('academic_id', getAcademicId())
-            ->orderBy('create_date', 'DESC');
+            ->where('academic_id', getAcademicId());
+
+        // Balance/paid are computed from invoiceDetails (see Tamount/Tpaidamount
+        // accessors), not real columns, so the payment-status filter has to
+        // recompute them as correlated subqueries rather than a plain where().
+        $balanceExpr = '(SELECT COALESCE(SUM(amount),0) + COALESCE(SUM(fine),0) - COALESCE(SUM(paid_amount),0) - COALESCE(SUM(weaver),0) FROM fm_fees_invoice_chields WHERE fm_fees_invoice_chields.fees_invoice_id = fm_fees_invoices.id)';
+        $paidExpr = '(SELECT COALESCE(SUM(paid_amount),0) FROM fm_fees_invoice_chields WHERE fm_fees_invoice_chields.fees_invoice_id = fm_fees_invoices.id)';
+
+        if (in_array($request->payment_status, ['paid', 'partial', 'unpaid'], true)) {
+            switch ($request->payment_status) {
+                case 'paid':
+                    $studentInvoices->whereRaw("{$balanceExpr} = 0");
+                    break;
+                case 'partial':
+                    $studentInvoices->whereRaw("{$balanceExpr} != 0")->whereRaw("{$paidExpr} > 0");
+                    break;
+                case 'unpaid':
+                    $studentInvoices->whereRaw("{$balanceExpr} != 0")->whereRaw("{$paidExpr} = 0");
+                    break;
+            }
+        }
+
+        $studentInvoices->orderBy('create_date', 'DESC');
         if (isset($studentInvoices)){
             return Datatables::of($studentInvoices)
                     ->addIndexColumn()

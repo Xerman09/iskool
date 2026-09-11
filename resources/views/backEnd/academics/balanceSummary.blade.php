@@ -29,7 +29,7 @@
         <div class="row mb-20">
             <div class="col-lg-12 text-right">
                 @if(auth()->user()->role_id == 2)
-                <a href="#" class="primary-btn small fix-gr-bg" data-toggle="modal" data-target="#itemStoreModal">
+                <a href="#itemStoreModal" class="primary-btn small fix-gr-bg">
                     <span class="ti-shopping-cart pr-2"></span>
                     @lang('academics.browse_item_store')
                 </a>

@@ -29,6 +29,28 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="white-box">
+                    <form method="GET" action="{{ route('student-transaction-ledger') }}" class="d-flex align-items-center flex-wrap mb-20" style="gap:10px;">
+                        <div class="btn-group" role="group">
+                            <a href="{{ route('student-transaction-ledger', ['scope' => 'semester', 'semester_id' => $selectedSemesterId]) }}"
+                               class="primary-btn small {{ $scope === 'semester' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.per_semester')</a>
+                            <a href="{{ route('student-transaction-ledger', ['scope' => 'whole_stay']) }}"
+                               class="primary-btn small {{ $scope === 'whole_stay' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.whole_stay')</a>
+                        </div>
+
+                        @if($scope === 'semester' && $semesters->count() > 0)
+                        <input type="hidden" name="scope" value="semester">
+                        <select name="semester_id" class="primary_select form-control" style="max-width:220px;" onchange="this.form.submit()">
+                            @foreach($semesters as $semester)
+                            <option value="{{ $semester->id }}" @selected($selectedSemesterId == $semester->id)>{{ $semester->semester_name }}</option>
+                            @endforeach
+                        </select>
+                        @endif
+                    </form>
+
+                    @if($scope === 'semester' && $semesters->count() > 0 && $invoices->isEmpty())
+                    <p class="text-muted">@lang('academics.no_transactions_for_semester')</p>
+                    @endif
+
                     @include('backEnd.academics.partials.transactionLedgerContent')
                 </div>
             </div>

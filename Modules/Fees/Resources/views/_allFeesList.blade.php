@@ -41,6 +41,16 @@
 
                 @if ((isset($role) && $role == 'admin') || $role == 'lms')
                     <div class="col-lg-12">
+                        <div class="row mb-15">
+                            <div class="col-lg-3">
+                                <select id="invoiceStatusFilter" class="primary_select form-control">
+                                    <option value="">@lang('fees::feesModule.all_statuses')</option>
+                                    <option value="paid">@lang('fees.paid')</option>
+                                    <option value="partial">@lang('fees.partial')</option>
+                                    <option value="unpaid">@lang('fees.unpaid')</option>
+                                </select>
+                            </div>
+                        </div>
                         <x-table>
                             <table id="table_id" class="table data-table" cellspacing="0" width="100%">
                                 <thead>
@@ -116,6 +126,9 @@
                                                                 target="_blank">
                                                                 {{ @$studentInvoice->studentInfo->full_name }}
                                                             </a>
+                                                            @if($studentInvoice->type === 'store')
+                                                            <span class="badge badge-info">@lang('academics.item_purchase')</span>
+                                                            @endif
                                                         </td>
                                                         <td>{{ @$studentInvoice->recordDetail->class->class_name }}
                                                             ({{ @$studentInvoice->recordDetail->section->section_name }})
@@ -233,7 +246,9 @@
             serverSide: true,
             "ajax": $.fn.dataTable.pipeline({
                 url: "{{ url('fees/fees-invoice-datatable') }}",
-                data: {},
+                data: function(d) {
+                    d.payment_status = $('#invoiceStatusFilter').val();
+                },
                 pages: "{{ generalSetting()->ss_page_load }}" // number of pages to cache
             }),
             columns: [{
@@ -368,6 +383,13 @@
                 visible: false,
             }, ],
             responsive: true,
+        });
+
+        // The pipeline plugin caches pages client-side and only refetches when
+        // DataTables' own order/columns/search change - this filter is outside
+        // that, so it has to force a refetch itself via clearPipeline().
+        $('#invoiceStatusFilter').on('change', function() {
+            $('.data-table').DataTable().clearPipeline().draw();
         });
     });
 </script>

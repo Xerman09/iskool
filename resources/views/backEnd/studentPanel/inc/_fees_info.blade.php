@@ -59,6 +59,9 @@
                                                         target="_blank">
                                                         {{ @$student_detail->full_name }}
                                                     </a>
+                                                    @if($studentInvoice->type === 'store')
+                                                    <span class="badge badge-info">@lang('academics.item_purchase')</span>
+                                                    @endif
                                                 </td>
                                                 <td>{{ @$record->class->class_name }}
                                                     ({{ @$record->section->section_name }})

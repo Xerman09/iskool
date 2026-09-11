@@ -302,6 +302,8 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('item-order-approval', ['as' => 'item-order-approval', 'uses' => 'Admin\Academics\ItemOrderApprovalController@index'])->middleware('userRolePermission:item-order-approval');
         Route::post('item-order-approval-approve/{id}', ['as' => 'item-order-approval-approve', 'uses' => 'Admin\Academics\ItemOrderApprovalController@approve'])->middleware('userRolePermission:item-order-approval');
         Route::post('item-order-approval-reject/{id}', ['as' => 'item-order-approval-reject', 'uses' => 'Admin\Academics\ItemOrderApprovalController@reject'])->middleware('userRolePermission:item-order-approval');
+        Route::post('item-order-approval-bulk-approve', ['as' => 'item-order-approval-bulk-approve', 'uses' => 'Admin\Academics\ItemOrderApprovalController@bulkApprove'])->middleware('userRolePermission:item-order-approval');
+        Route::post('item-order-approval-bulk-reject', ['as' => 'item-order-approval-bulk-reject', 'uses' => 'Admin\Academics\ItemOrderApprovalController@bulkReject'])->middleware('userRolePermission:item-order-approval');
 
         Route::get('misc-fee-assign', ['as' => 'misc-fee-assign', 'uses' => 'Admin\Academics\MiscFeeController@index'])->middleware('userRolePermission:misc-fee-assign');
 

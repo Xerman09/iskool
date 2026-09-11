@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Student;
 use App\SmItem;
 use App\SmItemOrder;
 use App\SmItemCategory;
+use App\SmNotification;
+use App\User;
 use App\Models\StudentRecord;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Traits\EnrollmentInvoicing;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class StudentItemPurchaseController extends Controller
 {
@@ -34,7 +37,16 @@ class StudentItemPurchaseController extends Controller
                 ->latest()
                 ->get();
 
-            return view('backEnd.academics.itemStore', compact('items', 'student', 'pendingOrders'));
+            // Passive closed-loop for approve/reject: a student who never opens the
+            // notification bell still sees the outcome next time they visit this page.
+            $recentResolvedOrders = SmItemOrder::where('student_id', optional($student)->id)
+                ->whereIn('status', ['approved', 'rejected'])
+                ->with('item', 'invoice')
+                ->latest('approved_at')
+                ->take(10)
+                ->get();
+
+            return view('backEnd.academics.itemStore', compact('items', 'student', 'pendingOrders', 'recentResolvedOrders'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -78,6 +90,11 @@ class StudentItemPurchaseController extends Controller
                 return redirect()->back();
             }
 
+            // Ties every line from this single "Submit Order" click together so
+            // the pending list (and reception's approval queue) can show one
+            // order with N items instead of a flat, ungrouped item list.
+            $orderBatch = (string) Str::uuid();
+
             foreach ($request->item_id as $i => $itemId) {
                 $quantity = (int) $request->quantity[$i];
                 $item = SmItem::where('school_id', $schoolId)->findOrFail($itemId);
@@ -90,6 +107,7 @@ class StudentItemPurchaseController extends Controller
                 $order = new SmItemOrder();
                 $order->student_id = $student->id;
                 $order->record_id = $record->id;
+                $order->order_batch = $orderBatch;
                 $order->item_id = $item->id;
                 $order->quantity = $quantity;
                 $order->unit_price = $item->unit_price;
@@ -100,11 +118,39 @@ class StudentItemPurchaseController extends Controller
                 $order->save();
             }
 
+            $this->notifyReception($schoolId, trans_choice('academics.item_order_submitted_notification', count($request->item_id), [
+                'student' => $student->full_name,
+                'count' => count($request->item_id),
+            ]), route('item-order-approval'));
+
             Toastr::success('Order submitted. Reception will review it before it is added to your invoice.', 'Success');
             return redirect()->route('student-item-store');
         } catch (\Exception $e) {
             Toastr::error($e->getMessage() ?: 'Operation Failed', 'Failed');
             return redirect()->back();
+        }
+    }
+
+    /**
+     * Every receptionist at this school gets their own notification row - there's
+     * no "broadcast to a role" primitive in SmNotification, each recipient's own
+     * bell only ever reads rows keyed to their own user_id (see SmNotification::
+     * notifications()), so one row per receptionist is what actually surfaces this.
+     */
+    private function notifyReception($schoolId, string $message, ?string $url = null)
+    {
+        $receptionists = User::where('school_id', $schoolId)->where('role_id', 7)->get();
+
+        foreach ($receptionists as $user) {
+            $notification = new SmNotification();
+            $notification->user_id = $user->id;
+            $notification->role_id = $user->role_id;
+            $notification->date = date('Y-m-d');
+            $notification->message = $message;
+            $notification->url = $url;
+            $notification->school_id = $schoolId;
+            $notification->academic_id = getAcademicId();
+            $notification->save();
         }
     }
 

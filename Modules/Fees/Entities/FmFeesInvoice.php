@@ -34,6 +34,11 @@ class FmFeesInvoice extends Model
         return $this->belongsTo(Course::class,'course_id','id');
     }
 
+    public function semester()
+    {
+        return $this->belongsTo(\App\Semester::class, 'semester_id', 'id');
+    }
+
     public function invoiceDetails()
     {
         return $this->hasMany(FmFeesInvoiceChield::class,'fees_invoice_id');
