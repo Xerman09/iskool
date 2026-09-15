@@ -880,9 +880,11 @@ class FeesController extends Controller
             $isPendingEnrollment = $invoiceInfo->type === 'fees'
                 && optional($invoiceStudent)->enrollment_status === 'pending';
 
-            // Surfaced here only as a heads-up notice pointing to the standalone
-            // Item Order Approval page - that page is the one place approve/reject
-            // actually happens, so this invoice view never duplicates that queue.
+            // Surfaced as a heads-up notice with a "review" action that opens this
+            // student's orders directly in the same studentOrdersModal popup used
+            // per-row on the standalone Item Order Approval queue (see
+            // resources/views/backEnd/academics/partials/studentOrdersModal.blade.php) -
+            // reception never has to leave this invoice to approve/reject.
             $pendingItemOrders = SmItemOrder::where('school_id', Auth::user()->school_id)
                 ->where('student_id', $invoiceInfo->student_id)
                 ->where('status', 'pending')
@@ -890,7 +892,7 @@ class FeesController extends Controller
                 ->orderBy('created_at')
                 ->get();
 
-            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan', 'planSchedule', 'isPendingEnrollment', 'pendingItemOrders'));
+            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan', 'planSchedule', 'isPendingEnrollment', 'pendingItemOrders', 'invoiceStudent'));
         } else {
             return view('fees::feesInvoice.feesInvoicePrint', compact('invoiceInfo', 'invoiceDetails', 'banks'));
         }
@@ -1403,11 +1405,26 @@ class FeesController extends Controller
             $fees_type='fees';
         }
 
-        $studentInvoices = FmFeesInvoice::where('type', $fees_type)
-            ->with('studentInfo', 'course')
-            ->select('fm_fees_invoices.*')
-            ->where('school_id', Auth::user()->school_id)
-            ->where('academic_id', getAcademicId());
+        // Student invoices (tuition and their own store purchases) vs employee
+        // invoices (always type 'store', never tied to a student) - same split
+        // criterion as the Item Order Approval queue: who the invoice belongs to.
+        $audience = $request->audience === 'staff' ? 'staff' : 'student';
+
+        if ($audience === 'staff') {
+            $studentInvoices = FmFeesInvoice::where('type', 'store')
+                ->whereNotNull('staff_id')
+                ->with('staffInfo')
+                ->select('fm_fees_invoices.*')
+                ->where('school_id', Auth::user()->school_id)
+                ->where('academic_id', getAcademicId());
+        } else {
+            $studentInvoices = FmFeesInvoice::where('type', $fees_type)
+                ->whereNull('staff_id')
+                ->with('studentInfo', 'course')
+                ->select('fm_fees_invoices.*')
+                ->where('school_id', Auth::user()->school_id)
+                ->where('academic_id', getAcademicId());
+        }
 
         // Balance/paid are computed from invoiceDetails (see Tamount/Tpaidamount
         // accessors), not real columns, so the payment-status filter has to
@@ -1433,11 +1450,15 @@ class FeesController extends Controller
         if (isset($studentInvoices)){
             return Datatables::of($studentInvoices)
                     ->addIndexColumn()
-                    ->addColumn('student_name', function($row){
-                        $btn = '<a href="' . route('fees.fees-invoice-view', ['id' => $row->id, 'state' => 'view']) . 'target="_blank">' .@$row->studentInfo->full_name . '</a>';
+                    ->addColumn('student_name', function($row) use ($audience){
+                        $name = $audience === 'staff' ? @$row->staffInfo->full_name : @$row->studentInfo->full_name;
+                        $btn = '<a href="' . route('fees.fees-invoice-view', ['id' => $row->id, 'state' => 'view']) . '" target="_blank">' . $name . '</a>';
                         return $btn;
                     })
-                    ->addColumn('course_name', function($row){
+                    ->addColumn('course_name', function($row) use ($audience){
+                        if ($audience === 'staff') {
+                            return '-';
+                        }
                         return @$row->course->course_name ?: '-';
                     })
                     ->addColumn('amount', function($row){

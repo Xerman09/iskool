@@ -181,6 +181,7 @@
                                                 <input type="checkbox" id="checkAll" class="common-checkbox" name="checkAll">
                                                 <label for="checkAll">@lang('common.all')</label>
                                             </th>
+                                            <th>@lang('student.admission_no')</th>
                                             <th>@lang('student.current_roll')</th>
                                             <th>@lang('student.name')</th>
                                             @if (moduleStatusCheck('Alumni'))
@@ -200,7 +201,7 @@
                                                 <input type="checkbox" id="student_{{$student->id}}" class="common-checkbox promote_check" name="promote[{{$student->id}}][student]" value="{{$student->id}}">
                                                 <label for="student_{{$student->id}}"></label>
                                             </td>
-                                        
+                                            <td>{{ $student->admission_no }}</td>
                                             <td> <a href="{{route('student_view',[$student->id]) }}"  target="_blank" rel="noopener noreferrer">  <h5 style="color:#A235EC">{{$student->studentRecord->getRawOriginal('roll_no')}} </h5></a> </td>
                                             <td>{{  $student->first_name .' '.$student->last_name }}</td>
                                             <td>

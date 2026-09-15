@@ -16,6 +16,11 @@ class SmItemOrder extends Model
         return $this->belongsTo('App\SmStudent', 'student_id', 'id');
     }
 
+    public function staff()
+    {
+        return $this->belongsTo('App\SmStaff', 'staff_id', 'id');
+    }
+
     public function item()
     {
         return $this->belongsTo('App\SmItem', 'item_id', 'id');

@@ -186,6 +186,7 @@
                                         <tr>
                                             <th>@lang('fees.payment_id')</th>
                                             <th>@lang('common.date')</th>
+                                            <th>@lang('student.admission_no')</th>
                                             <th>@lang('common.name')</th>
                                             @if(moduleStatusCheck('University'))
                                                 <th>@lang('university::un.semester_label')</th>
@@ -273,6 +274,7 @@
                        columns: [
                            {data: 'invoice', name: 'invoice'},
                            {data: 'date', name: 'date'},
+                           {data: 'admission_no', name: 'admission_no'},
                            {data: 'record_detail.student_detail.full_name', name: 'full_name'},
                            @if(moduleStatusCheck('University'))
                            {data: 'class_sec', name: 'class_sec'},

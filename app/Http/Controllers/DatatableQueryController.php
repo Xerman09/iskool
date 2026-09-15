@@ -1465,6 +1465,9 @@ class DatatableQueryController extends Controller
             ->addColumn('date', function ($row) {
                 return dateConvert(@$row->payment_date);
             })
+            ->addColumn('admission_no', function ($row) {
+                return optional($row->recordDetail->studentDetail)->admission_no;
+            })
             ->addColumn('fees_amount', function ($row) {
                 return generalSetting()->currency_symbol. ' '.$row->amount;
             })
@@ -1475,7 +1478,7 @@ class DatatableQueryController extends Controller
                     return $row->recordDetail->class->class_name.'('.$row->recordDetail->section->section_name.')';
                 }
             })
-            
+
             ->addColumn('action', function ($row) {
                 $btn = '<div class="dropdown CRM_dropdown">
                                     <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">' . app('translator')->get('common.select') . '</button>

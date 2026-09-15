@@ -1,5 +1,25 @@
 @push('css')
     <link rel="stylesheet" href="{{ url('Modules\Fees\Resources\assets\css\feesStyle.css') }}" />
+    <style>
+        /* The theme positions .dataTables_filter > label with position:absolute;
+           top:-60px, anchored to the nearest positioned ancestor
+           (.dataTables_wrapper, position:relative, in its original spot). Once
+           moved into this toolbar row it has no positioned ancestor of its own,
+           so it'd fall back to the page itself and float off near the top -
+           strip that positioning here so it just sits in flow as a flex item. */
+        #feesInvoiceToolbarRow .dataTables_filter {
+            margin-bottom: 0;
+            float: none;
+        }
+        #feesInvoiceToolbarRow .dataTables_filter > label {
+            position: static !important;
+            top: 0;
+            left: auto;
+            transform: none;
+            margin-bottom: 0;
+            min-width: 0;
+        }
+    </style>
 @endpush
 @if (!userPermission('fees.fees-invoice-store'))
     @push('css')
@@ -28,7 +48,7 @@
             @if (isset($role) && $role == 'admin')
                 @if (userPermission('fees.fees-invoice-store'))
                     <div class="row">
-                        <div class="col-lg-12 text-left col-md-12">
+                        <div class="col-lg-12 text-left col-md-12 d-flex flex-wrap align-items-center justify-content-between" id="feesInvoiceToolbarRow">
                             <a href="{{ route('fees.fees-invoice') }}" class="primary-btn small fix-gr-bg">
                                 <span class="ti-plus pr-2"></span>
                                 @lang('common.add')
@@ -42,6 +62,14 @@
                 @if ((isset($role) && $role == 'admin') || $role == 'lms')
                     <div class="col-lg-12">
                         <div class="row mb-15">
+                            @if ($role == 'admin')
+                            <div class="col-lg-3">
+                                <select id="invoiceAudienceFilter" class="primary_select form-control">
+                                    <option value="student">@lang('common.student')</option>
+                                    <option value="staff">@lang('academics.employee')</option>
+                                </select>
+                            </div>
+                            @endif
                             <div class="col-lg-3">
                                 <select id="invoiceStatusFilter" class="primary_select form-control">
                                     <option value="">@lang('fees::feesModule.all_statuses')</option>
@@ -56,7 +84,7 @@
                                 <thead>
                                     <tr>
                                         <th>@lang('common.sl')</th>
-                                        <th>@lang('common.student')</th>
+                                        <th id="invoiceAudienceColumnHeader">@lang('common.student')</th>
                                         <th>@lang('academics.program')</th>
                                         <th>@lang('accounts.amount')</th>
                                         <th>@lang('fees::feesModule.waiver')</th>
@@ -240,6 +268,8 @@
             },
         });
     }
+    var currentInvoiceAudience = 'student';
+
     $(document).ready(function() {
         $('.data-table').DataTable({
             processing: true,
@@ -248,6 +278,7 @@
                 url: "{{ url('fees/fees-invoice-datatable') }}",
                 data: function(d) {
                     d.payment_status = $('#invoiceStatusFilter').val();
+                    d.audience = currentInvoiceAudience;
                 },
                 pages: "{{ generalSetting()->ss_page_load }}" // number of pages to cache
             }),
@@ -383,12 +414,33 @@
                 visible: false,
             }, ],
             responsive: true,
+            // Quick Search normally renders on its own row above the table -
+            // move it up next to the Add button instead, same row, right-aligned,
+            // so it doesn't eat an extra row of vertical space. No-op if that
+            // button (and its row) isn't there (no fees.fees-invoice-store
+            // permission).
+            initComplete: function() {
+                var $toolbarRow = $('#feesInvoiceToolbarRow');
+                if ($toolbarRow.length) {
+                    $toolbarRow.append($('.data-table').closest('.dataTables_wrapper').find('.dataTables_filter'));
+                }
+            },
         });
 
         // The pipeline plugin caches pages client-side and only refetches when
         // DataTables' own order/columns/search change - this filter is outside
         // that, so it has to force a refetch itself via clearPipeline().
         $('#invoiceStatusFilter').on('change', function() {
+            $('.data-table').DataTable().clearPipeline().draw();
+        });
+
+        $('#invoiceAudienceFilter').on('change', function() {
+            currentInvoiceAudience = $(this).val();
+
+            $('#invoiceAudienceColumnHeader').text(
+                currentInvoiceAudience === 'staff' ? @json(__('academics.employee')) : @json(__('common.student'))
+            );
+
             $('.data-table').DataTable().clearPipeline().draw();
         });
     });

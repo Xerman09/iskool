@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\SmItem;
+use App\SmStaff;
 use App\SmStudent;
 use App\Models\StudentRecord;
 use Modules\Fees\Entities\FmFeesType;
@@ -153,6 +154,43 @@ trait EnrollmentInvoicing
     {
         return FmFeesInvoice::where('record_id', $record->id)
             ->whereIn('type', ['fees', 'store'])
+            ->whereDoesntHave('invoiceDetails', fn ($q) => $q->where('paid_amount', '>', 0))
+            ->whereDoesntHave('paymentPlanAssign')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * Staff counterpart to newOrderInvoice() - a staff member has no course/class/
+     * semester/StudentRecord, so this always creates a plain standalone 'store'
+     * invoice with those left null and staff_id set instead of student_id/record_id.
+     */
+    protected function newStaffOrderInvoice(SmStaff $staff, $dueInDays = 7)
+    {
+        $invoice = new FmFeesInvoice();
+        $invoice->type = 'store';
+        $invoice->staff_id = $staff->id;
+        $invoice->create_date = now()->toDateString();
+        $invoice->due_date = now()->addDays($dueInDays)->toDateString();
+        $invoice->payment_status = 'unpaid';
+        $invoice->school_id = auth()->user()->school_id;
+        $invoice->academic_id = getAcademicId();
+        $invoice->save();
+        $invoice->invoice_id = feesInvoiceNumber($invoice);
+        $invoice->save();
+
+        return $invoice;
+    }
+
+    /**
+     * Staff counterpart to openOrderInvoiceFor() - keyed on staff_id instead of a
+     * StudentRecord, since staff orders never carry one. Same "open" definition:
+     * nothing paid yet, no payment plan attached.
+     */
+    protected function openStaffOrderInvoiceFor(SmStaff $staff)
+    {
+        return FmFeesInvoice::where('staff_id', $staff->id)
+            ->where('type', 'store')
             ->whereDoesntHave('invoiceDetails', fn ($q) => $q->where('paid_amount', '>', 0))
             ->whereDoesntHave('paymentPlanAssign')
             ->orderByDesc('id')

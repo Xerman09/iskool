@@ -305,6 +305,11 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::post('item-order-approval-bulk-approve', ['as' => 'item-order-approval-bulk-approve', 'uses' => 'Admin\Academics\ItemOrderApprovalController@bulkApprove'])->middleware('userRolePermission:item-order-approval');
         Route::post('item-order-approval-bulk-reject', ['as' => 'item-order-approval-bulk-reject', 'uses' => 'Admin\Academics\ItemOrderApprovalController@bulkReject'])->middleware('userRolePermission:item-order-approval');
 
+        // Staff Item Store - employee counterpart to student-item-store (routes/student.php)
+        Route::get('staff-item-store', ['as' => 'staff-item-store', 'uses' => 'Staff\StaffItemPurchaseController@index'])->middleware('userRolePermission:staff-item-store');
+        Route::post('staff-item-store/add-to-invoice', ['as' => 'staff-item-store-add', 'uses' => 'Staff\StaffItemPurchaseController@addToInvoice'])->middleware('userRolePermission:staff-item-store');
+        Route::post('staff-item-store/cancel/{id}', ['as' => 'staff-item-store-cancel', 'uses' => 'Staff\StaffItemPurchaseController@cancel'])->middleware('userRolePermission:staff-item-store');
+
         Route::get('misc-fee-assign', ['as' => 'misc-fee-assign', 'uses' => 'Admin\Academics\MiscFeeController@index'])->middleware('userRolePermission:misc-fee-assign');
 
         Route::get('down-payment', ['as' => 'down-payment', 'uses' => 'Admin\Academics\DownPaymentController@index'])->middleware('userRolePermission:down-payment');

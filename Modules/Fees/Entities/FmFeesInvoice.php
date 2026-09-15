@@ -29,6 +29,11 @@ class FmFeesInvoice extends Model
         return $this->belongsTo(SmStudent::class,'student_id','id');
     }
 
+    public function staffInfo()
+    {
+        return $this->belongsTo(\App\SmStaff::class, 'staff_id', 'id');
+    }
+
     public function course()
     {
         return $this->belongsTo(Course::class,'course_id','id');

@@ -4,6 +4,10 @@
 @endsection
 
 @section('mainContent')
+@php
+    $itemStoreSubmitRoute = 'staff-item-store-add';
+    $itemStoreCancelRoute = 'staff-item-store-cancel';
+@endphp
 <section class="sms-breadcrumb mb-20">
     <div class="container-fluid">
         <div class="row justify-content-between">

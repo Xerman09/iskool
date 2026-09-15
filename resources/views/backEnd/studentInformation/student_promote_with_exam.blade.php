@@ -170,6 +170,7 @@
                                             <input type="checkbox" id="checkAll" class="common-checkbox" name="checkAll">
                                             <label for="checkAll">@lang('common.all')</label>
                                         </th>                                       
+                                        <th>@lang('student.admission_no')</th>
                                         <th>@lang('student.current_roll')</th>
                                         <th>@lang('common.name')</th>
                                         <th>@lang('exam.total_marks')</th>
@@ -193,6 +194,7 @@
                                             <input type="checkbox" id="student_{{$student->studentinfo->id}}" class="common-checkbox promote_check" name="promote[{{$student->studentinfo->id}}][student]" value="{{$student->studentinfo->id}}">
                                             <label for="student_{{$student->studentinfo->id}}"></label>
                                         </td>
+                                        <td>{{ $student->studentinfo->admission_no }}</td>
                                         <td> <a href="{{route('student_view',[$student->studentinfo->id]) }}"  target="_blank" rel="noopener noreferrer">  <h5 style="color:#A235EC">{{$student->studentinfo->roll_no}}</h5></a> </td>
                                         <td>{{  $student->studentinfo->first_name .' '.$student->studentinfo->last_name }}</td>
                                        <td>{{ $student->total_marks}}</td>

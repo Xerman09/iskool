@@ -40,6 +40,8 @@ class StudentTransactionLedgerController extends Controller
                 'semesters' => $semesters,
                 'scope' => $scope,
                 'selectedSemesterId' => $semesterId,
+                'ledgerRoute' => 'student-transaction-ledger',
+                'ledgerRouteParams' => [],
             ]));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

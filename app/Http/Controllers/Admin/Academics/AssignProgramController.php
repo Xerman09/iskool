@@ -9,6 +9,7 @@ use App\CurriculumVersion;
 use App\SmOptionalSubjectAssign;
 use App\Models\StudentRecord;
 use App\Models\StudentProgramHistory;
+use App\Semester;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Traits\EnrollmentBalanceBreakdown;
@@ -271,14 +272,33 @@ class AssignProgramController extends Controller
         }
     }
 
-    public function ledger($studentId)
+    public function ledger(Request $request, $studentId)
     {
         try {
             $student = SmStudent::where('school_id', auth()->user()->school_id)->findOrFail($studentId);
-            $ledger = $this->ledgerFor($student);
+
+            // Mirrors StudentTransactionLedgerController::index() so reception/admin get
+            // the same Per Semester / Whole Stay toggle on the shared transactionLedger
+            // view instead of being stuck on the student's current-semester-only slice.
+            $scope = $request->query('scope') === 'whole_stay' ? 'whole_stay' : 'semester';
+            $semesterId = $scope === 'semester'
+                ? ($request->query('semester_id') ?: $student->semester_id)
+                : null;
+
+            $ledger = $this->ledgerFor($student, $scope, $semesterId);
+
+            $semesters = Semester::where('school_id', $student->school_id)
+                ->where('active_status', 1)
+                ->orderBy('sort_order')
+                ->get();
 
             return view('backEnd.academics.transactionLedger', array_merge($ledger, [
                 'student' => $student,
+                'semesters' => $semesters,
+                'scope' => $scope,
+                'selectedSemesterId' => $semesterId,
+                'ledgerRoute' => 'assign-program-ledger',
+                'ledgerRouteParams' => ['student' => $student->id],
             ]));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

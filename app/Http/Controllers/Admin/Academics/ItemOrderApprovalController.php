@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Academics;
 
 use App\SmItem;
+use App\SmStaff;
 use App\SmStudent;
 use App\SmItemOrder;
 use App\SmNotification;
@@ -25,11 +26,19 @@ class ItemOrderApprovalController extends Controller
 
             $pendingOrders = SmItemOrder::where('school_id', $schoolId)
                 ->where('status', 'pending')
-                ->with('item', 'student')
+                ->with('item', 'student', 'staff')
                 ->orderBy('created_at')
                 ->get();
 
-            return view('backEnd.academics.itemOrderApproval', compact('pendingOrders'));
+            // Split by who ordered - a student's own order (role == student) vs
+            // anyone else's (employees; parents can't order at all, so in practice
+            // this side is always staff). Two separate queues so reception isn't
+            // hunting for one student's request buried among staff pickups, or the
+            // other way around.
+            $pendingStudentOrders = $pendingOrders->whereNotNull('student_id');
+            $pendingStaffOrders = $pendingOrders->whereNotNull('staff_id');
+
+            return view('backEnd.academics.itemOrderApproval', compact('pendingStudentOrders', 'pendingStaffOrders'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -38,10 +47,10 @@ class ItemOrderApprovalController extends Controller
 
     /**
      * The only point an item order actually becomes a billable invoice line and
-     * moves stock - everything before this (student submitting, sitting pending)
-     * is just a request. Stock is re-checked here (with a row lock), not trusted
-     * from submission time, since it may have sold out to someone else while this
-     * order waited for review.
+     * moves stock - everything before this (submitting, sitting pending) is just a
+     * request. Stock is re-checked here (with a row lock), not trusted from
+     * submission time, since it may have sold out to someone else while this order
+     * waited for review.
      */
     public function approve(Request $request, $id)
     {
@@ -60,7 +69,7 @@ class ItemOrderApprovalController extends Controller
             // straight to it instead of leaving that to be discovered later,
             // mirroring how the enrollment invoice surfaces the same choice.
             if ($result['startedNewInvoice']) {
-                Toastr::success("Order approved. Since the student's tuition invoice is already settled or on a payment plan, a separate invoice ({$result['invoice']->invoice_id}) was created for this item. Collect payment or assign a payment plan below.", 'Success');
+                Toastr::success("Order approved. A separate invoice ({$result['invoice']->invoice_id}) was created for this item. Collect payment or assign a payment plan below.", 'Success');
                 return redirect()->route('fees.fees-invoice-view', ['id' => $result['invoice']->id, 'state' => 'view']);
             }
 
@@ -99,12 +108,13 @@ class ItemOrderApprovalController extends Controller
 
     /**
      * Approve several selected orders from one click - the checkbox selection
-     * inside a single student's "View Orders" popup, for reception clearing that
-     * student's whole cart in one go instead of one approve click per item.
-     * Always scoped to one student (the popup only ever lists their own orders),
-     * so - like the single approve() - at most one new invoice can come out of
-     * this: every item in the batch lands on the same freshly-opened invoice,
-     * since it stays "open" (no payment/plan yet) for the rest of the loop.
+     * inside a single person's "View Orders" popup, for reception clearing that
+     * person's whole cart in one go instead of one approve click per item.
+     * Always scoped to one student or one staff member (the popup only ever lists
+     * their own orders), so - like the single approve() - at most one new invoice
+     * can come out of this: every item in the batch lands on the same
+     * freshly-opened invoice, since it stays "open" (no payment/plan yet) for the
+     * rest of the loop.
      */
     public function bulkApprove(Request $request)
     {
@@ -149,7 +159,7 @@ class ItemOrderApprovalController extends Controller
         // further action, so stay on the queue; a new one is an unseen decision
         // point (pay now, or split into a plan?) worth jumping straight to.
         if ($newInvoice) {
-            Toastr::success("{$approvedCount} order(s) approved. Since the student's tuition invoice is already settled or on a payment plan, a separate invoice ({$newInvoice->invoice_id}) was created for these items. Collect payment or assign a payment plan below.", 'Success');
+            Toastr::success("{$approvedCount} order(s) approved. A separate invoice ({$newInvoice->invoice_id}) was created for these items. Collect payment or assign a payment plan below.", 'Success');
             return redirect()->route('fees.fees-invoice-view', ['id' => $newInvoice->id, 'state' => 'view']);
         }
 
@@ -195,27 +205,49 @@ class ItemOrderApprovalController extends Controller
     private function approveOne(SmItemOrder $order): array
     {
         $schoolId = $order->school_id;
-        $student = SmStudent::where('school_id', $schoolId)->findOrFail($order->student_id);
-        $record = StudentRecord::where('id', $order->record_id)->where('school_id', $schoolId)->firstOrFail();
+
+        // Every order belongs to exactly one of student_id/staff_id - resolve the
+        // owner up front so the transaction body below can stay generic (open- or
+        // start-an-invoice, add the line, move stock) regardless of which it is.
+        if ($order->student_id) {
+            $student = SmStudent::where('school_id', $schoolId)->findOrFail($order->student_id);
+            $record = StudentRecord::where('id', $order->record_id)->where('school_id', $schoolId)->firstOrFail();
+
+            $openInvoice = fn () => $this->openOrderInvoiceFor($record);
+            $newInvoice = fn () => $this->newOrderInvoice($student, $record, 'store');
+            $notifyOwner = fn (string $message, string $url) => $this->notifyUser($student->user, $message, $url);
+            $newInvoiceMessageKey = 'academics.item_order_approved_new_invoice_notification';
+        } else {
+            $staff = SmStaff::where('school_id', $schoolId)->findOrFail($order->staff_id);
+
+            $openInvoice = fn () => $this->openStaffOrderInvoiceFor($staff);
+            $newInvoice = fn () => $this->newStaffOrderInvoice($staff);
+            $notifyOwner = fn (string $message, string $url) => $this->notifyUser($staff->staff_user, $message, $url);
+            // Staff have no tuition invoice, so the tuition-specific wording the
+            // student notification uses ("already settled or on a payment plan")
+            // doesn't apply - a plain "new invoice was created" covers it instead.
+            $newInvoiceMessageKey = 'academics.item_order_approved_new_invoice_notification_staff';
+        }
 
         $invoice = null;
         $item = null;
-        // Whether the item landed on the student's existing (still-open) invoice
-        // or had to start a brand new one - surfaced afterward to both reception
-        // (toast) and the student (notification) so a second invoice appearing
-        // never looks unexplained. See openOrderInvoiceFor() for what "open" means.
+        // Whether the item landed on an existing (still-open) invoice or had to
+        // start a brand new one - surfaced afterward to both reception (toast) and
+        // the buyer (notification) so a second invoice appearing never looks
+        // unexplained. See openOrderInvoiceFor()/openStaffOrderInvoiceFor() for
+        // what "open" means.
         $startedNewInvoice = false;
 
-        DB::transaction(function () use ($order, $student, $record, &$invoice, &$item, &$startedNewInvoice) {
+        DB::transaction(function () use ($order, $openInvoice, $newInvoice, &$invoice, &$item, &$startedNewInvoice) {
             $item = SmItem::where('school_id', $order->school_id)->lockForUpdate()->findOrFail($order->item_id);
 
             if ($item->total_in_stock < $order->quantity) {
                 throw new \RuntimeException('OUT_OF_STOCK');
             }
 
-            $openInvoice = $this->openOrderInvoiceFor($record);
-            $startedNewInvoice = !$openInvoice;
-            $invoice = $openInvoice ?: $this->newOrderInvoice($student, $record, 'store');
+            $existingInvoice = $openInvoice();
+            $startedNewInvoice = !$existingInvoice;
+            $invoice = $existingInvoice ?: $newInvoice();
             $this->addItemLine($invoice, $item, $order->quantity);
 
             $item->total_in_stock -= $order->quantity;
@@ -228,10 +260,12 @@ class ItemOrderApprovalController extends Controller
             $order->save();
         });
 
-        $this->notifyStudent($student, $startedNewInvoice
-            ? __('academics.item_order_approved_new_invoice_notification', ['item' => $item->item_name, 'invoice' => $invoice->invoice_id])
-            : __('academics.item_order_approved_notification', ['item' => $item->item_name, 'invoice' => $invoice->invoice_id]),
-            route('fees.fees-invoice-view', ['id' => $invoice->id, 'state' => 'view']));
+        $notifyOwner(
+            $startedNewInvoice
+                ? __($newInvoiceMessageKey, ['item' => $item->item_name, 'invoice' => $invoice->invoice_id])
+                : __('academics.item_order_approved_notification', ['item' => $item->item_name, 'invoice' => $invoice->invoice_id]),
+            route('fees.fees-invoice-view', ['id' => $invoice->id, 'state' => 'view'])
+        );
 
         return ['invoice' => $invoice, 'item' => $item, 'startedNewInvoice' => $startedNewInvoice];
     }
@@ -244,31 +278,38 @@ class ItemOrderApprovalController extends Controller
         $order->approved_at = now();
         $order->save();
 
-        $student = SmStudent::where('school_id', $order->school_id)->find($order->student_id);
-        if ($student) {
-            $this->notifyStudent(
-                $student,
-                __('academics.item_order_rejected_notification', [
-                    'item' => optional($order->item)->item_name,
-                    'reason' => $order->reject_reason ?: __('academics.no_reason_given'),
-                ]),
-                route('student-item-store')
-            );
+        $message = __('academics.item_order_rejected_notification', [
+            'item' => optional($order->item)->item_name,
+            'reason' => $order->reject_reason ?: __('academics.no_reason_given'),
+        ]);
+
+        if ($order->student_id) {
+            $student = SmStudent::where('school_id', $order->school_id)->find($order->student_id);
+            if ($student) {
+                $this->notifyUser($student->user, $message, route('student-item-store'));
+            }
+        } else {
+            $staff = SmStaff::where('school_id', $order->school_id)->find($order->staff_id);
+            if ($staff) {
+                $this->notifyUser($staff->staff_user, $message, route('staff-item-store'));
+            }
         }
     }
 
     /**
      * Closed-loop feedback on the item order's outcome - without this, the only
-     * way a student learns their order was approved/rejected is by happening to
+     * way someone learns their order was approved/rejected is by happening to
      * revisit the Item Store page. Mirrors the SmNotification pattern used for
      * leave request approvals (see SmLeaveRequestController) so it surfaces
      * through the same notification bell the rest of the app already uses.
+     *
+     * $user may be a "withDefault()" placeholder (e.g. SmStaff::staff_user() when
+     * a staff record has no linked login) rather than a real null - guard on ->id,
+     * not just truthiness, to skip those the same as a genuinely missing user.
      */
-    private function notifyStudent(SmStudent $student, string $message, ?string $url = null)
+    private function notifyUser($user, string $message, ?string $url = null)
     {
-        $user = $student->user;
-
-        if (!$user) {
+        if (!$user || !$user->id) {
             return;
         }
 
@@ -278,7 +319,7 @@ class ItemOrderApprovalController extends Controller
         $notification->date = date('Y-m-d');
         $notification->message = $message;
         $notification->url = $url;
-        $notification->school_id = $student->school_id;
+        $notification->school_id = $user->school_id;
         $notification->academic_id = getAcademicId();
         $notification->save();
     }

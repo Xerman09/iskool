@@ -111,6 +111,7 @@
                                     <thead>
                                         <tr>
                                             <th>@lang('academics.student')</th>
+                                            <th>@lang('student.admission_no')</th>
                                             <th>@lang('academics.payment_plan_type')</th>
                                             <th>@lang('academics.total_amount_due')</th>
                                             <th>@lang('academics.installments_progress')</th>
@@ -121,6 +122,7 @@
                                         @foreach($assignedPlans as $assign)
                                         <tr>
                                             <td valign="top">{{ optional($assign->student)->first_name }} {{ optional($assign->student)->last_name }}</td>
+                                            <td valign="top">{{ optional($assign->student)->admission_no }}</td>
                                             <td valign="top">{{ optional($assign->planType)->name }}</td>
                                             <td valign="top">{{ currency_format($assign->total_amount) ?: number_format($assign->total_amount, 2) }}</td>
                                             <td valign="top">{{ $assign->paidCount }} @lang('academics.of') {{ $assign->number_of_installments }} @lang('academics.paid')</td>

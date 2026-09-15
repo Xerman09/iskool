@@ -72,6 +72,7 @@
                                                     <th>@lang('common.sl')</th>
                                                     <th>@lang('student.parent_name')</th>
                                                     <th>@lang('student.child_name')</th>
+                                                    <th>@lang('student.admission_no')</th>
                                                     <th>@lang('student.class')(@lang('student.section'))</th>
                                                     <th>@lang('common.email')</th>
                                                     <th>@lang('common.phone')</th>
@@ -90,6 +91,7 @@
                                                                 {{ @$data->full_name }}
                                                             </a>
                                                         </td>
+                                                        <td>{{ @$data->admission_no }}</td>
                                                         <td>
                                                             {{ $data->studentRecord->class->class_name }}({{ $data->studentRecord->section->section_name }})
                                                         </td>

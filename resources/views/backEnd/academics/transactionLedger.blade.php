@@ -29,11 +29,11 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="white-box">
-                    <form method="GET" action="{{ route('student-transaction-ledger') }}" class="d-flex align-items-center flex-wrap mb-20" style="gap:10px;">
+                    <form method="GET" action="{{ route($ledgerRoute, $ledgerRouteParams) }}" class="d-flex align-items-center flex-wrap mb-20" style="gap:10px;">
                         <div class="btn-group" role="group">
-                            <a href="{{ route('student-transaction-ledger', ['scope' => 'semester', 'semester_id' => $selectedSemesterId]) }}"
+                            <a href="{{ route($ledgerRoute, array_merge($ledgerRouteParams, ['scope' => 'semester', 'semester_id' => $selectedSemesterId])) }}"
                                class="primary-btn small {{ $scope === 'semester' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.per_semester')</a>
-                            <a href="{{ route('student-transaction-ledger', ['scope' => 'whole_stay']) }}"
+                            <a href="{{ route($ledgerRoute, array_merge($ledgerRouteParams, ['scope' => 'whole_stay'])) }}"
                                class="primary-btn small {{ $scope === 'whole_stay' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.whole_stay')</a>
                         </div>
 

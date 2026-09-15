@@ -159,6 +159,7 @@
                         <table id="table_id" class="table" cellspacing="0" width="100%">
                             <thead>
                                 <tr>
+                                    <th>@lang('common.sl')</th>
                                     <th>@lang('academics.subject')</th>
                                     <th>@lang('common.teacher')</th>
                                     @if(@generalSetting()->result_type == 'mark')
@@ -168,9 +169,9 @@
                             </thead>
         
                             <tbody>
-                                 @php $i = 4; @endphp
                                 @foreach($assign_subjects as $assign_subject)
                                 <tr>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{@$assign_subject->subject != ""? @$assign_subject->subject->subject_name:''}}</td>
                                     <td>
                                         @if(@$assign_subject->teacher != "") 

@@ -82,17 +82,23 @@
         </div>
 
         @if(!empty($pendingItemOrders) && $pendingItemOrders->count() > 0 && userPermission('item-order-approval'))
+        @include('backEnd.academics.partials.studentOrdersModalAssets')
         <div class="max_1200 mb-30">
             <div class="order-batch-card d-flex justify-content-between align-items-center flex-wrap" style="gap:10px;">
                 <span>
                     <span class="ti-time pr-2"></span>
                     {{ trans_choice('academics.pending_item_orders_notice', $pendingItemOrders->count(), ['count' => $pendingItemOrders->count()]) }}
                 </span>
-                <a href="{{ route('item-order-approval') }}" class="primary-btn small fix-gr-bg">
+                <a href="#" class="primary-btn small fix-gr-bg" data-toggle="modal" data-target="#studentOrdersModalstudent{{ $invoiceStudent->id }}">
                     @lang('academics.review_in_item_order_approval')
                 </a>
             </div>
         </div>
+        @include('backEnd.academics.partials.studentOrdersModal', [
+            'ownerId' => 'student' . $invoiceStudent->id,
+            'ownerLabel' => trim($invoiceStudent->first_name . ' ' . $invoiceStudent->last_name) . ' (' . $invoiceStudent->admission_no . ')',
+            'orders' => $pendingItemOrders,
+        ])
         @endif
 
         <div class="invoice_wrapper">

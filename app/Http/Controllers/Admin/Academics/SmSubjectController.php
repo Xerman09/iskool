@@ -132,13 +132,11 @@ class SmSubjectController extends Controller
                 return redirect()->back();
             }
 
-            $existingNames = SmSubject::whereNull('course_id')->pluck('subject_name')->map(function ($name) {
-                return strtolower(trim($name));
-            })->all();
+            // subject_code is the unique identifier - subject_name may repeat (see
+            // SmSubjectRequest), so only codes are tracked for duplicate skipping.
             $existingCodes = SmSubject::whereNull('course_id')->pluck('subject_code')->map(function ($code) {
                 return strtolower(trim($code));
             })->all();
-            $names = array_flip($existingNames);
             $codes = array_flip($existingCodes);
             $subjects = [];
             $errors = [];
@@ -160,7 +158,7 @@ class SmSubjectController extends Controller
                     $errors[] = "row {$line}";
                     continue;
                 }
-                if (isset($names[strtolower($name)]) || isset($codes[strtolower($code)])) {
+                if (isset($codes[strtolower($code)])) {
                     $skipped++;
                     continue;
                 }
@@ -169,7 +167,6 @@ class SmSubjectController extends Controller
                     continue;
                 }
 
-                $names[strtolower($name)] = true;
                 $codes[strtolower($code)] = true;
                 $subjects[] = [
                     'subject_name' => $name,

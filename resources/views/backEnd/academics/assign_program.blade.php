@@ -99,7 +99,9 @@
                                 <table id="table_id" class="table Crm_table_active3" cellspacing="0" width="100%">
                                     <thead>
                                         <tr>
+                                            <th>@lang('common.sl')</th>
                                             <th>@lang('academics.student')</th>
+                                            <th>@lang('student.admission_no')</th>
                                             <th>@lang('academics.program')</th>
                                             <th>@lang('academics.program_level')</th>
                                             <th>@lang('academics.curriculum_version')</th>
@@ -115,7 +117,9 @@
                                     <tbody>
                                         @foreach($assignedStudents as $s)
                                         <tr>
-                                            <td valign="top">{{$s->first_name}} {{$s->last_name}} ({{$s->admission_no}})</td>
+                                            <td valign="top">{{ $loop->iteration }}</td>
+                                            <td valign="top">{{$s->first_name}} {{$s->last_name}}</td>
+                                            <td valign="top">{{$s->admission_no}}</td>
                                             <td valign="top">{{ optional($s->course)->course_name }}</td>
                                             <td valign="top">
                                                 @if(optional($s->course)->level == 'graduate')
