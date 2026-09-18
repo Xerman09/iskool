@@ -59,7 +59,13 @@
                                     </td>
                                     <td>
                                         @if($order->status === 'approved' && $order->invoice)
-                                        <a href="{{ route('fees.fees-invoice-view', ['id' => $order->invoice->id, 'state' => 'view']) }}" class="primary-btn small fix-gr-bg">@lang('academics.pay_now')</a>
+                                            @if($order->invoice->payment_status === 'paid')
+                                            <span class="badge badge-success">@lang('fees.paid')</span>
+                                            @elseif($order->invoice->paymentPlanAssign)
+                                            <span class="badge badge-info">@lang('academics.payment_plan')</span>
+                                            @else
+                                            <a href="{{ route('fees.fees-invoice-view', ['id' => $order->invoice->id, 'state' => 'view']) }}" class="primary-btn small fix-gr-bg">@lang('academics.pay_now')</a>
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>

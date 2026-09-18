@@ -56,12 +56,53 @@
 
         .login_wrapper {
             width: 550px;
-            background: #fff;
+            background: rgba(255, 255, 255, 0.25);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             padding: 30px;
         }
 
         .text-danger.text-left {
             font-size: 14px;
+        }
+
+        /* Off-white text/icons so they read clearly on the frosted-glass box */
+        .login_wrapper_content h4,
+        .login_wrapper .checkbox-title {
+            color: #f5f7ff;
+        }
+
+        .login_wrapper .input-control-icon {
+            color: #f5f7ff;
+        }
+
+        .login_wrapper .input-control-icon:hover {
+            color: #ffffff;
+        }
+
+        .login_wrapper .input-control-input:not([type=submit]) {
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.45);
+        }
+
+        .login_wrapper .input-control-input:not([type=submit])::placeholder {
+            color: rgba(245, 247, 255, 0.75);
+        }
+
+        .login_wrapper .input-control-input:not([type=submit]):focus {
+            border-color: #ffffff;
+        }
+
+        .login_wrapper_content .input-control #forget {
+            color: #f5f7ff;
+        }
+
+        .login_wrapper_content .input-control #forget:hover {
+            color: #ffffff;
+            text-decoration: underline;
         }
         .row.row-gap-10 {
             row-gap: 10px;

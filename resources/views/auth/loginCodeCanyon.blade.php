@@ -34,7 +34,7 @@ $css = 'background:' . $login_background->color;
     <link rel="stylesheet" href="{{ url('/') }}/public/backEnd/vendors/js/select2/select2.css" />
 
     <link rel="stylesheet" href="{{ asset('public/backEnd/') }}/vendors/css/toastr.min.css" />
-    <link rel="stylesheet" href="{{ asset('public/frontend/') }}/css/{{ activeStyle()->path_main_style }}" />
+    <link rel="stylesheet" href="{{ asset('public/frontend/') }}/css/{{ activeStyle()->path_main_style }}?v={{ @filemtime(public_path('frontend/css/' . activeStyle()->path_main_style)) }}" />
     <x-root-css />
     @if (isset($ttl_rtl) && $ttl_rtl==1)
     <link rel="stylesheet" href="{{ url('public/backEnd/') }}/assets/vendors/vendors_static_style.css" />
@@ -73,6 +73,17 @@ $css = 'background:' . $login_background->color;
 
         .invalid-select strong {
             font-size: 11px !important;
+        }
+
+        /* Frosted-glass credentials box. Lives here (not only in the cached
+           frontend style.css) so it always applies on this page. */
+        .login-area .login-height .form-wrap {
+            background: rgba(255, 255, 255, 0.25);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
 
         .login-area .form-group i {

@@ -47,7 +47,14 @@
         <div class="row mt-10 align-items-center">
             <div class="col-lg-8">
                 <div class="main-title">
-                    <h4 class="mb-20">@lang('academics.enrolling_for_semester') {{$activeSemester->semester_name}}</h4>
+                    <h4 class="mb-20">
+                        @if($student->enrollment_status == 'enrolled')
+                            @lang('academics.schedule_for_semester')
+                        @else
+                            @lang('academics.enrolling_for_semester')
+                        @endif
+                        {{$activeSemester->semester_name}}
+                    </h4>
                 </div>
             </div>
             <div class="col-lg-4 text-right">
@@ -59,10 +66,34 @@
         </div>
 
         @if($times->count() == 0)
-        <div class="row">
+        <div class="row mt-10">
             <div class="col-lg-12">
                 <div class="white-box">
-                    <p class="text-center text-muted">@lang('academics.no_open_blocks')</p>
+                    <p class="text-muted">@lang('academics.no_open_blocks')</p>
+                    <div class="table-responsive">
+                        <table class="table Crm_table_active3">
+                            <thead>
+                                <tr>
+                                    <th>@lang('academics.subject_code')</th>
+                                    <th>@lang('academics.subject_name')</th>
+                                    <th>@lang('academics.units')</th>
+                                    <th>@lang('common.type')</th>
+                                    <th>@lang('academics.schedule')</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($subjects as $subject)
+                                <tr>
+                                    <td>{{$subject->subject_code}}</td>
+                                    <td>{{$subject->subject_name}}</td>
+                                    <td>{{$subject->units}}</td>
+                                    <td>{{ucfirst($subject->subject_classification)}}</td>
+                                    <td>@include('backEnd.academics.partials.subjectScheduleCell', ['subject' => $subject])</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

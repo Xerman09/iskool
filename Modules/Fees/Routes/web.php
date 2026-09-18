@@ -36,6 +36,12 @@ Route::group(['middleware' => ['subdomain']], function () {
         Route::get('delete-single-fees-transcation/{id}', [FeesController::class, 'deleteSingleFeesTranscation'])->name('fees.delete-single-fees-transcation');
         Route::get('fees-invoice-datatable', [FeesController::class, 'feesInvoiceDatatable'])->name('fees.fees-invoice-datatable');
 
+        //Transaction History - every approved payment across both students and
+        //staff, unlike the Fees Report section above which is class/section
+        //driven and has no concept of a staff-owned invoice.
+        Route::get('transaction-history', [FeesController::class, 'transactionHistory'])->name('fees.transaction-history')->middleware('userRolePermission:fees.transaction-history');
+        Route::get('transaction-history-datatable', [FeesController::class, 'transactionHistoryDatatable'])->name('fees.transaction-history-datatable')->middleware('userRolePermission:fees.transaction-history');
+
         //Bank Payment
         Route::get('bank-payment', [FeesController::class, 'bankPayment'])->name('fees.bank-payment')->middleware('userRolePermission:fees.bank-payment');
         Route::post('search-bank-payment', [FeesController::class, 'searchBankPayment'])->name('fees.search-bank-payment')->middleware('userRolePermission:fees.search-bank-payment');

@@ -4,12 +4,12 @@ namespace Modules\Fees\Http\Controllers;
 
 use App\SmSection;
 use App\SmAddIncome;
-use App\SmBankAccount;
 use App\SmClassSection;
 use App\SmAssignSubject;
 use App\SmPaymentMethhod;
 use Illuminate\Http\Request;
 use App\Models\StudentRecord;
+use App\Traits\EnrollmentBalanceBreakdown;
 use Illuminate\Routing\Controller;
 use Modules\Fees\Entities\FmFeesType;
 use Illuminate\Support\Facades\Artisan;
@@ -19,6 +19,8 @@ use Modules\Fees\Entities\FmFeesTransaction;
 
 class AjaxController extends Controller
 {
+    use EnrollmentBalanceBreakdown;
+
     public function feesViewPayment(Request $request)
     {
         $feesinvoice = FmFeesInvoice::find($request->invoiceId);
@@ -26,9 +28,12 @@ class AjaxController extends Controller
                         ->where('paid_status', 'approve')
                         ->where('school_id', auth()->user()->school_id)
                         ->get();
-        $paymentMethods = SmPaymentMethhod::whereIn('method', ['Cash','Cheque','Bank'])->get();
-        $banks = SmBankAccount::where('school_id', auth()->user()->school_id)->get();
-        return view('fees::feesInvoice.viewPayment', compact('feesinvoice', 'feesTranscations','paymentMethods','banks'));
+        $paymentPlanAssign = \App\PaymentPlanAssign::where('fm_fees_invoice_id', $request->invoiceId)
+                        ->where('active_status', 1)
+                        ->with('planType', 'installments', 'invoice')
+                        ->first();
+        $planSchedule = $paymentPlanAssign ? $this->installmentSchedule($paymentPlanAssign) : null;
+        return view('fees::feesInvoice.viewPayment', compact('feesinvoice', 'feesTranscations','paymentPlanAssign','planSchedule'));
     }
 
     public function ajaxSelectStudent(Request $request)
@@ -130,6 +135,15 @@ class AjaxController extends Controller
     {
         try{
             $transcation = FmFeesTransaction::find($request->feesInvoiceId);
+
+            // Once an invoice has a partial or full payment on it, its transactions'
+            // payment methods are locked - matches the view (viewPayment.blade.php),
+            // which hides the change-method form in that case; guarded here too so
+            // it can't be bypassed by posting directly to this endpoint.
+            if (in_array(optional($transcation->feesInvoiceInfo)->payment_status, ['partial', 'paid'], true)) {
+                return response()->json('Error', 422);
+            }
+
             $transcation->payment_method= $request->change_method;
             $transcation->update();
 

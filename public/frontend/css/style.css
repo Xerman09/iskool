@@ -2813,7 +2813,18 @@ body.login .footer_area a {
 /* line 26, ../../xampp/htdocs/infixeduB/public/backEnd/scss/admin/_login.scss */
 
 .login-area .form-wrap {
-  background: rgba(28, 0, 78, 0.25);
+   background: rgba(255, 255, 255, 0.25);
+  
+  /* 2. The frosted glass blur effect */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* For Safari support */
+  
+  /* 3. Border radius and subtle border */
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  
+  /* 4. Optional: Soft shadow to lift the element */
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   padding: 50px 70px;
 }
 

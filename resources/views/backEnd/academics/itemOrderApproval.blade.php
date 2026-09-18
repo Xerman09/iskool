@@ -180,10 +180,28 @@
 @push('script')
 <script>
 $(document).ready(function () {
-    $('#itemOrderAudienceFilter').on('change', function () {
+    var $filter = $('#itemOrderAudienceFilter');
+
+    function showAudience(value) {
         $('#pendingStudentOrdersSection, #pendingStaffOrdersSection').prop('hidden', true);
-        $($(this).val()).prop('hidden', false);
+        $(value).prop('hidden', false);
+        $filter.val(value);
+    }
+
+    $filter.on('change', function () {
+        showAudience($(this).val());
     });
+
+    // A notification for a staff/admin order links here with #pendingStaffOrdersSection
+    // so reception lands straight on it - otherwise the page defaults to the Student
+    // tab and a staff order sits there looking like it "never showed up".
+    if (window.location.hash && $(window.location.hash).length && $filter.find('option[value="' + window.location.hash + '"]').length) {
+        showAudience(window.location.hash);
+    } else if ($('#pendingStudentOrdersSection tbody tr').length === 0 && $('#pendingStaffOrdersSection tbody tr').length > 0) {
+        // Nothing pending on the default Student tab but the Employee tab has orders -
+        // show that one instead of the empty default.
+        showAudience('#pendingStaffOrdersSection');
+    }
 });
 </script>
 @endpush

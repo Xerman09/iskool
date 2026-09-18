@@ -48,7 +48,7 @@
                 <div class="col-lg-12">
                     <!-- Start Student Meta Information -->
                     <div class="main-title">
-                        <h3 class="mb-15">@lang('student.welcome_to') <strong> {{ @$student_detail->full_name }}</strong> </h3>
+                        <h3 class="mb-15">@lang('student.welcome_to') <strong>{{ @Auth::user()->school->school_name }}</strong></h3>
                     </div>
                 </div>
             </div>

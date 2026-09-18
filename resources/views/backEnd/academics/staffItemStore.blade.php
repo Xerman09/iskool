@@ -15,6 +15,9 @@
             <div class="bc-pages">
                 <a href="{{route('dashboard')}}">@lang('common.dashboard')</a>
                 <a href="#">@lang('academics.item_store')</a>
+                @if (userPermission('staff-transaction-history'))
+                <a href="{{route('staff-transaction-history')}}">@lang('academics.my_transactions')</a>
+                @endif
             </div>
         </div>
     </div>
@@ -63,7 +66,13 @@
                                     </td>
                                     <td>
                                         @if($order->status === 'approved' && $order->invoice)
-                                        <a href="{{ route('fees.fees-invoice-view', ['id' => $order->invoice->id, 'state' => 'view']) }}" class="primary-btn small fix-gr-bg">@lang('academics.pay_now')</a>
+                                            @if($order->invoice->payment_status === 'paid')
+                                            <span class="badge badge-success">@lang('fees.paid')</span>
+                                            @elseif($order->invoice->paymentPlanAssign)
+                                            <span class="badge badge-info">@lang('academics.payment_plan')</span>
+                                            @else
+                                            <a href="{{ route('fees.fees-invoice-view', ['id' => $order->invoice->id, 'state' => 'view']) }}" class="primary-btn small fix-gr-bg">@lang('academics.pay_now')</a>
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>

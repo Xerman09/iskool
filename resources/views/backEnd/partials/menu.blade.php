@@ -166,7 +166,7 @@
                                             <div class="notify_thumb">
                                                 <i class="fa fa-bell"></i>
                                             </div>
-                                            <a href="#" class="unread_notification flex-grow-1" title="Mark As Read"
+                                            <a href="{{ route('notification-show', $notification->id) }}" class="unread_notification flex-grow-1" title="@lang('common.view')"
                                                 data-notification_id="{{ $notification->id }}">
                                                 <div class="notify_content">
                                                     <p class="notification_title">{!! strip_tags(\Illuminate\Support\Str::limit(@$notification->message, 70, $end = '...')) !!}</p>

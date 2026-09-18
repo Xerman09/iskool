@@ -41,7 +41,7 @@ class StudentItemPurchaseController extends Controller
             // notification bell still sees the outcome next time they visit this page.
             $recentResolvedOrders = SmItemOrder::where('student_id', optional($student)->id)
                 ->whereIn('status', ['approved', 'rejected'])
-                ->with('item', 'invoice')
+                ->with('item', 'invoice.paymentPlanAssign')
                 ->latest('approved_at')
                 ->take(10)
                 ->get();
@@ -121,7 +121,7 @@ class StudentItemPurchaseController extends Controller
             $this->notifyReception($schoolId, trans_choice('academics.item_order_submitted_notification', count($request->item_id), [
                 'student' => $student->full_name,
                 'count' => count($request->item_id),
-            ]), route('item-order-approval'));
+            ]), route('item-order-approval') . '#pendingStudentOrdersSection');
 
             Toastr::success('Order submitted. Reception will review it before it is added to your invoice.', 'Success');
             return redirect()->route('student-item-store');

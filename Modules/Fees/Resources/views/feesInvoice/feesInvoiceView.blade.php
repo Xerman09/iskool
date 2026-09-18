@@ -239,29 +239,20 @@
                     @endif
                     @php
                         // Beyond a handful of lines (item-heavy enrollment invoices
-                        // especially) the itemized table gets unwieldy, so collapse
-                        // it behind a summary row instead of always listing every line.
+                        // especially) the itemized table gets unwieldy - the first 3
+                        // lines still print normally, but anything past that collapses
+                        // behind a summary row (with its own subtotal) instead of
+                        // always listing every single line.
                         $sectionLineCount = $sectionLines->count();
                         $showItemized = $sectionLineCount <= 3;
                         $sectionSubTotal = $sectionLines->sum(fn ($d) => ($d->amount + $d->fine) - ($d->paid_amount + $d->weaver));
                         $sectionKey = 'invoiceItems' . $loop->index;
+                        $rowInSection = 0;
                     @endphp
-                    @unless($showItemized)
-                    <tr class="item-summary-row">
-                        <td colspan="6">
-                            <button type="button" class="primary-btn small tr-bg toggle-invoice-items"
-                                    data-target-group="{{ $sectionKey }}"
-                                    data-show-text="@lang('fees::feesModule.show_all_items') ({{ $sectionLineCount }})"
-                                    data-hide-text="@lang('fees::feesModule.hide_items')">
-                                @lang('fees::feesModule.show_all_items') ({{ $sectionLineCount }})
-                            </button>
-                        </td>
-                        <td class="text-right pr-0"><strong>{{currency_format($sectionSubTotal)}}</strong></td>
-                    </tr>
-                    @endunless
                     @foreach ($sectionLines as $invoiceDetail)
                         @php
                             $rowNo++;
+                            $rowInSection++;
                             $amount += $invoiceDetail->amount;
                             $weaver += $invoiceDetail->weaver;
                             $fine += $invoiceDetail->fine;
@@ -273,8 +264,23 @@
 
                             $total = ($invoiceDetail->amount+ $invoiceDetail->fine) - ($invoiceDetail->paid_amount + $invoiceDetail->weaver) ;
                             $balance += $total;
+
+                            $isHiddenRow = !$showItemized && $rowInSection > 3;
                         @endphp
-                        <tr @if(!$showItemized) class="invoice-item-row" data-item-group="{{ $sectionKey }}" style="display:none;" @endif>
+                        @if($isHiddenRow && $rowInSection === 4)
+                        <tr class="item-summary-row">
+                            <td colspan="6">
+                                <button type="button" class="primary-btn small tr-bg toggle-invoice-items"
+                                        data-target-group="{{ $sectionKey }}"
+                                        data-show-text="@lang('fees::feesModule.show_all_items') ({{ $sectionLineCount - 3 }})"
+                                        data-hide-text="@lang('fees::feesModule.hide_items')">
+                                    @lang('fees::feesModule.show_all_items') ({{ $sectionLineCount - 3 }})
+                                </button>
+                            </td>
+                            <td class="text-right pr-0"><strong>{{currency_format($sectionSubTotal)}}</strong></td>
+                        </tr>
+                        @endif
+                        <tr @if($isHiddenRow) class="invoice-item-row" data-item-group="{{ $sectionKey }}" style="display:none;" @endif>
                             <td>{{$rowNo}}</td>
                             <td>
                                 {{ $invoiceDetail->sm_item_id ? optional($invoiceDetail->item)->item_name : @$invoiceDetail->feesType->name }}
@@ -340,47 +346,19 @@
             </table>
 
             @if(!empty($activePaymentPlan) && $planSchedule)
+            @php $nextInstallment = collect($planSchedule)->firstWhere('is_next', true); @endphp
+            @if($nextInstallment)
             <div class="col-lg-12 mb-30">
-                <h4 class="mb-15">@lang('academics.payment_schedule') &mdash; {{ optional($activePaymentPlan->planType)->name }}</h4>
-                <table class="table border_table mb_30 description_table">
-                    <thead>
-                        <tr>
-                            <th>@lang('academics.installment_no')</th>
-                            <th>@lang('academics.due_date')</th>
-                            <th class="text-right">@lang('accounts.amount')</th>
-                            <th>@lang('student.status')</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($planSchedule as $installment)
-                        <tr @if($installment['is_next']) style="font-weight:bold;" @endif>
-                            <td>
-                                {{$installment['installment_no']}} @lang('academics.of') {{$activePaymentPlan->number_of_installments}}
-                                @if($installment['is_next'])
-                                <span class="badge badge-warning">@lang('academics.next_payment')</span>
-                                @endif
-                            </td>
-                            <td>{{ \Carbon\Carbon::parse($installment['due_date'])->format('M d, Y') }}</td>
-                            <td class="text-right">
-                                {{currency_format($installment['amount']) ?: number_format($installment['amount'], 2)}}
-                                @if($installment['status'] == 'partial')
-                                    <br><small class="text-muted">{{ __('academics.installment_remaining_note', ['amount' => currency_format($installment['remaining']) ?: number_format($installment['remaining'], 2)]) }}</small>
-                                @endif
-                            </td>
-                            <td>
-                                @if($installment['status'] == 'paid')
-                                    <span class="badge badge-success">@lang('academics.paid_status')</span>
-                                @elseif($installment['status'] == 'partial')
-                                    <span class="badge badge-warning">@lang('academics.partial_status')</span>
-                                @else
-                                    <span class="badge badge-secondary">@lang('academics.unpaid_status')</span>
-                                @endif
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                <p class="text-muted">
+                    <span class="badge badge-warning">@lang('academics.next_payment')</span>
+                    {{ __('academics.next_payment_due_hint', [
+                        'amount' => currency_format($nextInstallment['amount']) ?: number_format($nextInstallment['amount'], 2),
+                        'date' => \Carbon\Carbon::parse($nextInstallment['due_date'])->format('M d, Y'),
+                    ]) }}
+                    &mdash; @lang('academics.full_schedule_in_view_payment')
+                </p>
             </div>
+            @endif
             @endif
 
             @if($banks)

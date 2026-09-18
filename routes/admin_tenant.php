@@ -310,6 +310,12 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::post('staff-item-store/add-to-invoice', ['as' => 'staff-item-store-add', 'uses' => 'Staff\StaffItemPurchaseController@addToInvoice'])->middleware('userRolePermission:staff-item-store');
         Route::post('staff-item-store/cancel/{id}', ['as' => 'staff-item-store-cancel', 'uses' => 'Staff\StaffItemPurchaseController@cancel'])->middleware('userRolePermission:staff-item-store');
 
+        // A staff member's own payment history for their item-store purchases -
+        // parallel to student-transaction-ledger (routes/student.php), since
+        // staff previously had no way to see a purchase again once it dropped
+        // off the "recent orders" list on the Item Store page itself.
+        Route::get('staff-transaction-history', ['as' => 'staff-transaction-history', 'uses' => 'Staff\StaffTransactionHistoryController@index'])->middleware('userRolePermission:staff-transaction-history');
+
         Route::get('misc-fee-assign', ['as' => 'misc-fee-assign', 'uses' => 'Admin\Academics\MiscFeeController@index'])->middleware('userRolePermission:misc-fee-assign');
 
         Route::get('down-payment', ['as' => 'down-payment', 'uses' => 'Admin\Academics\DownPaymentController@index'])->middleware('userRolePermission:down-payment');

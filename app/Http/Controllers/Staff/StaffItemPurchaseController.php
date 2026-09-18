@@ -43,7 +43,7 @@ class StaffItemPurchaseController extends Controller
 
             $recentResolvedOrders = SmItemOrder::where('staff_id', optional($staff)->id)
                 ->whereIn('status', ['approved', 'rejected'])
-                ->with('item', 'invoice')
+                ->with('item', 'invoice.paymentPlanAssign')
                 ->latest('approved_at')
                 ->take(10)
                 ->get();
@@ -104,7 +104,7 @@ class StaffItemPurchaseController extends Controller
             $this->notifyReception($schoolId, trans_choice('academics.item_order_submitted_notification', count($request->item_id), [
                 'student' => $staff->full_name,
                 'count' => count($request->item_id),
-            ]), route('item-order-approval'));
+            ]), route('item-order-approval') . '#pendingStaffOrdersSection');
 
             Toastr::success('Order submitted. Reception will review it before it is added to your invoice.', 'Success');
             return redirect()->route('staff-item-store');

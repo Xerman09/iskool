@@ -5,6 +5,7 @@ namespace Modules\Fees\Http\Controllers;
 use DataTables;
 use App\SmClass;
 use App\SmSchool;
+use App\SmStaff;
 use App\SmStudent;
 use App\SmItemOrder;
 use App\Models\User;
@@ -944,6 +945,11 @@ class FeesController extends Controller
                 ->get();
 
             $invoiceInfo = FmFeesInvoice::find($id);
+            if (!$invoiceInfo) {
+                Toastr::error('Invoice not found.', 'Failed');
+                return redirect()->back();
+            }
+
             $invoiceDetails = FmFeesInvoiceChield::where('fees_invoice_id', $invoiceInfo->id)
                 ->where('school_id', Auth::user()->school_id)
                 ->where('academic_id', getAcademicId())
@@ -988,11 +994,22 @@ class FeesController extends Controller
             $destination = 'public/uploads/student/document/';
             $file = fileUpload($request->file('file'), $destination);
 
-            $record = StudentRecord::find($request->student_id);
+            // A staff item-store invoice has no StudentRecord to look up - the
+            // form sends staff_id instead of student_id for those (see
+            // _addFeesPayment.blade.php). Wallet top-up, the parent notification,
+            // and the enrollment check below are all student-only concepts, so
+            // $student stays null on that path and each of those is skipped.
+            $staff = null;
+            $student = null;
 
-            $student = SmStudent::with('parents')->find($record->student_id);
+            if ($request->filled('staff_id')) {
+                $staff = SmStaff::where('school_id', Auth::user()->school_id)->find($request->staff_id);
+            } else {
+                $record = StudentRecord::find($request->student_id);
+                $student = SmStudent::with('parents')->find($record->student_id);
+            }
 
-            if ($request->add_wallet > 0) {
+            if ($student && $request->add_wallet > 0) {
                 $user = User::find($student->user_id);
                 $walletBalance = $user->wallet_balance;
                 $user->wallet_balance = $walletBalance + $request->add_wallet;
@@ -1031,7 +1048,8 @@ class FeesController extends Controller
             $storeTransaction->payment_note = $request->payment_note;
             $storeTransaction->payment_method = $request->payment_method;
             $storeTransaction->bank_id = $request->bank;
-            $storeTransaction->student_id = $student->id;
+            $storeTransaction->student_id = optional($student)->id;
+            $storeTransaction->staff_id = optional($staff)->id;
             $storeTransaction->record_id = $request->record_id;
             $storeTransaction->user_id = Auth::user()->id;
             $storeTransaction->file = $file;
@@ -1052,7 +1070,8 @@ class FeesController extends Controller
                 $storeWeaver = new FmFeesWeaver();
                 $storeWeaver->fees_invoice_id = $request->invoice_id;
                 $storeWeaver->fees_type = $type;
-                $storeWeaver->student_id = $student->id;
+                $storeWeaver->student_id = optional($student)->id;
+                $storeWeaver->staff_id = optional($staff)->id;
                 $storeWeaver->weaver = $request->weaver[$key];
                 $storeWeaver->note = $request->note[$key];
                 $storeWeaver->school_id = Auth::user()->school_id;
@@ -1118,8 +1137,12 @@ class FeesController extends Controller
                 }
             }
             //Notification
-            sendNotification("Add Fees Payment", null, $student->user_id, 2);
-            sendNotification("Add Fees Payment", null, $student->parents->user_id, 3);
+            if ($student) {
+                sendNotification("Add Fees Payment", null, $student->user_id, 2);
+                sendNotification("Add Fees Payment", null, optional($student->parents)->user_id, 3);
+            } elseif ($staff) {
+                sendNotification("Add Fees Payment", null, optional($staff->staff_user)->id, optional($staff->staff_user)->role_id);
+            }
 
             $paidInvoice = FmFeesInvoice::find($request->invoice_id);
             if ($paidInvoice) {
@@ -1134,9 +1157,12 @@ class FeesController extends Controller
 
                 // Checked regardless of full vs. partial - the down payment threshold
                 // inside markStudentEnrolledIfPending() can be met well before the
-                // invoice balance reaches zero.
-                $extendedController = new FeesExtendedController();
-                $extendedController->markStudentEnrolledIfPending($paidInvoice->student_id);
+                // invoice balance reaches zero. Staff invoices have no student behind
+                // them at all, so there's no enrollment status to reconsider.
+                if ($paidInvoice->student_id) {
+                    $extendedController = new FeesExtendedController();
+                    $extendedController->markStudentEnrolledIfPending($paidInvoice->student_id);
+                }
             }
 
             Toastr::success('Save Successful', 'Success');
@@ -1517,7 +1543,97 @@ class FeesController extends Controller
                         return (string)$view;
                     })
                     ->rawColumns(['student_name', 'status', 'action', 'date'])
+                    // Quick Search's default (yajra's global search) matches the
+                    // term as a substring against every column, including hidden
+                    // ones - "a" matches almost every row. Reception only ever
+                    // means "find this person's invoice", so replace it with a
+                    // starts-with match against just the name.
+                    ->filter(function ($query) use ($request, $audience) {
+                        $term = $request->search['value'] ?? null;
+                        if (!$term) {
+                            return;
+                        }
+
+                        $relation = $audience === 'staff' ? 'staffInfo' : 'studentInfo';
+                        $query->whereHas($relation, function ($q) use ($term) {
+                            $q->where('full_name', 'like', $term . '%');
+                        });
+                    }, true)
                     ->make(true);
         }
+    }
+
+    /**
+     * Every approved payment across both students and staff - previously there
+     * was no cross-audience view of this at all: the Fees Report section is
+     * entirely class/section driven (no concept of a staff-owned invoice), and
+     * the invoice list only shows current balances, not the payment history
+     * behind them. Reuses the same audience split (student_id vs staff_id) as
+     * the invoice list and Item Order Approval queue.
+     */
+    public function transactionHistory()
+    {
+        return view('fees::transactionHistory');
+    }
+
+    public function transactionHistoryDatatable(Request $request)
+    {
+        $audience = $request->audience === 'staff' ? 'staff' : 'student';
+
+        $transactions = FmFeesTransaction::where('paid_status', 'approve')
+            ->where('school_id', Auth::user()->school_id)
+            ->where('academic_id', getAcademicId())
+            ->when($audience === 'staff', function ($query) {
+                $query->whereNotNull('staff_id')->with('feeStaffInfo');
+            }, function ($query) {
+                $query->whereNotNull('student_id')->with('feeStudentInfo');
+            })
+            ->with('feesInvoiceInfo')
+            ->orderBy('created_at', 'DESC');
+
+        return Datatables::of($transactions)
+            ->addIndexColumn()
+            ->addColumn('owner_name', function ($row) use ($audience) {
+                return $audience === 'staff' ? @$row->feeStaffInfo->full_name : @$row->feeStudentInfo->full_name;
+            })
+            ->addColumn('invoice_number', function ($row) {
+                return @$row->feesInvoiceInfo->invoice_id ?: '-';
+            })
+            ->addColumn('invoice_type', function ($row) {
+                return @$row->feesInvoiceInfo->type === 'store'
+                    ? '<span class="badge badge-info">' . __('academics.item_purchase') . '</span>'
+                    : '<span class="badge badge-secondary">' . __('fees::feesModule.fees') . '</span>';
+            })
+            ->addColumn('paid_amount', function ($row) {
+                return $row->paid_amount;
+            })
+            ->addColumn('weaver', function ($row) {
+                return $row->weaver;
+            })
+            ->addColumn('fine', function ($row) {
+                return $row->fine;
+            })
+            ->addColumn('created_date', function ($row) {
+                return dateConvert($row->created_at);
+            })
+            ->addColumn('action', function ($row) {
+                if (!$row->fees_invoice_id) {
+                    return '-';
+                }
+                return '<button type="button" class="primary-btn icon-only fix-gr-bg" onclick="viewPaymentDetailModal(' . $row->fees_invoice_id . ')" title="' . __('common.view') . '"><span class="ti-eye"></span></button>';
+            })
+            ->rawColumns(['invoice_type', 'action'])
+            ->filter(function ($query) use ($request, $audience) {
+                $term = $request->search['value'] ?? null;
+                if (!$term) {
+                    return;
+                }
+
+                $relation = $audience === 'staff' ? 'feeStaffInfo' : 'feeStudentInfo';
+                $query->whereHas($relation, function ($q) use ($term) {
+                    $q->where('full_name', 'like', $term . '%');
+                });
+            }, true)
+            ->make(true);
     }
 }

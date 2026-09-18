@@ -87,4 +87,25 @@ class FmFeesInvoice extends Model
     public function paymentPlanAssign(){
         return $this->hasOne('App\PaymentPlanAssign', 'fm_fees_invoice_id', 'id');
     }
+
+    /**
+     * Whoever this invoice is billed to - a student for tuition/enrollment
+     * invoices, or a staff member for a staff item-store purchase. Invoices
+     * always have exactly one of student_id/staff_id set (see
+     * EnrollmentInvoicing::newOrderInvoice()/newStaffOrderInvoice()), so callers
+     * that just need a name to display (e.g. the payment history modal) don't
+     * have to branch on which one themselves.
+     */
+    public function getOwnerNameAttribute()
+    {
+        if ($this->student_id) {
+            return optional($this->studentInfo)->full_name;
+        }
+
+        if ($this->staff_id) {
+            return optional($this->staffInfo)->full_name;
+        }
+
+        return null;
+    }
 }

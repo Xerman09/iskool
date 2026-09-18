@@ -49,7 +49,7 @@
             <div class="white-box">
                 <div class="col-lg-12">
                     <div class="main-title">
-                        <h3 class="mb-15">@lang('student.welcome_to') <strong> {{ @$student_detail->full_name }}</strong> </h3>
+                        <h3 class="mb-15">@lang('student.welcome_to') <strong>{{ @Auth::user()->school->school_name }}</strong></h3>
                     </div>
                 </div>
                 <div class="row row-gap-30">

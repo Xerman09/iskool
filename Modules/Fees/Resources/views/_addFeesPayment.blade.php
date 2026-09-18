@@ -1,3 +1,10 @@
+@php
+    // An item-store invoice can be billed to a staff member instead of a
+    // student (see EnrollmentInvoicing::newStaffOrderInvoice()) - no
+    // record_id/class/section/wallet to show or send for those, so this page
+    // branches on which owner the invoice actually has.
+    $isStaffInvoice = !$invoiceInfo->student_id && $invoiceInfo->staff_id;
+@endphp
 @push('css')
     <link rel="stylesheet" href="{{url('Modules\Fees\Resources\assets\css\feesStyle.css')}}"/>
     <style>
@@ -31,7 +38,10 @@
     <div class="container-fluid p-0">
         @if (isset($role) && $role =='admin')
             {{ Form::open(['class' => 'form-horizontal', 'method' => 'POST', 'route' => 'fees.fees-payment-store', 'enctype' => 'multipart/form-data']) }}
-            <input type="hidden" name="record_id" value="{{$invoiceInfo->recordDetail->id}}">
+            <input type="hidden" name="record_id" value="{{ optional($invoiceInfo->recordDetail)->id }}">
+            @if($isStaffInvoice)
+                <input type="hidden" name="staff_id" value="{{ $invoiceInfo->staff_id }}">
+            @endif
         @else
             {{ Form::open(['class' => 'form-horizontal', 'method' => 'POST', 'route' => 'fees.student-fees-payment-store', 'id'=>'addFeesPayment','enctype' => 'multipart/form-data']) }}
             @if (isset(Auth::user()->wallet_balance))
@@ -42,44 +52,62 @@
         <div class="row">
             <div class="col-lg-3">
                 <div class="main-title">
-                    <h3 class="mb-30">@lang('student.student_details')</h3>
+                    <h3 class="mb-30">@lang($isStaffInvoice ? 'academics.employee' : 'student.student_details')</h3>
                 </div>
                 <div class="student-meta-box">
                     <div class="student-meta-top"></div>
-                    <img class="student-meta-img img-100"
-                         src="{{($invoiceInfo->studentInfo->student_photo)? $invoiceInfo->studentInfo->student_photo : asset('public/uploads/staff/demo/staff.jpg')}}"
-                         alt="">
-                    <div class="white-box radius-t-y-0">
-                        <div class="single-meta mt-50">
-                            <div class="d-flex justify-content-between">
-                                <div class="name">@lang('student.student_name')</div>
-                                <div class="value">{{$invoiceInfo->studentInfo->full_name}}</div>
+                    @if($isStaffInvoice)
+                        <img class="student-meta-img img-100"
+                             src="{{ optional($invoiceInfo->staffInfo)->staff_photo ?: asset('public/uploads/staff/demo/staff.jpg') }}"
+                             alt="">
+                        <div class="white-box radius-t-y-0">
+                            <div class="single-meta mt-50">
+                                <div class="d-flex justify-content-between">
+                                    <div class="name">@lang('student.student_name')</div>
+                                    <div class="value">{{ optional($invoiceInfo->staffInfo)->full_name }}</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="single-meta">
-                            <div class="d-flex justify-content-between">
-                                <div class="name">@lang('student.admission_number')</div>
-                                <div class="value">{{$invoiceInfo->studentInfo->admission_no}}</div>
+                            <div class="single-meta">
+                                <div class="d-flex justify-content-between">
+                                    <div class="name">@lang('academics.staff_no')</div>
+                                    <div class="value">{{ optional($invoiceInfo->staffInfo)->staff_no }}</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="single-meta">
-                            <div class="d-flex justify-content-between">
-                                <div class="name">@lang('student.roll_number')</div>
-                                <div class="value">{{$invoiceInfo->recordDetail->roll_no}}</div>
+                    @else
+                        <img class="student-meta-img img-100"
+                             src="{{($invoiceInfo->studentInfo->student_photo)? $invoiceInfo->studentInfo->student_photo : asset('public/uploads/staff/demo/staff.jpg')}}"
+                             alt="">
+                        <div class="white-box radius-t-y-0">
+                            <div class="single-meta mt-50">
+                                <div class="d-flex justify-content-between">
+                                    <div class="name">@lang('student.student_name')</div>
+                                    <div class="value">{{$invoiceInfo->studentInfo->full_name}}</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="single-meta">
-                            <div class="d-flex justify-content-between">
-                                <div class="name">@lang('common.class')</div>
-                                <div class="value">{{$invoiceInfo->recordDetail->class->class_name}}</div>
+                            <div class="single-meta">
+                                <div class="d-flex justify-content-between">
+                                    <div class="name">@lang('student.admission_number')</div>
+                                    <div class="value">{{$invoiceInfo->studentInfo->admission_no}}</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="single-meta">
-                            <div class="d-flex justify-content-between">
-                                <div class="name"> @lang('common.section')</div>
-                                <div class="value">{{$invoiceInfo->recordDetail->section->section_name}}</div>
+                            <div class="single-meta">
+                                <div class="d-flex justify-content-between">
+                                    <div class="name">@lang('student.roll_number')</div>
+                                    <div class="value">{{$invoiceInfo->recordDetail->roll_no}}</div>
+                                </div>
                             </div>
-                        </div>
+                            <div class="single-meta">
+                                <div class="d-flex justify-content-between">
+                                    <div class="name">@lang('common.class')</div>
+                                    <div class="value">{{$invoiceInfo->recordDetail->class->class_name}}</div>
+                                </div>
+                            </div>
+                            <div class="single-meta">
+                                <div class="d-flex justify-content-between">
+                                    <div class="name"> @lang('common.section')</div>
+                                    <div class="value">{{$invoiceInfo->recordDetail->section->section_name}}</div>
+                                </div>
+                            </div>
                         @if (isset($role) && $role =='admin')
                             <div class="single-meta">
                                 <div class="d-flex justify-content-between">
@@ -114,6 +142,7 @@
                                 </div>
                             </div>
                         </div>
+                    @endif
                         <div class="row mt-25">
                             <div class="col-lg-12">
                                 <select class="primary_select  form-control{{ $errors->has('payment_method') ? ' is-invalid' : '' }}"
@@ -285,7 +314,7 @@
                             </div>
                         </div>
 
-                        @if (moduleStatusCheck('MercadoPago') == true)
+                        @if (moduleStatusCheck('MercadoPago') == true && !$isStaffInvoice)
                             @include('mercadopago::form.userForm',['student_id' => $invoiceInfo->recordDetail->id, 'invoice_id' => $invoiceInfo->id,'fees'=>true])
                         @endif
                         <div class="row mt-40">
@@ -351,7 +380,7 @@
                                     @if (isset($invoiceInfo))
                                         <input type="hidden" name="invoice_id" value="{{$invoiceInfo->id}}">
                                         <input type="hidden" class="weaverType" value="amount">
-                                        <input type="hidden" name="student_id" value="{{$invoiceInfo->recordDetail->id}}">
+                                        <input type="hidden" name="student_id" value="{{ optional($invoiceInfo->recordDetail)->id }}">
                                         @foreach ($invoiceDetails as $key=>$invoiceDetail)
                                             <tr>
                                                 <td></td>

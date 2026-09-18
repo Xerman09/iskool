@@ -1,23 +1,45 @@
 @push('css')
     <link rel="stylesheet" href="{{ url('Modules\Fees\Resources\assets\css\feesStyle.css') }}" />
     <style>
-        /* The theme positions .dataTables_filter > label with position:absolute;
-           top:-60px, anchored to the nearest positioned ancestor
-           (.dataTables_wrapper, position:relative, in its original spot). Once
-           moved into this toolbar row it has no positioned ancestor of its own,
-           so it'd fall back to the page itself and float off near the top -
-           strip that positioning here so it just sits in flow as a flex item. */
-        #feesInvoiceToolbarRow .dataTables_filter {
-            margin-bottom: 0;
-            float: none;
+        /* DataTables' own generated .dataTables_filter/label is styled by the
+           theme with position:absolute + a decorative ::before underline,
+           calibrated only for its original default spot above the table.
+           Fighting that positioning to relocate it next to the Add button kept
+           breaking (offset overshoot, then a stray border from the underline
+           losing its anchor). Simpler and sturdier: don't move DataTables' box at
+           all - turn it off (dom string drops "f") and use a plain input of our
+           own here instead, wired to the table's search() API directly. */
+        #feesInvoiceToolbarRow {
+            gap: 12px;
         }
-        #feesInvoiceToolbarRow .dataTables_filter > label {
-            position: static !important;
-            top: 0;
-            left: auto;
-            transform: none;
-            margin-bottom: 0;
-            min-width: 0;
+        #feesInvoiceQuickSearchWrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 220px;
+            max-width: 280px;
+            margin-right:400px;
+            border-bottom: 1px solid rgba(130, 139, 178, 0.40);
+            padding-bottom: 6px;
+        }
+        #feesInvoiceQuickSearchWrap .ti-search {
+            color: var(--base_color);
+            font-weight: 600;
+            font-size: 13px;
+        }
+        #feesInvoiceQuickSearch {
+            border: none;
+            outline: none;
+            background: transparent;
+            width: 100%;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: .03em;
+            color: var(--base_color);
+        }
+        #feesInvoiceQuickSearch::placeholder {
+            color: var(--base_color);
+            text-transform: uppercase;
         }
     </style>
 @endpush
@@ -53,6 +75,10 @@
                                 <span class="ti-plus pr-2"></span>
                                 @lang('common.add')
                             </a>
+                            <div id="feesInvoiceQuickSearchWrap">
+                                <span class="ti-search"></span>
+                                <input type="text" id="feesInvoiceQuickSearch" placeholder="@lang('common.quick_search')">
+                            </div>
                         </div>
                     </div>
                 @endif
@@ -342,7 +368,7 @@
                     previous: "<i class='ti-arrow-left'></i>",
                 },
             },
-            dom: "Bfrtip",
+            dom: "Brtip",
             buttons: [{
                     extend: "copyHtml5",
                     text: '<i class="fa fa-files-o"></i>',
@@ -414,17 +440,14 @@
                 visible: false,
             }, ],
             responsive: true,
-            // Quick Search normally renders on its own row above the table -
-            // move it up next to the Add button instead, same row, right-aligned,
-            // so it doesn't eat an extra row of vertical space. No-op if that
-            // button (and its row) isn't there (no fees.fees-invoice-store
-            // permission).
-            initComplete: function() {
-                var $toolbarRow = $('#feesInvoiceToolbarRow');
-                if ($toolbarRow.length) {
-                    $toolbarRow.append($('.data-table').closest('.dataTables_wrapper').find('.dataTables_filter'));
-                }
-            },
+        });
+
+        // DataTables' own search box is turned off (dom: "Brtip", no "f") in
+        // favor of #feesInvoiceQuickSearch above, next to the Add button -
+        // wired straight to the same search() API a built-in box would use, so
+        // it drives the exact same server-side request/redraw.
+        $('#feesInvoiceQuickSearch').on('keyup', function() {
+            $('.data-table').DataTable().search(this.value).draw();
         });
 
         // The pipeline plugin caches pages client-side and only refetches when
