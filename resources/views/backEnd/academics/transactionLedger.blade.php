@@ -31,24 +31,33 @@
                 <div class="white-box">
                     <form method="GET" action="{{ route($ledgerRoute, $ledgerRouteParams) }}" class="d-flex align-items-center flex-wrap mb-20" style="gap:10px;">
                         <div class="btn-group" role="group">
-                            <a href="{{ route($ledgerRoute, array_merge($ledgerRouteParams, ['scope' => 'semester', 'semester_id' => $selectedSemesterId])) }}"
-                               class="primary-btn small {{ $scope === 'semester' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.per_semester')</a>
                             <a href="{{ route($ledgerRoute, array_merge($ledgerRouteParams, ['scope' => 'whole_stay'])) }}"
-                               class="primary-btn small {{ $scope === 'whole_stay' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.whole_stay')</a>
+                               class="primary-btn small {{ $scope === 'whole_stay' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.overall_stay')</a>
+                            <a href="{{ route($ledgerRoute, array_merge($ledgerRouteParams, ['scope' => 'year', 'year' => $selectedYear])) }}"
+                               class="primary-btn small {{ $scope === 'year' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.per_year')</a>
+                            <a href="{{ route($ledgerRoute, array_merge($ledgerRouteParams, ['scope' => 'semester', 'session_id' => $selectedSessionId])) }}"
+                               class="primary-btn small {{ $scope === 'semester' ? 'fix-gr-bg' : 'tr-bg' }}">@lang('academics.per_semester')</a>
                         </div>
 
-                        @if($scope === 'semester' && $semesters->count() > 0)
+                        @if($scope === 'year' && $years->count() > 0)
+                        <input type="hidden" name="scope" value="year">
+                        <select name="year" class="primary_select form-control" style="max-width:220px;" onchange="this.form.submit()">
+                            @foreach($years as $year)
+                            <option value="{{ $year }}" @selected($selectedYear == $year)>{{ $year }}</option>
+                            @endforeach
+                        </select>
+                        @elseif($scope === 'semester' && $sessions->count() > 0)
                         <input type="hidden" name="scope" value="semester">
-                        <select name="semester_id" class="primary_select form-control" style="max-width:220px;" onchange="this.form.submit()">
-                            @foreach($semesters as $semester)
-                            <option value="{{ $semester->id }}" @selected($selectedSemesterId == $semester->id)>{{ $semester->semester_name }}</option>
+                        <select name="session_id" class="primary_select form-control" style="max-width:260px;" onchange="this.form.submit()">
+                            @foreach($sessions as $session)
+                            <option value="{{ $session->id }}" @selected($selectedSessionId == $session->id)>{{ $session->year }} [{{ $session->title }}]</option>
                             @endforeach
                         </select>
                         @endif
                     </form>
 
-                    @if($scope === 'semester' && $semesters->count() > 0 && $invoices->isEmpty())
-                    <p class="text-muted">@lang('academics.no_transactions_for_semester')</p>
+                    @if($scope !== 'whole_stay' && $invoices->isEmpty())
+                    <p class="text-muted">@lang('academics.no_transactions_for_period')</p>
                     @endif
 
                     @include('backEnd.academics.partials.transactionLedgerContent')

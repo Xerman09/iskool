@@ -277,26 +277,9 @@ class AssignProgramController extends Controller
         try {
             $student = SmStudent::where('school_id', auth()->user()->school_id)->findOrFail($studentId);
 
-            // Mirrors StudentTransactionLedgerController::index() so reception/admin get
-            // the same Per Semester / Whole Stay toggle on the shared transactionLedger
-            // view instead of being stuck on the student's current-semester-only slice.
-            $scope = $request->query('scope') === 'whole_stay' ? 'whole_stay' : 'semester';
-            $semesterId = $scope === 'semester'
-                ? ($request->query('semester_id') ?: $student->semester_id)
-                : null;
-
-            $ledger = $this->ledgerFor($student, $scope, $semesterId);
-
-            $semesters = Semester::where('school_id', $student->school_id)
-                ->where('active_status', 1)
-                ->orderBy('sort_order')
-                ->get();
-
-            return view('backEnd.academics.transactionLedger', array_merge($ledger, [
-                'student' => $student,
-                'semesters' => $semesters,
-                'scope' => $scope,
-                'selectedSemesterId' => $semesterId,
+            // Same Overall / Per Year / Per Semester filters as the student's own
+            // StudentTransactionLedgerController::index(), on the shared view.
+            return view('backEnd.academics.transactionLedger', array_merge($this->ledgerPageData($student, $request), [
                 'ledgerRoute' => 'assign-program-ledger',
                 'ledgerRouteParams' => ['student' => $student->id],
             ]));

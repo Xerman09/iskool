@@ -18,8 +18,10 @@
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                {{-- Title lives inside itemStoreContent's own heading, shared with the
-                     standalone Item Store page - keep this header to just the close button. --}}
+                <h4 class="modal-title d-flex align-items-center">
+                    <span class="ti-bag pr-2"></span>
+                    @lang('academics.item_store')
+                </h4>
                 <button type="button" class="close ml-auto" data-dismiss="modal" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">

@@ -97,12 +97,90 @@
         color: #1f2233;
     }
 
-    #addToOrderModal .modal-dialog,
-    #itemCartModal .modal-dialog {
-        max-width: 480px;
+    /* Child "sheets" (add-to-order, cart, pending orders) - compact white cards
+       floating over the store. The theme's modal rules otherwise stretch them to
+       the outer store modal's size, hence the !importants on sizing/header. */
+    .item-store-sheet .modal-dialog {
+        max-width: 420px !important;
+        width: calc(100% - 32px) !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
-    #myPendingOrdersModal .modal-dialog {
-        max-width: 850px;
+    #myPendingOrdersModal.item-store-sheet .modal-dialog {
+        max-width: 760px !important;
+    }
+    .item-store-sheet .modal-content {
+        border: 0;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, .35);
+    }
+    .item-store-sheet .modal-header {
+        background: #fff !important;
+        border-bottom: 1px solid #eef0f4 !important;
+        padding: 18px 22px !important;
+        align-items: center;
+    }
+    .item-store-sheet .modal-title {
+        color: #1f2233 !important;
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0;
+    }
+    .item-store-sheet .sheet-eyebrow {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #9098a8;
+        margin-bottom: 2px;
+    }
+    .item-store-sheet .modal-header .close {
+        width: 32px;
+        height: 32px;
+        margin: 0 0 0 auto !important;
+        padding: 0 !important;
+        border-radius: 50%;
+        background: #f3f4f8 !important;
+        color: #5b6275 !important;
+        font-size: 20px;
+        line-height: 32px;
+        opacity: 1;
+        text-shadow: none;
+        box-shadow: none !important;
+    }
+    .item-store-sheet .modal-header .close:hover {
+        background: #e6e8f0 !important;
+    }
+    .item-store-sheet .modal-body {
+        padding: 20px 22px !important;
+    }
+    .item-store-sheet .modal-footer {
+        display: grid;
+        grid-template-columns: 1fr 1.6fr;
+        gap: 10px;
+        padding: 14px 22px 20px !important;
+        border-top: 0 !important;
+    }
+    .item-store-sheet .modal-footer > * {
+        margin: 0 !important;
+        width: 100%;
+        justify-content: center;
+    }
+    .item-store-sheet .modal-footer > :only-child {
+        grid-column: 1 / -1;
+    }
+
+    /* Outer store fades back while a sheet is open, so it's obvious which layer
+       is active even if the theme's stacked backdrop doesn't render. */
+    #itemStoreModal .modal-content {
+        transition: filter .2s ease, transform .2s ease;
+    }
+    #itemStoreModal.item-store-dimmed .modal-content {
+        filter: brightness(.45) saturate(.8);
+        transform: scale(.97);
+        pointer-events: none;
     }
 
     .item-store-grid {
@@ -286,6 +364,54 @@
         color: #9098a8;
         font-size: 12px;
     }
+    .item-store-cart-list li > span:first-child {
+        flex: 1;
+        min-width: 0;
+    }
+    .item-store-cart-stepper {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid #e6e8f0;
+        border-radius: 999px;
+        padding: 2px;
+        flex-shrink: 0;
+    }
+    .item-store-cart-stepper .cart-qty-btn {
+        width: 26px;
+        height: 26px;
+        border: 0;
+        border-radius: 50%;
+        background: #f3f4f8;
+        color: #1f2233;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+    }
+    .item-store-cart-stepper .cart-qty-btn:hover:not(:disabled) {
+        background: #e6e8f0;
+    }
+    .item-store-cart-stepper .cart-qty-btn:disabled {
+        opacity: .35;
+        cursor: not-allowed;
+    }
+    .item-store-cart-stepper .cart-qty-value {
+        min-width: 26px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 13px;
+        color: #1f2233;
+    }
+
+    /* Inside the balance-summary modal the title moves up into the modal header
+       (itemStoreModal.blade.php), so drop the duplicate in-body heading there. */
+    #itemStoreModal .item-store-embed > .main-title > h3 {
+        display: none;
+    }
+    #itemStoreModal .item-store-embed > .main-title {
+        justify-content: flex-end !important;
+    }
+
     .item-store-cart-remove {
         color: #b3b8c4;
         cursor: pointer;
@@ -390,11 +516,14 @@
 </div>
 
 {{-- Add-to-order modal: asks for quantity for one item at a time before it joins the cart --}}
-<div class="modal fade admin-query" id="addToOrderModal">
+<div class="modal fade admin-query item-store-sheet" id="addToOrderModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title" id="addToOrderItemName"></h4>
+                <div>
+                    <span class="sheet-eyebrow">@lang('academics.add_to_order')</span>
+                    <h4 class="modal-title" id="addToOrderItemName"></h4>
+                </div>
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
@@ -431,7 +560,7 @@
 </div>
 
 {{-- Cart modal: review everything added so far, then actually submit the order --}}
-<div class="modal fade admin-query" id="itemCartModal">
+<div class="modal fade admin-query item-store-sheet" id="itemCartModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             {{ Form::open(['route' => $itemStoreSubmitRoute ?? 'student-item-store-add', 'method' => 'POST', 'id' => 'itemStoreForm']) }}
@@ -463,7 +592,7 @@
 
 @isset($pendingOrders)
 {{-- My Pending Orders modal: everything already submitted and awaiting reception's review --}}
-<div class="modal fade admin-query" id="myPendingOrdersModal">
+<div class="modal fade admin-query item-store-sheet" id="myPendingOrdersModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -531,6 +660,23 @@
 $(document).ready(function () {
     var cart = {};
 
+    // When this content sits inside #itemStoreModal, these child modals are DOM
+    // descendants of the outer modal's transformed/scrolling body, so their
+    // position:fixed is trapped in that box and they render overlapping it
+    // instead of over the page. Moving them to <body> lets them stack properly;
+    // on the standalone Item Store page they're already effectively top-level.
+    $('#addToOrderModal, #itemCartModal, #myPendingOrdersModal').appendTo(document.body);
+
+    // Push the outer store back visually while a sheet is on top of it.
+    $(document).on('show.bs.modal', '.item-store-sheet', function () {
+        $('#itemStoreModal').addClass('item-store-dimmed');
+    });
+    $(document).on('hidden.bs.modal', '.item-store-sheet', function () {
+        if (!$('.item-store-sheet:visible').length) {
+            $('#itemStoreModal').removeClass('item-store-dimmed');
+        }
+    });
+
     // Bootstrap 4 doesn't natively support opening a modal from inside another
     // open modal (e.g. this cart modal opened while the outer #itemStoreModal is
     // already showing on the balance summary page): the new backdrop lands behind
@@ -565,7 +711,16 @@ $(document).ready(function () {
                 .append(
                     $('<span>')
                         .append($('<span>').addClass('item-store-cart-name d-block').text(entry.name))
-                        .append($('<span>').addClass('item-store-cart-qty').text('× ' + entry.qty))
+                        .append($('<span>').addClass('item-store-cart-qty').text(entry.price.toFixed(2) + ' each'))
+                )
+                .append(
+                    $('<span>').addClass('item-store-cart-stepper')
+                        .append($('<button type="button">').addClass('cart-qty-btn').attr('data-item-id', itemId).attr('data-step', -1).attr('aria-label', 'Decrease').html('&minus;'))
+                        .append($('<span>').addClass('cart-qty-value').text(entry.qty))
+                        .append(
+                            $('<button type="button">').addClass('cart-qty-btn').attr('data-item-id', itemId).attr('data-step', 1).attr('aria-label', 'Increase').html('&plus;')
+                                .prop('disabled', entry.max > 0 && entry.qty >= entry.max)
+                        )
                 )
                 .append(
                     $('<span>').css('display', 'flex').css('align-items', 'center').css('gap', '10px')
@@ -663,10 +818,27 @@ $(document).ready(function () {
             name: modal.data('item-name'),
             price: parseFloat(modal.data('item-price')) || 0,
             qty: qty,
+            max: isNaN(max) ? 0 : max,
         };
 
         renderCart();
         modal.modal('hide');
+    });
+
+    // Cart line stepper: stepping below 1 drops the item, + stops at stock.
+    $('#itemCartList').on('click', '.cart-qty-btn', function () {
+        var itemId = String($(this).data('item-id'));
+        var entry = cart[itemId];
+        if (!entry) {
+            return;
+        }
+        var qty = entry.qty + parseInt($(this).data('step'), 10);
+        if (qty < 1) {
+            delete cart[itemId];
+        } else {
+            entry.qty = entry.max > 0 ? Math.min(qty, entry.max) : qty;
+        }
+        renderCart();
     });
 
     $('#itemCartList').on('click', '.item-store-cart-remove', function () {

@@ -886,14 +886,33 @@ class FeesController extends Controller
             // per-row on the standalone Item Order Approval queue (see
             // resources/views/backEnd/academics/partials/studentOrdersModal.blade.php) -
             // reception never has to leave this invoice to approve/reject.
-            $pendingItemOrders = SmItemOrder::where('school_id', Auth::user()->school_id)
-                ->where('student_id', $invoiceInfo->student_id)
-                ->where('status', 'pending')
-                ->with('item')
-                ->orderBy('created_at')
-                ->get();
+            // Store invoices can belong to a staff member instead (student_id is
+            // null there), so key the lookup on whichever owner the invoice has -
+            // a bare where('student_id', null) would match every staff order.
+            $pendingItemOrders = collect();
+            $orderOwnerId = null;
+            $orderOwnerLabel = null;
+            if ($invoiceStudent) {
+                $pendingItemOrders = SmItemOrder::where('school_id', Auth::user()->school_id)
+                    ->where('student_id', $invoiceStudent->id)
+                    ->where('status', 'pending')
+                    ->with('item')
+                    ->orderBy('created_at')
+                    ->get();
+                $orderOwnerId = 'student' . $invoiceStudent->id;
+                $orderOwnerLabel = trim($invoiceStudent->first_name . ' ' . $invoiceStudent->last_name) . ' (' . $invoiceStudent->admission_no . ')';
+            } elseif ($invoiceInfo->staff_id && $invoiceStaff = $invoiceInfo->staffInfo) {
+                $pendingItemOrders = SmItemOrder::where('school_id', Auth::user()->school_id)
+                    ->where('staff_id', $invoiceStaff->id)
+                    ->where('status', 'pending')
+                    ->with('item')
+                    ->orderBy('created_at')
+                    ->get();
+                $orderOwnerId = 'staff' . $invoiceStaff->id;
+                $orderOwnerLabel = trim($invoiceStaff->full_name) . ($invoiceStaff->staff_no ? ' (' . $invoiceStaff->staff_no . ')' : '');
+            }
 
-            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan', 'planSchedule', 'isPendingEnrollment', 'pendingItemOrders', 'invoiceStudent'));
+            return view('fees::feesInvoice.feesInvoiceView', compact('generalSetting', 'invoiceInfo', 'invoiceDetails', 'banks', 'paymentPlanTypes', 'activePaymentPlan', 'planSchedule', 'isPendingEnrollment', 'pendingItemOrders', 'orderOwnerId', 'orderOwnerLabel'));
         } else {
             return view('fees::feesInvoice.feesInvoicePrint', compact('invoiceInfo', 'invoiceDetails', 'banks'));
         }

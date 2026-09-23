@@ -84,19 +84,14 @@
         @if(!empty($pendingItemOrders) && $pendingItemOrders->count() > 0 && userPermission('item-order-approval'))
         @include('backEnd.academics.partials.studentOrdersModalAssets')
         <div class="max_1200 mb-30">
-            <div class="order-batch-card d-flex justify-content-between align-items-center flex-wrap" style="gap:10px;">
-                <span>
-                    <span class="ti-time pr-2"></span>
-                    {{ trans_choice('academics.pending_item_orders_notice', $pendingItemOrders->count(), ['count' => $pendingItemOrders->count()]) }}
-                </span>
-                <a href="#" class="primary-btn small fix-gr-bg" data-toggle="modal" data-target="#studentOrdersModalstudent{{ $invoiceStudent->id }}">
-                    @lang('academics.review_in_item_order_approval')
-                </a>
-            </div>
+            <a href="#" class="order-batch-card d-flex align-items-center" style="gap:10px; color:inherit; cursor:pointer;" data-toggle="modal" data-target="#studentOrdersModal{{ $orderOwnerId }}">
+                <span class="ti-time"></span>
+                <span>{{ trans_choice('academics.pending_item_orders_notice', $pendingItemOrders->count(), ['count' => $pendingItemOrders->count()]) }}</span>
+            </a>
         </div>
         @include('backEnd.academics.partials.studentOrdersModal', [
-            'ownerId' => 'student' . $invoiceStudent->id,
-            'ownerLabel' => trim($invoiceStudent->first_name . ' ' . $invoiceStudent->last_name) . ' (' . $invoiceStudent->admission_no . ')',
+            'ownerId' => $orderOwnerId,
+            'ownerLabel' => $orderOwnerLabel,
             'orders' => $pendingItemOrders,
         ])
         @endif
@@ -158,7 +153,7 @@
                                                 <div class="addressright_text">
                                                     <p><span><strong>@lang('fees.invoice_number')</span> <span>: {{$invoiceInfo->invoice_id}}</span> </strong>
                                                         @if($invoiceInfo->type === 'store')
-                                                        <span class="badge badge-info" data-tooltip="tooltip" title="@lang('academics.item_purchase_invoice_hint')">@lang('academics.item_purchase')</span>
+                                                        <span class="badge badge-info">@lang('academics.item_purchase')</span>
                                                         @endif
                                                     </p>
                                                     <p><span>@lang('fees.create_date') </span> <span>: {{dateConvert($invoiceInfo->create_date)}}</span> </p>
@@ -284,7 +279,7 @@
                             <td>{{$rowNo}}</td>
                             <td>
                                 {{ $invoiceDetail->sm_item_id ? optional($invoiceDetail->item)->item_name : @$invoiceDetail->feesType->name }}
-                                @if($invoiceDetail->note)
+                                @if($invoiceDetail->note && !$invoiceDetail->sm_item_id)
                                     <i class="fa fa-info-circle" aria-hidden="true"data-tooltip="tooltip" title="{{$invoiceDetail->note}}" style="courser:help;"></i>
                                 @endif
                             </td>

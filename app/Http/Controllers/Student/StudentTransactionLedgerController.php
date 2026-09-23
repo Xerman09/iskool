@@ -23,23 +23,8 @@ class StudentTransactionLedgerController extends Controller
                 return redirect()->back();
             }
 
-            $scope = $request->query('scope') === 'whole_stay' ? 'whole_stay' : 'semester';
-            $semesterId = $scope === 'semester'
-                ? ($request->query('semester_id') ?: $student->semester_id)
-                : null;
-
-            $ledger = $this->ledgerFor($student, $scope, $semesterId);
-
-            $semesters = Semester::where('school_id', $student->school_id)
-                ->where('active_status', 1)
-                ->orderBy('sort_order')
-                ->get();
-
-            return view('backEnd.academics.transactionLedger', array_merge($ledger, [
-                'student' => $student,
-                'semesters' => $semesters,
-                'scope' => $scope,
-                'selectedSemesterId' => $semesterId,
+            // Always the logged-in student's own record - never taken from the request.
+            return view('backEnd.academics.transactionLedger', array_merge($this->ledgerPageData($student, $request), [
                 'ledgerRoute' => 'student-transaction-ledger',
                 'ledgerRouteParams' => [],
             ]));

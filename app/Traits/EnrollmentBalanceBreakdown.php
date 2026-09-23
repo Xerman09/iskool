@@ -5,6 +5,7 @@ namespace App\Traits;
 use App\Course;
 use App\SmStudent;
 use App\SmSubject;
+use App\SmAcademicYear;
 use App\PaymentPlanAssign;
 use App\Models\StudentRecord;
 use App\Scopes\AcademicSchoolScope;
@@ -356,40 +357,47 @@ trait EnrollmentBalanceBreakdown
      * individual payment/receipt across them, chronologically - the combined
      * statement the per-invoice pages don't show.
      *
-     * $scope 'semester' (default) stays within the current academic year (as
-     * before) and, when $semesterId is given, narrows further to invoices tagged
-     * with that semester - only invoices created after semester tagging shipped
-     * carry that tag, so older ones simply won't match a semester filter.
-     * $scope 'whole_stay' lifts the academic-year scoping entirely (both
-     * FmFeesInvoice and FmFeesTransaction default to the current academic year
-     * via AcademicSchoolScope) to show the student's entire enrollment history.
+     * Invoices are only reliably tagged with the academic session they were
+     * created in (academic_id - e.g. "2026 [1st Term]"); semester_id is never
+     * stamped, so filtering happens on sessions instead:
+     *   'semester'   - one session ($value = sm_academic_years.id)
+     *   'year'       - every session in a year ($value = sm_academic_years.year)
+     *   'whole_stay' - everything the student has ever been billed
+     * AcademicSchoolScope (current session only) is lifted in every case - the
+     * student is always filtered explicitly - so past sessions actually load,
+     * including their eager-loaded payment lines.
      */
-    protected function ledgerFor(SmStudent $student, $scope = 'semester', $semesterId = null)
+    protected function ledgerFor(SmStudent $student, $scope = 'semester', $value = null)
     {
-        $wholeStay = $scope === 'whole_stay';
-
-        $invoiceQuery = FmFeesInvoice::where('student_id', $student->id)
+        $invoiceQuery = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('student_id', $student->id)
             ->where('school_id', $student->school_id);
 
-        if ($wholeStay) {
-            $invoiceQuery->withoutGlobalScope(AcademicSchoolScope::class);
-        } elseif ($semesterId) {
-            $invoiceQuery->where('semester_id', $semesterId);
+        if ($scope === 'semester') {
+            $invoiceQuery->where('academic_id', $value);
+        } elseif ($scope === 'year') {
+            $invoiceQuery->whereIn('academic_id', SmAcademicYear::where('school_id', $student->school_id)
+                ->where('year', $value)
+                ->pluck('id'));
         }
 
-        $invoices = $invoiceQuery->with('invoiceDetails.feesType', 'invoiceDetails.item', 'semester')
+        $invoices = $invoiceQuery->with('invoiceDetails.feesType', 'invoiceDetails.item')
+            ->orderBy('create_date')
+            ->orderBy('id')
             ->get();
 
         $invoiceIds = $invoices->pluck('id');
 
-        $transactionQuery = FmFeesTransaction::whereIn('fees_invoice_id', $invoiceIds);
-
-        if ($wholeStay) {
-            $transactionQuery->withoutGlobalScope(AcademicSchoolScope::class);
-        }
-
-        $transactions = $transactionQuery
-            ->with('transcationDetails.transcationFeesType', 'feesInvoiceInfo')
+        $transactions = FmFeesTransaction::withoutGlobalScope(AcademicSchoolScope::class)
+            ->whereIn('fees_invoice_id', $invoiceIds)
+            ->with([
+                'transcationDetails' => function ($q) {
+                    $q->withoutGlobalScope(AcademicSchoolScope::class)->with('transcationFeesType');
+                },
+                'feesInvoiceInfo' => function ($q) {
+                    $q->withoutGlobalScope(AcademicSchoolScope::class);
+                },
+            ])
             ->orderBy('created_at')
             ->get();
 
@@ -402,6 +410,52 @@ trait EnrollmentBalanceBreakdown
             'totalPaid' => (float) $allDetails->sum('paid_amount'),
             'totalDue' => (float) $allDetails->sum('due_amount'),
         ];
+    }
+
+    /**
+     * Everything the shared transactionLedger view needs for one student:
+     * reads ?scope= (semester|year|whole_stay) plus ?session_id= / ?year= from
+     * the request, falls back to the student's current session/year, and only
+     * offers sessions/years the student actually has invoices in (plus the
+     * current one), so the dropdowns never list terms from before they enrolled.
+     */
+    protected function ledgerPageData(SmStudent $student, $request)
+    {
+        $usedSessionIds = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('student_id', $student->id)
+            ->where('school_id', $student->school_id)
+            ->distinct()
+            ->pluck('academic_id')
+            ->push(getAcademicId());
+
+        $sessions = SmAcademicYear::where('school_id', $student->school_id)
+            ->whereIn('id', $usedSessionIds)
+            ->orderBy('starting_date')
+            ->get();
+        $years = $sessions->pluck('year')->unique()->values();
+
+        $scope = in_array($request->query('scope'), ['semester', 'year', 'whole_stay'], true)
+            ? $request->query('scope')
+            : 'semester';
+
+        $currentSession = $sessions->firstWhere('id', getAcademicId()) ?: $sessions->last();
+        $selectedSessionId = $sessions->firstWhere('id', (int) $request->query('session_id'))
+            ? (int) $request->query('session_id')
+            : optional($currentSession)->id;
+        $selectedYear = $years->contains($request->query('year'))
+            ? $request->query('year')
+            : optional($currentSession)->year;
+
+        $value = $scope === 'semester' ? $selectedSessionId : ($scope === 'year' ? $selectedYear : null);
+
+        return array_merge($this->ledgerFor($student, $scope, $value), [
+            'student' => $student,
+            'scope' => $scope,
+            'sessions' => $sessions,
+            'years' => $years,
+            'selectedSessionId' => $selectedSessionId,
+            'selectedYear' => $selectedYear,
+        ]);
     }
 
     /**
