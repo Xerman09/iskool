@@ -383,7 +383,9 @@
                                             @endphp
                                             @foreach ($students as $record)
                                                 @php
-                                                    $absent_check = App\SmMarksRegister::is_absent_check($exam_type->id, $class_id, $record->section_id, $subject_id, $record->student_id, $record->id);
+                                                    /* The block being marked, not the advisory section of the record, which
+                                                       is null for a student who cross-enrolls per subject. */
+                                                    $absent_check = App\SmMarksRegister::is_absent_check($exam_type->id, $class_id, $section_id, $subject_id, $record->student_id, $record->id);
                                                 @endphp
                                                 <tr>
                                                     <td>
@@ -394,10 +396,10 @@
                                                             value="{{ $record->student_id }}">
                                                         <input type="hidden"
                                                             name="markStore[{{ $record->id }}][class]"
-                                                            value="{{ $record->class_id }}">
+                                                            value="{{ $class_id }}">
                                                         <input type="hidden"
                                                             name="markStore[{{ $record->id }}][section]"
-                                                            value="{{ $record->section_id }}">
+                                                            value="{{ $section_id }}">
                                                         <input type="hidden"
                                                             name="markStore[{{ $record->id }}][roll_no]"
                                                             value="{{ $record->roll_no }}">
@@ -443,7 +445,7 @@
                                                         </td>
                                                     @endforeach
                                                     <?php
-                                                    $teacher_remarks = App\SmMarkStore::teacher_remarks($record->student_id, $exam_type->id, $record->class_id, $record->section_id, $subject_id, $record->id);
+                                                    $teacher_remarks = App\SmMarkStore::teacher_remarks($record->student_id, $exam_type->id, $class_id, $section_id, $subject_id, $record->id);
                                                     ?>
                                                     <td>
                                                         <div class="primary_input">

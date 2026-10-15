@@ -68,6 +68,10 @@ class SmMarksRegister extends Model
                     ->where('subject_id', $subject_id)
                     ->first();
 
+            if (!$exam) {
+                return null;
+            }
+
             $exam_attendance = SmExamAttendance::where('exam_id', $exam->id)->where('class_id', $class_id)->where('section_id', $section_id)->where('subject_id', $subject_id)->first();
             if ($exam_attendance) {
                 $exam_attendance_child = SmExamAttendanceChild::where('exam_attendance_id', $exam_attendance->id)->where('student_id', $student_id)->where('student_record_id', $record_id)->first();
