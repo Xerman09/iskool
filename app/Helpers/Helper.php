@@ -4263,7 +4263,8 @@ if (!function_exists('blockStudents')) {
             ->where('is_promote', 0)
             ->get()
             ->unique('id')
-            ->sortBy('roll_no');
+            ->sortBy('roll_no')
+            ->values();
     }
 }
 

@@ -73,21 +73,29 @@ class SmSubjectAttendanceController extends Controller
                 ]);
             }
 
-            $students = StudentRecord::with('studentDetail', 'studentDetail.DateSubjectWiseAttendances')
-                ->whereHas('studentDetail', function ($q) use ($request) {
-                    $q->where('active_status', 1)
-                        ->when($request->filled('course_id'), function ($q2) use ($request) {
-                            $q2->where('course_id', $request->course_id);
-                        })
-                        ->when($request->filled('semester_id'), function ($q2) use ($request) {
-                            $q2->where('semester_id', $request->semester_id);
-                        });
-                })
-                ->where('class_id', $input['class'])
-                ->where('section_id', $input['section'])
-                ->where('academic_id', getAcademicId())
-                ->where('school_id', Auth::user()->school_id)
-                ->get();
+            /* Attendance here is per subject, which is exactly one block, so the list comes
+               from who is enrolled in that block rather than from the advisory section of
+               the record. A student cross-enrolled in another section is marked with the
+               block they attend. */
+            $students = blockStudents($input['class'], $input['section'], $input['subject']);
+
+            if ($request->filled('course_id') || $request->filled('semester_id')) {
+                $students = $students->filter(function ($record) use ($request) {
+                    $student = $record->studentDetail;
+                    if (!$student) {
+                        return false;
+                    }
+                    if ($request->filled('course_id') && $student->course_id != $request->course_id) {
+                        return false;
+                    }
+                    if ($request->filled('semester_id') && $student->semester_id != $request->semester_id) {
+                        return false;
+                    }
+                    return true;
+                })->values();
+            }
+
+            $students->load('studentDetail', 'studentDetail.DateSubjectWiseAttendances');
 
             if (moduleStatusCheck('University')) {
                 $data['un_semester_label_id'] = $request->un_semester_label_id;
