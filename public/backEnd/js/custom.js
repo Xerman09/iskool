@@ -1413,6 +1413,13 @@
     // subject from class
 
     $(document).ready(function() {
+        // Reload the subject list when the program filter changes, where a screen has one.
+        $("#select_exam_program").on("change", function() {
+            if ($("#class_subject").val()) {
+                $("#class_subject").trigger("change");
+            }
+        });
+
         $("#class_subject").on("change", function() {
             var url = $("#url").val();
             var i = 0;
@@ -1420,6 +1427,8 @@
 
             var formData = {
                 id: $(this).val(),
+                // Optional program filter; endpoints that do not use it ignore it.
+                course_id: $("#select_exam_program").val() || "",
             };
 
             // get section for student

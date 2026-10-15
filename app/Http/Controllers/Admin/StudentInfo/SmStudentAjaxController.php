@@ -194,7 +194,14 @@ class SmStudentAjaxController extends Controller
                 $subjectIds = $subjects->get()->pluck(['subject_id'])->toArray();
 
 
-                $subjects = SmSubject::whereIn('id', $subjectIds)->get(['id', 'subject_name']);
+                /* Narrow to one program when the screen asks for it: the same year level is
+                   shared by every program, so without this an admin sees every program's
+                   subjects for that year in one list, including same-named ones. */
+                $subjects = SmSubject::whereIn('id', $subjectIds)
+                    ->when($request->filled('course_id'), function ($q) use ($request) {
+                        $q->where('course_id', $request->course_id);
+                    })
+                    ->get(['id', 'subject_name']);
             }
 
 

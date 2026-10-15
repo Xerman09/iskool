@@ -52,7 +52,8 @@ class SmExamAttendanceController extends Controller
                 $classes = SmClass::get();
             }
             $subjects = SmSubject::get();
-            return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects'));
+            $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+            return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects', 'courses'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

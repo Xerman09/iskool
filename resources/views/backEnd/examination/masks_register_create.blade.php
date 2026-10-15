@@ -110,6 +110,17 @@
                                     @endif
                                 </div>
                                 <div class="col-lg-3 mt-30-md">
+                                    <select class="primary_select form-control" id="select_exam_program" name="course_id">
+                                        <option data-display="@lang('academics.program')" value="">@lang('academics.program')</option>
+                                        @foreach (@$courses ?? [] as $course)
+                                            <option value="{{ $course->id }}"
+                                                {{ isset($course_id) ? ($course_id == $course->id ? 'selected' : '') : '' }}>
+                                                {{ $course->course_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-3 mt-30-md">
                                     <select
                                         class="primary_select form-control {{ $errors->has('class') ? ' is-invalid' : '' }}"
                                         id="class_subject" name="class">
