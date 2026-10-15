@@ -172,8 +172,11 @@ class SmExamMarkRegisterController extends Controller
                 }
                 // return view('backEnd.examination.masks_register_create', compact('students', 'exam_id', 'subject_id', 'marks_register_subjects', 'assign_subject_ids','un_session','un_faculty','un_department','un_academic','un_semester','un_semester_label','subjectName','exam_type','exam_type_id'))->with($data);
             } else {
+                /* The Exam dropdown of this screen is built from sm_exam_types, so the posted
+                   value is an exam type id and has to be matched on exam_type_id. Matching it
+                   against sm_exams.id only ever hit the right row by coincidence. */
                 $exam = SmExam::query();
-                $exam->where('id', $request->exam)
+                $exam->where('exam_type_id', $request->exam)
                 ->where('subject_id', $request->subject)
                 ->where('class_id', $request->class);
                 if ($request->section=='') {
@@ -183,13 +186,21 @@ class SmExamMarkRegisterController extends Controller
                                                 ->where('school_id', auth()->user()->school_id)
                                                 ->where('academic_id', getAcademicId())
                                                 ->get(['section_id']);
-    
+                } else {
+                    $exam = $exam->where('section_id', $request->section)->first();
+                }
+
+                if (!$exam) {
+                    Toastr::error('No exam setup found for this exam, class, section and subject', 'Failed');
+                    return redirect()->back();
+                }
+
+                if ($request->section=='') {
                     $exam_attendance = SmExamAttendance::where('class_id', $request->class)
                                                         ->where('exam_id', $exam->id)
                                                         ->where('subject_id', $request->subject)
                                                         ->first();
                 } else {
-                    $exam = $exam->where('section_id', $request->section)->first();
                     $exam_attendance = SmExamAttendance::where('class_id', $request->class)->where('section_id', $request->section)->where('exam_id', $exam->id)->where('subject_id', $request->subject)->first();
                 }
 
@@ -223,29 +234,25 @@ class SmExamMarkRegisterController extends Controller
                     $search_info['section_name'] = 'All Sections';
                 }
 
-                $students = StudentRecord::with('class', 'section')
-                ->when($request->academic_year, function ($query) use ($request) {
-                    $query->where('academic_id', $request->academic_year);
-                })
-                ->whereHas('studentDetail', function ($q)  {
-                    $q->where('active_status', 1);
-                })
-                ->when($request->class, function ($query) use ($request) {
-                    $query->where('class_id', $request->class);
-                })
-                ->when($request->section, function ($query) use ($request) {
-                    $query->where('section_id', $request->section);
-                })
-                ->when(!$request->academic_year, function ($query) use ($request) {
-                    $query->where('academic_id', getAcademicId());
-                })->where('school_id', auth()->user()->school_id)->where('is_promote', 0)->whereHas('studentDetail', function($q){
-                        $q->where('active_status', 1);
-                    })->where('is_promote', 0)->get()->sortBy('roll_no');
+                /* Enrolled in this block of this subject, so a cross-block student is marked
+                   by the teacher of the block they actually attend. With no section picked,
+                   every block of the subject in that class is covered. */
+                if ($request->section != '') {
+                    $students = blockStudents($request->class, $request->section, $request->subject);
+                } else {
+                    $students = collect();
+                    foreach ($classSections as $classSection) {
+                        $students = $students->merge(
+                            blockStudents($request->class, $classSection->section_id, $request->subject)
+                        );
+                    }
+                    $students = $students->unique('id')->sortBy('roll_no');
+                }
 
-                $exam_schedule = SmExamSchedule::where('exam_id', $request->exam)->where('class_id', $request->class)->where('section_id', $request->section)->where('academic_id', getAcademicId())->first();
+                $exam_schedule = SmExamSchedule::where('exam_id', $exam->id)->where('class_id', $request->class)->where('section_id', $request->section)->where('academic_id', getAcademicId())->first();
 
                 if ($students->count() < 1) {
-                    Toastr::error('Student is not found in according this class and section!', 'Failed');
+                    Toastr::error('No student is enrolled in this block of that subject', 'Failed');
                     return redirect()->back();
                 // return redirect()->back()->with('message-danger', 'Student is not found in according this class and section! Please add student in this section of that class.');
                 } else {

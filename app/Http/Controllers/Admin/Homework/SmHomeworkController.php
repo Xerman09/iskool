@@ -355,15 +355,17 @@ class SmHomeworkController extends Controller
     public function evaluationHomework(Request $request, $class_id, $section_id, $homework_id)
     {
         try {
-            $student_ids = SmStudentReportController::classSectionStudent($request->merge([
-                'class' => $class_id,
-                'section' => $section_id,
-            ]));
-
             $homeworkDetails = SmHomework::where('class_id', $class_id)
                 ->where('section_id', $section_id)
                 ->where('id', $homework_id)
                 ->first();
+
+            /* The students enrolled in this block of the homework's subject, so a
+               cross-enrolled student is evaluated by the teacher of the block they
+               actually attend instead of by their advisory section. */
+            $student_ids = blockStudents($class_id, $section_id, optional($homeworkDetails)->subject_id)
+                ->pluck('student_id')
+                ->unique();
 
             $students = SmStudent::where('active_status', 1)->whereIn('id', $student_ids)->where('school_id', auth()->user()->school_id)->get();
 

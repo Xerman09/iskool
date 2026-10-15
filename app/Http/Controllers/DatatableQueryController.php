@@ -184,13 +184,11 @@ class DatatableQueryController extends Controller
 
                 if(auth()->user()->role_id == 4 && !userPermission('student.show-all-student'))
                 {
-                    $classTeacher = SmClassTeacher::where('teacher_id', auth()->user()->staff->id)->pluck('assign_class_teacher_id');
-                    $assignClassTeacher = SmAssignClassTeacher::whereIn('id', $classTeacher)->get();
-                    
-                    $all_students = $all_students->whereHas('studentRecords', function($q) use($assignClassTeacher) {
-                        $q->whereIn('class_id', $assignClassTeacher->pluck('class_id'))
-                        ->whereIn('section_id', $assignClassTeacher->pluck('section_id'));
-                    });
+                    /* Everyone enrolled in a block the teacher handles - per subject, per
+                       block, per program - plus the students of their advisory classes where
+                       the school keeps advisers. The old pairing of class ids against section
+                       ids also leaked other sections of the same year level. */
+                    $all_students = $all_students->whereIn('id', teacherStudentIds());
                 }
 
             return Datatables::of($all_students)

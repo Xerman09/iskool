@@ -159,9 +159,53 @@ class StudentRecord extends Model
     }
     public function getHomeWorkAttribute()
     {
-        return SmHomework::with('classes', 'sections', 'subjects')->where('class_id', $this->class_id)->where('section_id', $this->section_id)
+        return SmHomework::with('classes', 'sections', 'subjects')
             ->whereNull('course_id')
-            ->where('sm_homeworks.academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            ->where('sm_homeworks.academic_id', getAcademicId())
+            ->where('school_id', Auth::user()->school_id)
+            ->where(function ($query) {
+                $this->scopeToEnrolledBlocks($query);
+            })
+            ->get();
+    }
+
+    /**
+     * Narrows a homework query to the blocks this student is enrolled in.
+     *
+     * A block is a (class, section, subject) row in sm_assign_subjects, and the student is
+     * tied to it by their sm_optional_subject_assigns row, so a student cross-enrolled in
+     * another section still sees that section's homework. Homework addressed to the whole
+     * class or the whole school (no section) is kept. Replaces filtering by the single
+     * advisory section on the record, which is null for cross-enrolled students.
+     */
+    protected function scopeToEnrolledBlocks($query)
+    {
+        $blockIds = \App\SmOptionalSubjectAssign::where('student_id', $this->student_id)
+            ->where('school_id', Auth::user()->school_id)
+            ->pluck('assign_subject_id')
+            ->filter();
+
+        $blocks = SmAssignSubject::whereIn('id', $blockIds)
+            ->where('academic_id', getAcademicId())
+            ->get(['class_id', 'section_id', 'subject_id']);
+
+        foreach ($blocks as $block) {
+            $query->orWhere(function ($q) use ($block) {
+                $q->where('class_id', $block->class_id)
+                    ->where('section_id', $block->section_id)
+                    ->where('subject_id', $block->subject_id);
+            });
+        }
+
+        /* Whole-class or whole-school homework, which carries no section. */
+        $class = $this->class_id;
+        $query->orWhere(function ($q) use ($class) {
+            $q->where(function ($c) use ($class) {
+                $c->where('class_id', $class)->orWhereNull('class_id');
+            })->whereNull('section_id');
+        });
+
+        return $query;
     }
 
     public function getUploadContent($type, $is_university = null)
@@ -211,23 +255,15 @@ class StudentRecord extends Model
     public function homeworkContents($is_university = null)
     {
         if ($is_university == null) {
-            $class = $this->class_id;
-            $section = $this->section_id;
-            $content = [];
             $content = SmHomework::where('school_id', auth()->user()->school_id)
-                ->where(function ($que) use ($class) {
-                    return $que->where('class_id', $class)
-                        ->orWhereNull('class_id');
-                })
-                ->where(function ($que) use ($section) {
-                    return $que->where('section_id', $section)
-                        ->orWhereNull('section_id');
-                })
                 ->where('course_id', '=', null)
                 ->where('chapter_id', '=', null)
                 ->where('lesson_id', '=', null)
                 ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
+                ->where(function ($query) {
+                    $this->scopeToEnrolledBlocks($query);
+                })
                 ->get();
 
             return $content;

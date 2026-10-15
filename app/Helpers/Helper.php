@@ -25,6 +25,7 @@ use App\SmResultStore;
 use GuzzleHttp\Client;
 use App\SmAcademicYear;
 use App\SmClassTeacher;
+use App\SmAssignClassTeacher;
 use App\SmEmailSetting;
 use App\SmExamSchedule;
 use App\SmNotification;
@@ -4210,5 +4211,129 @@ if (!function_exists('studentFeesRemainingBalance')) {
         } catch (\Exception $e) {
             return null;
         }
+    }
+}
+
+if (!function_exists('blockStudents')) {
+    /**
+     * The students enrolled in one block of one subject.
+     *
+     * A block is a (class, section, subject) row in sm_assign_subjects, and a student is
+     * tied to it by their own sm_optional_subject_assigns row, so a student may sit in a
+     * different section per subject (cross-block enrollment). This is the enrollment-based
+     * replacement for filtering student_records by section_id, which only holds a single
+     * advisory section and is left null for cross-enrolled students.
+     */
+    function blockStudents($class_id, $section_id, $subject_id)
+    {
+        $school_id = auth()->user()->school_id;
+
+        $block_ids = SmAssignSubject::where('class_id', $class_id)
+            ->where('section_id', $section_id)
+            ->where('subject_id', $subject_id)
+            ->where('academic_id', getAcademicId())
+            ->where('school_id', $school_id)
+            ->pluck('id');
+
+        if ($block_ids->isEmpty()) {
+            return collect();
+        }
+
+        $enrollments = SmOptionalSubjectAssign::whereIn('assign_subject_id', $block_ids)
+            ->where('school_id', $school_id)
+            ->get(['record_id', 'student_id']);
+
+        if ($enrollments->isEmpty()) {
+            return collect();
+        }
+
+        $record_ids = $enrollments->pluck('record_id')->filter()->values();
+        $student_ids = $enrollments->pluck('student_id')->filter()->values();
+
+        return StudentRecord::with('class', 'section')
+            ->where(function ($q) use ($record_ids, $student_ids) {
+                $q->whereIn('id', $record_ids)
+                    ->orWhereIn('student_id', $student_ids);
+            })
+            ->whereHas('studentDetail', function ($q) {
+                $q->where('active_status', 1);
+            })
+            ->where('school_id', $school_id)
+            ->where('academic_id', getAcademicId())
+            ->where('is_promote', 0)
+            ->get()
+            ->unique('id')
+            ->sortBy('roll_no');
+    }
+}
+
+if (!function_exists('teacherBlocks')) {
+    /**
+     * The blocks a teacher handles: one sm_assign_subjects row per (class, section, subject).
+     *
+     * This is the whole of a teacher's load - the program and the curriculum come with the
+     * subject row itself (course_id, curriculum_version_id, semester_id), so no separate
+     * class-teacher or advisory-section record is needed to know what a teacher handles.
+     */
+    function teacherBlocks($staff_id = null)
+    {
+        $staff_id = $staff_id ?: optional(auth()->user()->staff)->id;
+
+        if (!$staff_id) {
+            return collect();
+        }
+
+        return SmAssignSubject::where('teacher_id', $staff_id)
+            ->where('academic_id', getAcademicId())
+            ->where('school_id', auth()->user()->school_id)
+            ->get(['id', 'class_id', 'section_id', 'subject_id']);
+    }
+}
+
+if (!function_exists('teacherStudentIds')) {
+    /**
+     * The sm_students ids of everyone enrolled in any block the teacher handles.
+     *
+     * Where a school also keeps advisers, the students of the teacher's class-teacher
+     * assignments are included, so adviser-only setups keep working.
+     */
+    function teacherStudentIds($staff_id = null)
+    {
+        $staff_id = $staff_id ?: optional(auth()->user()->staff)->id;
+
+        if (!$staff_id) {
+            return collect();
+        }
+
+        $school_id = auth()->user()->school_id;
+
+        $student_ids = SmOptionalSubjectAssign::whereIn('assign_subject_id', teacherBlocks($staff_id)->pluck('id'))
+            ->where('school_id', $school_id)
+            ->pluck('student_id');
+
+        /* Advisory classes, when the school uses them. */
+        $adviser_pairs = SmAssignClassTeacher::whereIn(
+            'id',
+            SmClassTeacher::where('teacher_id', $staff_id)->pluck('assign_class_teacher_id')
+        )->get(['class_id', 'section_id']);
+
+        if ($adviser_pairs->isNotEmpty()) {
+            $advised = StudentRecord::where('school_id', $school_id)
+                ->where('academic_id', getAcademicId())
+                ->where('is_promote', 0)
+                ->where(function ($query) use ($adviser_pairs) {
+                    foreach ($adviser_pairs as $pair) {
+                        $query->orWhere(function ($q) use ($pair) {
+                            $q->where('class_id', $pair->class_id)
+                                ->where('section_id', $pair->section_id);
+                        });
+                    }
+                })
+                ->pluck('student_id');
+
+            $student_ids = $student_ids->merge($advised);
+        }
+
+        return $student_ids->filter()->unique()->values();
     }
 }

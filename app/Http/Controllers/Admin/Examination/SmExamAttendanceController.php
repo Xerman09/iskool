@@ -158,23 +158,12 @@ class SmExamAttendanceController extends Controller
                     return redirect('exam-attendance-create');
                 }
 
-                $students = StudentRecord::with('class', 'section')
-                    ->when($request->class, function ($q) use ($request) {
-                        $q->where('class_id', $request->class);
-                    })
-                    ->when($request->section, function ($q) use ($request) {
-                        $q->where('section_id', $request->section);
-                    })
-                    ->whereHas('studentDetail', function ($q) {
-                        $q->where('active_status', 1);
-                    })
-                    ->where('school_id', auth()->user()->school_id)
-                    ->where('academic_id', getAcademicId())
-                    ->where('is_promote', 0)
-                    ->get()->sortBy('roll_no');
+                /* Enrolled in this block, not filtered by the advisory section of the record,
+                   so cross-block students are listed under the block they actually attend. */
+                $students = blockStudents($request->class, $request->section, $request->subject);
 
                 if ($students->count() == 0) {
-                    Toastr::error('No Record Found', 'Failed');
+                    Toastr::error('No student is enrolled in this block of that subject', 'Failed');
                     return redirect('exam-attendance-create');
                 }
 
@@ -183,6 +172,11 @@ class SmExamAttendanceController extends Controller
                     ->where('section_id', $request->section)
                     ->where('subject_id', $request->subject)
                     ->first();
+
+                if (!$exam) {
+                    Toastr::error('No exam setup found for this exam, class, section and subject', 'Failed');
+                    return redirect('exam-attendance-create');
+                }
 
                 $exam_attendance = SmExamAttendance::where('exam_id', $exam->id)
                     ->when($request->class, function ($q) use ($request) {
