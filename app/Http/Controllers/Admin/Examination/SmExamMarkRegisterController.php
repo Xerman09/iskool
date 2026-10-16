@@ -457,7 +457,25 @@ class SmExamMarkRegisterController extends Controller
                     $section_id = $request->section_id;
                 }
                 $subject_id = $request->subject_id;
-                $exam_id = SmExam::find($request->exam_id)->exam_type_id;
+
+                /* The screen posts the exam TYPE id, since its Exam dropdown is built from
+                   sm_exam_types. Looking that value up as sm_exams.id found nothing and the
+                   save died on the null. Resolve the exam setup of this block to confirm it
+                   exists; exam_term_id below is the exam type. */
+                $exam_setup = SmExam::where('exam_type_id', $request->exam_id)
+                    ->where('class_id', $request->class_id)
+                    ->where('subject_id', $request->subject_id)
+                    ->when($request->section_id != '', function ($q) use ($request) {
+                        $q->where('section_id', $request->section_id);
+                    })
+                    ->first();
+
+                if (!$exam_setup) {
+                    Toastr::error('No exam setup found for this exam, class, section and subject', 'Failed');
+                    return redirect()->back();
+                }
+
+                $exam_id = $exam_setup->exam_type_id;
                 $counter = 0;           // Initilize by 0
         
                 foreach ($request->markStore as $record_id => $record) {
