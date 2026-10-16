@@ -52,7 +52,9 @@ class SmExamMarkRegisterController extends Controller
                 }
                 
                 $exam_types = SmExamType::get();
-                return view('backEnd.examination.masks_register', compact('exams', 'classes', 'exam_types'));
+                $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+                $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+                return view('backEnd.examination.masks_register', compact('exams', 'classes', 'exam_types', 'courses', 'semesters'));
             }catch (\Exception $e) {
                 Toastr::error('Operation Failed', 'Failed');
                 return redirect()->back();
@@ -78,7 +80,8 @@ class SmExamMarkRegisterController extends Controller
                 }
                 $subjects = SmSubject::get();
                 $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
-                return view('backEnd.examination.masks_register_create', compact('exams', 'classes', 'subjects', 'exam_types', 'courses'));
+                $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+                return view('backEnd.examination.masks_register_create', compact('exams', 'classes', 'subjects', 'exam_types', 'courses', 'semesters'));
             }catch (\Exception $e) {
                 Toastr::error('Operation Failed', 'Failed');
                 return redirect()->back();
@@ -281,9 +284,11 @@ class SmExamMarkRegisterController extends Controller
                         $number_of_exam_parts = count($marks_entry_form);
                         /* Carried back so the criteria panel still shows what was searched. */
                         $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+                $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
                         $course_id = $request->course_id;
+                        $semester_id = $request->semester_id;
 
-                        return view('backEnd.examination.masks_register_create', compact('exams', 'classes', 'students', 'exam_id', 'class_id', 'section_id', 'subject_id', 'subjectNames', 'number_of_exam_parts', 'marks_entry_form', 'exam_types', 'exam_type','search_info', 'courses', 'course_id'));
+                        return view('backEnd.examination.masks_register_create', compact('exams', 'classes', 'students', 'exam_id', 'class_id', 'section_id', 'subject_id', 'subjectNames', 'number_of_exam_parts', 'marks_entry_form', 'exam_types', 'exam_type','search_info', 'courses', 'course_id', 'semesters', 'semester_id'));
                     } else {
                         Toastr::error('No result found or exam setup is not done!', 'Failed');
                         return redirect()->back();
@@ -761,26 +766,29 @@ class SmExamMarkRegisterController extends Controller
                 }
             }
         
-            $students = StudentRecord::with('class', 'section')
-                    ->when($request->academic_year, function ($query) use ($request) {
-                        $query->where('academic_id', $request->academic_year);
-                    })
-                    ->when($request->class, function ($query) use ($request) {
-                        $query->where('class_id', $request->class);
-                    })
-                    ->when($request->section, function ($query) use ($request) {
-                        $query->where('section_id', $request->section);
-                    })
-                    ->when(!$request->academic_year, function ($query) use ($request) {
-                        $query->where('academic_id', getAcademicId());
-                    })->where('school_id', auth()->user()->school_id)->where('is_promote', 0)->whereHas('studentDetail', function($q){
-                            $q->where('active_status', 1);
-                        })->get();
+            /* Enrolled in this block of this subject, so a cross-block student is listed
+               under the block they actually attend. With no section picked, every block
+               of the subject in that class is covered. */
+            if ($request->section != null) {
+                $students = blockStudents($request->class, $request->section, $subject_id);
+            } else {
+                $students = collect();
+                $sections = SmAssignSubject::where('class_id', $request->class)
+                    ->where('subject_id', $subject_id)
+                    ->where('school_id', auth()->user()->school_id)
+                    ->where('academic_id', getAcademicId())
+                    ->pluck('section_id')->unique();
+
+                foreach ($sections as $section) {
+                    $students = $students->merge(blockStudents($request->class, $section, $subject_id));
+                }
+                $students = $students->unique('id')->values();
+            }
 
 
                 $exam_schedule = SmExamSchedule::where('exam_id', $request->exam)->where('class_id', $request->class)->where('section_id', $request->section)->where('academic_id', getAcademicId())->first();
             if ($students->count() == 0) {
-                    Toastr::error('Sorry ! Student is not available Or exam schedule is not set yet.', 'Failed');
+                    Toastr::error('No student is enrolled in this block of that subject', 'Failed');
                     return redirect()->back();
                     // return redirect()->back()->with('message-danger', 'Sorry ! Student is not available Or exam schedule is not set yet.');
             } else {
@@ -796,7 +804,13 @@ class SmExamMarkRegisterController extends Controller
 
                 if ($marks_entry_form->count() > 0) {
                         $number_of_exam_parts = count($marks_entry_form);
-                        return view('backEnd.examination.masks_register_search', compact('exams', 'classes', 'students', 'exam_id', 'class_id', 'section_id', 'subject_id', 'subjectNames', 'number_of_exam_parts', 'marks_entry_form', 'exam_types', 'exam_type_id'));
+                        /* Carried back so the criteria panel still shows what was searched. */
+                        $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+                $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+                        $course_id = $request->course_id;
+                        $semester_id = $request->semester_id;
+
+                        return view('backEnd.examination.masks_register_search', compact('exams', 'classes', 'students', 'exam_id', 'class_id', 'section_id', 'subject_id', 'subjectNames', 'number_of_exam_parts', 'marks_entry_form', 'exam_types', 'exam_type_id', 'courses', 'course_id', 'semesters', 'semester_id'));
                 } else {
                         Toastr::error('Sorry ! Exam setup is not set yet.', 'Failed');
                         return redirect()->back();

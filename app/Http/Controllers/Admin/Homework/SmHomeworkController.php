@@ -53,7 +53,10 @@ class SmHomeworkController extends Controller
                 $classes = SmClass::get();
             }
 
-            return view('backEnd.homework.homeworkList', compact('classes'));
+            $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+
+            return view('backEnd.homework.homeworkList', compact('classes', 'courses', 'semesters'));
         } catch (\Exception $e) {
 
             Toastr::error('Operation Failed', 'Failed');
@@ -71,13 +74,22 @@ class SmHomeworkController extends Controller
             $data['class'] = $request->class_id;
             $data['subject'] = $request->subject_id;
             $data['section'] = $request->section_id;
+            /* Carried back so the criteria panel still shows what was searched. */
+            $data['class_id'] = $request->class_id;
+            $data['subject_id'] = $request->subject_id;
+            $data['section_id'] = $request->section_id;
+            $data['course_id'] = $request->course_id;
+            $data['semester_id'] = $request->semester_id;
             if (teacherAccess()) {
                 $teacher_info = SmStaff::where('user_id', Auth::user()->id)->first();
                 $classes = $teacher_info->classes;
             } else {
                 $classes = SmClass::get();
             }
-            return view('backEnd.homework.homeworkList', compact('classes'))->with($data);
+            $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+
+            return view('backEnd.homework.homeworkList', compact('classes', 'courses', 'semesters'))->with($data);
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

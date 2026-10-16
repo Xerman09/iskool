@@ -1413,8 +1413,9 @@
     // subject from class
 
     $(document).ready(function() {
-        // Reload the subject list when the program filter changes, where a screen has one.
-        $("#select_exam_program").on("change", function() {
+        // Reload the subject list when the program or semester filter changes,
+        // on the screens that carry them.
+        $("#select_exam_program, #select_exam_semester").on("change", function() {
             if ($("#class_subject").val()) {
                 $("#class_subject").trigger("change");
             }
@@ -1427,8 +1428,9 @@
 
             var formData = {
                 id: $(this).val(),
-                // Optional program filter; endpoints that do not use it ignore it.
+                // Optional program and semester filters; endpoints that do not use them ignore them.
                 course_id: $("#select_exam_program").val() || "",
+                semester_id: $("#select_exam_semester").val() || "",
             };
 
             // get section for student

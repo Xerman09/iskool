@@ -49,6 +49,34 @@
                             <div class="row">
                                 <div class="col-lg-4">
                                     <div class="primary_input">
+                                        <label class="primary_input_label" for="">{{ __('academics.program') }}</label>
+                                        <select class="primary_select form-control" name="course_id" id="select_exam_program">
+                                            <option data-display="@lang('academics.program')" value="">@lang('academics.program')</option>
+                                            @foreach (@$courses ?? [] as $course)
+                                                <option value="{{ $course->id }}"
+                                                    {{ isset($course_id) ? ($course_id == $course->id ? 'selected' : '') : '' }}>
+                                                    {{ $course->course_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-4">
+                                    <div class="primary_input">
+                                        <label class="primary_input_label" for="">{{ __('academics.semester') }}</label>
+                                        <select class="primary_select form-control" name="semester_id" id="select_exam_semester">
+                                            <option data-display="@lang('academics.semester')" value="">@lang('academics.semester')</option>
+                                            @foreach (@$semesters ?? [] as $semester)
+                                                <option value="{{ $semester->id }}"
+                                                    {{ isset($semester_id) && $semester_id ? ($semester_id == $semester->id ? 'selected' : '') : ($semester->is_active ? 'selected' : '') }}>
+                                                    {{ $semester->semester_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-4">
+                                    <div class="primary_input">
                                         <label class="primary_input_label" for="">
                                             {{ __('common.class') }}
                                             <span class="text-danger"> *</span>
@@ -83,6 +111,11 @@
                                             name="subject_id" id="select_class_subject">
                                             <option data-display="@lang('common.select_subjects')" value="">@lang('common.subject')
                                             </option>
+                                            {{-- Keep the searched subject visible; the rest is loaded by ajax on class change. --}}
+                                            @if (isset($subject_id) && $subject_id)
+                                                <option value="{{ $subject_id }}" selected>
+                                                    {{ @App\SmSubject::find($subject_id)->subject_name }}</option>
+                                            @endif
                                         </select>
                                         <div class="pull-right loader loader_style" id="select_subject_loader">
                                             <img class="loader_img_style"
@@ -114,6 +147,12 @@
                                                         {{ isset($search_info['section_id']) ? ($search_info['section_id'] == $subjectSection->id ? 'selected' : '') : '' }}>
                                                         {{ $subjectSection->section_name }}</option>
                                                 @endforeach
+                                            @else
+                                                {{-- Keep the searched block visible; the rest is loaded by ajax on subject change. --}}
+                                                @if (isset($section_id) && $section_id)
+                                                    <option value="{{ $section_id }}" selected>
+                                                        {{ @App\SmSection::find($section_id)->section_name }}</option>
+                                                @endif
                                             @endisset
                                         </select>
                                         <div class="pull-right loader loader_style" id="select_section_loader">

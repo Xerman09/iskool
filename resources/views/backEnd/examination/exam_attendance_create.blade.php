@@ -111,6 +111,17 @@
                                 </div>
 
                                 <div class="col-lg-3 mt-30-md">
+                                    <select class="primary_select form-control" id="select_exam_semester" name="semester_id">
+                                        <option data-display="@lang('academics.semester')" value="">@lang('academics.semester')</option>
+                                        @foreach (@$semesters ?? [] as $semester)
+                                            <option value="{{ $semester->id }}"
+                                                {{ isset($semester_id) && $semester_id ? ($semester_id == $semester->id ? 'selected' : '') : ($semester->is_active ? 'selected' : '') }}>
+                                                {{ $semester->semester_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-3 mt-30-md">
                                     <select
                                         class="primary_select form-control {{ $errors->has('class') ? ' is-invalid' : '' }}"
                                         id="class_subject" name="class">

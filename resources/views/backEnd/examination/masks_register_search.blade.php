@@ -51,8 +51,11 @@
                             <div class="col-lg-3 mt-30-md">
                                 <select class="primary_select form-control{{ $errors->has('exam') ? ' is-invalid' : '' }}" name="exam">
                                     <option data-display="@lang('exam.select_exam') *" value="">@lang('exam.select_exam') *</option>
-                                    @foreach($exam_types as $exam_type)
-                                        <option value="{{@$exam_type->id}}" {{isset($exam_id)? ($exam_id == $exam_type->id? 'selected':''):''}}>{{@$exam_type->title}}</option>
+                                    {{-- The exam rows, matching what this screen's search expects and what the
+                                         criteria panel before the search offers. Listing exam types here left the
+                                         selection blank and posted an id this search cannot resolve. --}}
+                                    @foreach(@$exams ?? [] as $exam)
+                                        <option value="{{@$exam->id}}" {{isset($exam_id)? ($exam_id == $exam->id? 'selected':''):''}}>{{@$exam->examType->title}}/{{@$exam->class->class_name}}({{@$exam->section->section_name}})</option>
                                     @endforeach
                                 </select>
                                 @if ($errors->has('exam'))
@@ -61,6 +64,24 @@
                                 </span>
                                 @endif
                             </div>
+                            <div class="col-lg-3 mt-30-md">
+                                <select class="primary_select form-control" id="select_exam_program" name="course_id">
+                                    <option data-display="@lang('academics.program')" value="">@lang('academics.program')</option>
+                                    @foreach(@$courses ?? [] as $course)
+                                        <option value="{{@$course->id}}" {{isset($course_id)? ($course_id == $course->id? 'selected':''):''}}>{{@$course->course_name}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-lg-3 mt-30-md">
+                                <select class="primary_select form-control" id="select_exam_semester" name="semester_id">
+                                    <option data-display="@lang('academics.semester')" value="">@lang('academics.semester')</option>
+                                    @foreach(@$semesters ?? [] as $semester)
+                                        <option value="{{@$semester->id}}" {{isset($semester_id) && $semester_id ? ($semester_id == $semester->id? 'selected':'') : ($semester->is_active? 'selected':'')}}>{{@$semester->semester_name}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
                             <div class="col-lg-3 mt-30-md">
                                 <select class="primary_select form-control {{ $errors->has('class') ? ' is-invalid' : '' }}" id="class_subject" name="class">
                                     <option data-display="@lang('common.select_class') *" value="">@lang('common.select_class') *</option>
@@ -80,6 +101,10 @@
                             <div class="col-lg-3 mt-30-md" id="select_class_subject_div">
                                 <select class="primary_select form-control{{ $errors->has('subject') ? ' is-invalid' : '' }} select_class_subject" id="select_class_subject" name="subject">
                                     <option data-display="@lang('common.select_subjects') *" value="">@lang('common.select_subjects') *</option>
+                                    {{-- Keep the searched subject visible; the rest is loaded by ajax on class change. --}}
+                                    @if(isset($subject_id) && $subject_id)
+                                        <option value="{{$subject_id}}" selected>{{@App\SmSubject::find($subject_id)->subject_name}}</option>
+                                    @endif
                                 </select>
                                 @if ($errors->has('subject'))
                                     <span class="text-danger invalid-select" role="alert">
@@ -91,6 +116,10 @@
                             <div class="col-lg-3 mt-30-md" id="m_select_subject_section_div">
                                 <select class="primary_select form-control{{ $errors->has('section') ? ' is-invalid' : '' }} m_select_subject_section" id="m_select_subject_section" name="section">
                                     <option data-display="@lang('common.select_section') " value="">@lang('common.select_section') </option>
+                                    {{-- Keep the searched block visible; the rest is loaded by ajax on subject change. --}}
+                                    @if(isset($section_id) && $section_id)
+                                        <option value="{{$section_id}}" selected>{{@App\SmSection::find($section_id)->section_name}}</option>
+                                    @endif
                                 </select>
                                 @if ($errors->has('section'))
                                     <span class="text-danger invalid-select" role="alert">

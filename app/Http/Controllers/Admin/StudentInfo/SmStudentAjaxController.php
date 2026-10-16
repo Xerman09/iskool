@@ -201,6 +201,9 @@ class SmStudentAjaxController extends Controller
                     ->when($request->filled('course_id'), function ($q) use ($request) {
                         $q->where('course_id', $request->course_id);
                     })
+                    ->when($request->filled('semester_id'), function ($q) use ($request) {
+                        $q->where('semester_id', $request->semester_id);
+                    })
                     ->get(['id', 'subject_name']);
             }
 

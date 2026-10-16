@@ -53,7 +53,8 @@ class SmExamAttendanceController extends Controller
             }
             $subjects = SmSubject::get();
             $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
-            return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects', 'courses'));
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+            return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects', 'courses', 'semesters'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -214,9 +215,11 @@ class SmExamAttendanceController extends Controller
 
                 /* Carried back so the criteria panel still shows what was searched. */
                 $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
                 $course_id = $request->course_id;
+                $semester_id = $request->semester_id;
 
-                return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects', 'students', 'exam_id', 'subject_id', 'class_id', 'section_id', 'exam_attendance_childs', 'search_info', 'courses', 'course_id'));
+                return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects', 'students', 'exam_id', 'subject_id', 'class_id', 'section_id', 'exam_attendance_childs', 'search_info', 'courses', 'course_id', 'semesters', 'semester_id'));
             }
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
