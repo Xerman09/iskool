@@ -279,7 +279,11 @@ class SmExamMarkRegisterController extends Controller
 
                     if ($marks_entry_form->count() > 0) {
                         $number_of_exam_parts = count($marks_entry_form);
-                        return view('backEnd.examination.masks_register_create', compact('exams', 'classes', 'students', 'exam_id', 'class_id', 'section_id', 'subject_id', 'subjectNames', 'number_of_exam_parts', 'marks_entry_form', 'exam_types', 'exam_type','search_info'));
+                        /* Carried back so the criteria panel still shows what was searched. */
+                        $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+                        $course_id = $request->course_id;
+
+                        return view('backEnd.examination.masks_register_create', compact('exams', 'classes', 'students', 'exam_id', 'class_id', 'section_id', 'subject_id', 'subjectNames', 'number_of_exam_parts', 'marks_entry_form', 'exam_types', 'exam_type','search_info', 'courses', 'course_id'));
                     } else {
                         Toastr::error('No result found or exam setup is not done!', 'Failed');
                         return redirect()->back();

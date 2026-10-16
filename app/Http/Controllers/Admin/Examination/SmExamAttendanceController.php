@@ -212,7 +212,11 @@ class SmExamAttendanceController extends Controller
                 $search_info['section_name'] =  $section_id == null ? 'All Sections' : SmSection::find($request->section)->section_name;
                 $search_info['subject_name'] =  SmSubject::find($request->subject)->subject_name;
 
-                return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects', 'students', 'exam_id', 'subject_id', 'class_id', 'section_id', 'exam_attendance_childs', 'search_info'));
+                /* Carried back so the criteria panel still shows what was searched. */
+                $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
+                $course_id = $request->course_id;
+
+                return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects', 'students', 'exam_id', 'subject_id', 'class_id', 'section_id', 'exam_attendance_childs', 'search_info', 'courses', 'course_id'));
             }
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

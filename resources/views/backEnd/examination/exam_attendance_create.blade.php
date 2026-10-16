@@ -135,6 +135,11 @@
                                         id="select_class_subject" name="subject">
                                         <option data-display="@lang('common.select_subject') *" value="">@lang('common.select_subject') *
                                         </option>
+                                        {{-- Keep the searched subject visible; the rest is loaded by ajax on class change. --}}
+                                        @if (isset($subject_id) && $subject_id)
+                                            <option value="{{ $subject_id }}" selected>
+                                                {{ @App\SmSubject::find($subject_id)->subject_name }}</option>
+                                        @endif
                                     </select>
                                     <div class="pull-right loader loader_style" id="select_subject_loader">
                                         <img class="loader_img_style" src="{{ asset('public/backEnd/img/demo_wait.gif') }}"
@@ -153,6 +158,11 @@
                                         id="m_select_subject_section" name="section">
                                         <option data-display="@lang('common.select_section') " value=" ">@lang('common.select_section')
                                         </option>
+                                        {{-- Keep the searched block visible; the rest is loaded by ajax on subject change. --}}
+                                        @if (isset($section_id) && $section_id)
+                                            <option value="{{ $section_id }}" selected>
+                                                {{ @App\SmSection::find($section_id)->section_name }}</option>
+                                        @endif
                                     </select>
                                     <div class="pull-right loader loader_style" id="select_section_loader">
                                         <img class="loader_img_style" src="{{ asset('public/backEnd/img/demo_wait.gif') }}"
@@ -349,8 +359,10 @@
                                                             <tr>
                                                                 <td>{{ @$record->studentDetail->admission_no }}</td>
                                                                 <td>{{ @$record->studentDetail->full_name }}</td>
-                                                                <td>{{ @$record->class->class_name }}
-                                                                    ({{ @$record->section->section_name }})
+                                                                {{-- The block being marked. The record's own section is the advisory
+                                                                     one, which is empty for a student who cross-enrolls per subject. --}}
+                                                                <td>{{ @$search_info['class_name'] ?: @$record->class->class_name }}
+                                                                    ({{ @$search_info['section_name'] ?: @$record->section->section_name }})
                                                                 </td>
                                                                 <td>{{ @$record->roll_no ? $record->roll_no : '' }}</td>
                                                                 <td>
@@ -397,8 +409,9 @@
                                                                 </td>
                                                                 <td>{{ @$student->studentInfo != '' ? @$student->studentInfo->full_name : '' }}
                                                                 </td>
-                                                                <td>{{ @$student->studentRecord->class->class_name }}
-                                                                    ({{ @$student->studentRecord->section->section_name }})
+                                                                {{-- The block being marked, not the advisory section of the record. --}}
+                                                                <td>{{ @$search_info['class_name'] ?: @$student->studentRecord->class->class_name }}
+                                                                    ({{ @$search_info['section_name'] ?: @$student->studentRecord->section->section_name }})
                                                                 </td>
                                                                 <td>{{ @$student->studentRecord != '' ? @$student->studentRecord->roll_no : '' }}
                                                                 </td>
@@ -444,8 +457,9 @@
                         <tr>
                             <td>{{ @$student_record->studentDetail->admission_no }}</td>
                             <td>{{ @$student_record->studentDetail->full_name }}</td>
-                            <td>{{ @$student_record->class->class_name }}
-                                ({{ @$student_record->section->section_name }})
+                            {{-- The block being marked, not the advisory section of the record. --}}
+                            <td>{{ @$search_info['class_name'] ?: @$student_record->class->class_name }}
+                                ({{ @$search_info['section_name'] ?: @$student_record->section->section_name }})
                             </td>
                             <td>{{ @$student_record->roll_no }}</td>
                             <td>
