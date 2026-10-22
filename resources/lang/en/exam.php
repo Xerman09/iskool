@@ -123,7 +123,7 @@ return [
     'multiple_choice' => 'Multiple Choice',
     'multiple_image' => 'Multiple Image',
     'watch' => 'Watch Video',
-    'create_class_routine' => 'Create Class Routine',
+    'create_class_routine' => 'Create Class Schedule',
     'true_false' => 'True False',
     'optional' => 'Optional',
     'fill_in_the_blanks' => 'Fill in the Blanks',

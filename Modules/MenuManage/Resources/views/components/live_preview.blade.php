@@ -8,7 +8,7 @@
                 @foreach($sidebar_menus as $preview_section)
                     @if($preview_section->subModule->count() > 0)
                         <li class="preview_section">
-                            {{__(@$preview_section->permissionInfo->lang_name)}}
+                            {{ menuLabel($preview_section->permissionInfo) }}
                         </li>
                         @foreach (@$preview_section->subModule as $key => $item)
                             @if(sidebarPermission($item->permissionInfo)==true)
@@ -18,7 +18,7 @@
                                             <span class="{{ $item->permissionInfo->icon ?? 'fas fa-th' }}"></span>
                                         </div>
                                         <div class="nav_title">
-                                            <span>{{$item->permissionInfo ? __($item->permissionInfo->lang_name) : 'no' }}</span>
+                                            <span>{{$item->permissionInfo ? menuLabel($item->permissionInfo) : 'no' }}</span>
                                         </div>
                                     </a>
                                     @if ($item->subModule->count())
@@ -27,7 +27,7 @@
                                                 @if(sidebarPermission($submenu->permissionInfo)==true)
                                                     <li>
                                                         <a href="#">
-                                                            {{ $submenu->permissionInfo ? __($submenu->permissionInfo->lang_name) :'no sub' }}
+                                                            {{ $submenu->permissionInfo ? menuLabel($submenu->permissionInfo) :'no sub' }}
                                                         </a>
                                                     </li>
                                                 @endif

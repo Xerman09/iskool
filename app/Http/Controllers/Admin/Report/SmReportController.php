@@ -43,7 +43,7 @@ class SmReportController extends Controller
     {
         try {
             $exam_types = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];
@@ -89,7 +89,6 @@ class SmReportController extends Controller
                         ->get();
 
                     $classes = SmClass::where('active_status', 1)
-                        ->where('academic_id', getAcademicId())
                         ->where('school_id', Auth::user()->school_id)
                         ->get();
 
@@ -358,7 +357,6 @@ class SmReportController extends Controller
                         ->get();
 
                     $classes = SmClass::where('active_status', 1)
-                        ->where('academic_id', getAcademicId())
                         ->where('school_id', Auth::user()->school_id)
                         ->get();
 
@@ -731,7 +729,7 @@ class SmReportController extends Controller
                     }
 
                     $exam_types = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-                    $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+                    $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
                     foreach ($subjects as $sub) {
                         $subject_list_name[] = $sub->subject->subject_name;
@@ -802,7 +800,7 @@ class SmReportController extends Controller
     {
         try {
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];
@@ -868,7 +866,6 @@ class SmReportController extends Controller
 
 
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
 
@@ -1066,7 +1063,6 @@ class SmReportController extends Controller
                     ->get();
 
                 $classes = SmClass::withOutGlobalScopes()->where('active_status', 1)
-                    ->where('academic_id', $academic_id)
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
 
@@ -1224,7 +1220,7 @@ class SmReportController extends Controller
     {
         try {
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $custom_mark_report = 'custom_mark_report';
             return view('backEnd.reports.progress_card_report', compact('exams', 'classes', 'custom_mark_report'));
         } catch (\Exception $e) {

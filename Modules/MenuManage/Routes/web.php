@@ -16,14 +16,16 @@ Route::group(['middleware' => ['subdomain']], function () {
         Route::name('menumanage.')->middleware('auth')->group(function () {
 
             Route::get('/', 'MenuManageController@index')->name('index')->middleware('userRolePermission:menumanage.index');
-            Route::post('menu-store', 'MenuManageController@store')->name('store.menu');
-            Route::get('reset-with-section', 'SidebarManagerController@resetMenu')->name('reset-with-section');
-            Route::get('/reset-default', 'SidebarManagerController@resetWithDefault')->name('reset-with-default');
+            Route::post('menu-store', 'MenuManageController@store')->name('store.menu')->middleware('userRolePermission:menumanage.index');
+            Route::get('reset-with-section', 'SidebarManagerController@resetMenu')->name('reset-with-section')->middleware('userRolePermission:menumanage.index');
+            Route::get('/reset-default', 'SidebarManagerController@resetWithDefault')->name('reset-with-default')->middleware('userRolePermission:menumanage.index');
 
         });
     });
 });
-Route::prefix('sidebar-manager')->middleware(['auth', 'subdomain'])->group(function () {
+/* Every endpoint here rearranges or renames the shared, per-role sidebar layout, so it
+   needs the same permission as the page that drives it - not merely a login. */
+Route::prefix('sidebar-manager')->middleware(['auth', 'subdomain', 'userRolePermission:menumanage.index'])->group(function () {
     Route::get('/', 'SidebarManagerController@index')->name('sidebar-manager.index');
     //section store
     Route::post('/section/store', 'SidebarManagerController@sectionStore')->name('sidebar-manager.section.store');
@@ -33,6 +35,8 @@ Route::prefix('sidebar-manager')->middleware(['auth', 'subdomain'])->group(funct
     Route::post('/section/menu-store', 'SidebarManagerController@menuStore')->name('sidebar-manager.menu-store');
     Route::post('/section/menu-update', 'SidebarManagerController@menuUpdate')->name('sidebar-manager.menu-update');
     Route::post('/section/menu-edit', 'SidebarManagerController@menuEdit')->name('sidebar-manager.menu-edit');
+    // Renames any entry, section header or menu item, for the whole school.
+    Route::post('/menu-rename', 'SidebarManagerController@menuRename')->name('sidebar-manager.menu-rename');
 
 
     Route::post('/section/sort-section', 'SidebarManagerController@sortSection')->name('sidebar-manager.sort-section');

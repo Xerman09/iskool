@@ -491,7 +491,6 @@ class BulkPrintController extends Controller
     {
         try {
             $classes = SmClass::where('school_id', auth()->user()->school_id)
-                            ->where('academic_id', getAcademicId())
                             ->get();
             return view('bulkprint::feesInvoice.feesInvoiceBulk', compact('classes'));
         } catch (\Exception $e) {

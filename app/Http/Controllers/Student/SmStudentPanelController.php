@@ -751,7 +751,7 @@ class SmStudentPanelController extends Controller
         try {
             $student = SmStudent::find($id);
 
-            $classes = SmClass::where('active_status', '=', '1')->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', '=', '1')->where('school_id', Auth::user()->school_id)->get();
 
             $religions = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '2')->get();
             $blood_groups = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '3')->get();
@@ -1161,7 +1161,6 @@ class SmStudentPanelController extends Controller
                     ->join('sm_subjects', 'sm_subjects.id', '=', 'sm_exam_schedules.subject_id')
                     ->select('sm_subjects.subject_name', 'sm_exam_schedule_subjects.start_time', 'sm_exam_schedule_subjects.end_time', 'sm_exam_schedule_subjects.date', 'sm_exam_schedule_subjects.room', 'sm_exam_schedules.class_id', 'sm_exam_schedules.section_id')
                     //->where('sm_students.class_id', '=', 'sm_exam_schedules.class_id')
-
                     ->where('sm_exam_schedules.section_id', '=', $student_detail->section_id)
                     ->where('sm_exam_schedulesacademic_id', getAcademicId())->where('sm_exam_schedules.school_id', Auth::user()->school_id)->get();
                 return ApiBaseMethod::sendResponse($exam_schedule, null);

@@ -300,7 +300,7 @@ class SmFeesMasterController extends Controller
     {
         try {
             $fees_group_id = $id;
-            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $groups = SmStudentGroup::where('active_status', '=', '1')->where('school_id', Auth::user()->school_id)->get();
             $categories = SmStudentCategory::where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
 

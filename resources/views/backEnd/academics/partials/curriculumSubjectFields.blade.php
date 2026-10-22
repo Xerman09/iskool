@@ -8,17 +8,9 @@
             <select class="primary_select form-control" name="source_subject_id">
                 <option value="">@lang('common.select')</option>
                 @foreach($baseSubjects as $baseSubject)
-                <option value="{{$baseSubject->id}}" {{$selectedSourceId == $baseSubject->id ? 'selected' : ''}}>{{$baseSubject->subject_name}} @if($baseSubject->subject_code)({{$baseSubject->subject_code}})@endif</option>
+                <option value="{{$baseSubject->id}}" {{$selectedSourceId == $baseSubject->id ? 'selected' : ''}}>{{$baseSubject->subject_name}} @if($baseSubject->subject_code)({{$baseSubject->subject_code}})@endif @if($baseSubject->units !== null)&mdash; {{$baseSubject->units}} @lang('academics.units')@endif</option>
                 @endforeach
             </select>
-        </div>
-    </div>
-</div>
-<div class="row mt-15">
-    <div class="col-lg-12">
-        <div class="primary_input">
-            <label class="primary_input_label" for="">@lang('academics.units') <span class="text-danger"> *</span></label>
-            <input class="primary_input_field form-control" type="number" step="0.5" min="0" name="units" autocomplete="off" value="{{$selectedUnits}}">
         </div>
     </div>
 </div>

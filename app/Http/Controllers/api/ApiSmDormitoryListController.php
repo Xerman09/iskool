@@ -253,7 +253,7 @@ class ApiSmDormitoryListController extends Controller
             }
             $students = $students->whereIn('id', $student_ids)->get();
 
-            $classes = SmClass::withOutGlobalScope(StatusAcademicSchoolScope::class)->where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
+            $classes = SmClass::withOutGlobalScope(StatusAcademicSchoolScope::class)->where('active_status', 1)->where('school_id', $school_id)->get();
             $dormitories = SmDormitoryList::where('active_status', 1)->where('school_id', $school_id)->get();
 
             $class_id = $request->class;

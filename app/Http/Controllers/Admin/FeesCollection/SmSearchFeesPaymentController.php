@@ -48,7 +48,6 @@ class SmSearchFeesPaymentController extends Controller
             }
             $classes = SmClass::where('active_status', 1)
                         ->where('school_id',Auth::user()->school_id)
-                        ->where('academic_id', getAcademicId())
                         ->get();
             $invoice_setting = FeesInvoice::where('school_id', auth()->user()->school_id)->first(['prefix','start_form']);
             return view('backEnd.feesCollection.search_fees_payment', compact('classes','fees_payments','invoice_setting'));
@@ -66,7 +65,6 @@ class SmSearchFeesPaymentController extends Controller
         try {
             $classes = SmClass::where('active_status', 1)
                         ->where('school_id',Auth::user()->school_id)
-                        ->where('academic_id', getAcademicId())
                         ->get();
 
             $search['date_from']  = $request->date_from;

@@ -61,7 +61,7 @@ class AcademicController extends Controller
             $class_id = $request->class;
             $section_id = $request->section;
             $subject_id = $request->subject;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $class_routine = SmClassRoutine::where('class_id', $request->class)->where('section_id', $request->section)->where('subject_id', $request->subject)->first();
             if ($class_routine == "") {
                 $class_routine = "hello";
@@ -152,7 +152,7 @@ class AcademicController extends Controller
     {
         try {
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
@@ -239,7 +239,7 @@ class AcademicController extends Controller
             }
 
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];

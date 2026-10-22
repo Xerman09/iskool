@@ -19,6 +19,47 @@ use Modules\MenuManage\Http\Requests\SectionRequestFrom;
 class SidebarManagerController extends Controller
 {
     use SidebarDataStore;
+    /**
+     * Renames any sidebar entry - a section header or a menu item, stock or custom.
+     *
+     * The label goes to permissions.custom_name, which menuLabel() prefers over the
+     * shipped name/lang_name, so an empty value restores the original. Unlike the rest of
+     * this controller the label is school-wide rather than per user: a menu entry should
+     * not be called one thing for the registrar and another for the dean.
+     */
+    public function menuRename(Request $request)
+    {
+        if (config('app.app_sync')) {
+            Toastr::error('Restricted in demo mode');
+            return back();
+        }
+
+        $request->validate([
+            'permission_id' => ['required', 'exists:permissions,id'],
+            'custom_name' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        $permission = Permission::findOrFail($request->permission_id);
+        $permission->custom_name = filled($request->custom_name) ? trim($request->custom_name) : null;
+        $permission->save();
+
+        $this->forgetSidebarCaches();
+
+        Toastr::success(filled($permission->custom_name)
+            ? 'Menu renamed to "' . $permission->custom_name . '"'
+            : 'Menu name reset to the default', 'Success');
+        return redirect()->route('menumanage.index');
+    }
+
+    /**
+     * sidebar_menus() caches the tree per user and keeps it forever, so a school-wide
+     * label change has to drop every user's key, not just the editor's.
+     */
+    private function forgetSidebarCaches()
+    {
+        forgetAllSidebarCaches();
+    }
+
     public function sectionStore(SectionRequestFrom $request)
     {     
      
@@ -26,13 +67,13 @@ class SidebarManagerController extends Controller
             Toastr::error('Restricted in demo mode');
             return back();
         }
-        $permission_position = Permission::whereNotNull('permission_section')->where('user_id', auth()->user()->id)->latest()->first();
+        $permission_position = Permission::whereNotNull('permission_section')->whereNull('user_id')->latest()->first();
         try{
             $permission = Permission::create([
                 'name' => $request->name,
                 'route'=>strtolower($request->name),
                 'position' => $permission_position->id + 1,
-                'user_id' => auth()->user()->id,
+                'user_id' => null,
                 'permission_section'=>1,
                 'type'=>1,
                 'is_menu' => 1,
@@ -44,13 +85,13 @@ class SidebarManagerController extends Controller
             ]);
             Sidebar::create([
                 'permission_id' => $permission->id,
-                'user_id' => auth()->id(),
+                'user_id' => null,
                 'role_id' => auth()->user()->role_id,
                 'position' => $permission_position->id + 1,
                 'active_status' => 1,
                 'parent'=>NULL
             ]);
-            Cache::forget('sidebars'.auth()->user()->id);
+            Cache::forget(sidebarCacheKey());
             
             Toastr::success('Operation successful', 'Success');
             return redirect()->route('menumanage.index');
@@ -66,9 +107,9 @@ class SidebarManagerController extends Controller
         }
         $data = [];
         $data['unused_menus'] = self::unUsedMenu(); 
-        Cache::forget('sidebars'.auth()->user()->id);             
+        Cache::forget(sidebarCacheKey());             
         $data['sidebar_menus'] = sidebar_menus();
-        $data['editPermissionSection'] = Permission::where('user_id', auth()->user()->id)->where('id', $id)->first();
+        $data['editPermissionSection'] = Permission::whereNull('user_id')->where('id', $id)->first();
         return view('menumanage::index', $data);
     }
 
@@ -94,7 +135,7 @@ class SidebarManagerController extends Controller
       
         try {
             if ($request->id != 1) {
-                $section = Sidebar::where('id', $request->id)->where('user_id', auth()->user()->id)->first();
+                $section = Sidebar::where('id', $request->id)->whereNull('user_id')->first();
                 if (count($section->subModule)!=0) {
                    
                     foreach ($section->subModule as $sidebar) {
@@ -104,12 +145,12 @@ class SidebarManagerController extends Controller
                
                 if($section->permissionInfo->permission_section == 1 && count($section->subModule)==0) {
                   
-                    Permission::where('user_id', auth()->user()->id)->where('id', $section->permission_id)->delete();
+                    Permission::whereNull('user_id')->where('id', $section->permission_id)->delete();
                     $section->delete();
                 }
                               
             }
-            Cache::forget('sidebars'.auth()->user()->id);
+            Cache::forget(sidebarCacheKey());
             return $this->reloadWithData();
         } catch (\Exception $e) {
             return response()->json([
@@ -121,7 +162,7 @@ class SidebarManagerController extends Controller
 
     public function removeMenu(Request $request)
     {
-        $sidebar = Sidebar::with('userChildMenu')->where('id', $request->id)->where('user_id', auth()->user()->id)->first();
+        $sidebar = Sidebar::with('userChildMenu')->where('id', $request->id)->whereNull('user_id')->first();
         if ($sidebar && !config('app.app_sync')) {
             if($sidebar->userChildMenu->count() > 0) {
                 foreach($sidebar->userChildMenu as $child) {
@@ -133,7 +174,7 @@ class SidebarManagerController extends Controller
             $sidebar->active_status = 0;
             $sidebar->save();
         }
-        Cache::forget('sidebars'.auth()->user()->id);
+        Cache::forget(sidebarCacheKey());
         return $this->reloadWithData();
 
     }
@@ -147,7 +188,7 @@ class SidebarManagerController extends Controller
             ->when(!$un_used, function($q){
                 $q->where('active_status', 1);
               })
-            ->where('user_id', auth()->user()->id)->first();
+            ->whereNull('user_id')->first();
 
             $data = [
                 'position' => $index + 1,                  
@@ -187,7 +228,7 @@ class SidebarManagerController extends Controller
         }
         $this->orderMenu($menuItemOrder, $request->menu_status, $request->section, $request->un_used);        
       
-        Cache::forget('sidebars'.auth()->user()->id);
+        Cache::forget(sidebarCacheKey());
         return $this->reloadWithData();
     }
 
@@ -198,7 +239,7 @@ class SidebarManagerController extends Controller
         if($request->ids && !config('app.app_sync')) {
             foreach($request->ids as $key=>$permissionSection) {
               
-              $sidebar =  Sidebar::where('id', $permissionSection)->where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id)
+              $sidebar =  Sidebar::where('id', $permissionSection)->whereNull('user_id')->where('role_id', auth()->user()->role_id)
               ->where('active_status', 1)->first();
               if($sidebar){
                 $sidebar->position = $key+1;
@@ -207,17 +248,17 @@ class SidebarManagerController extends Controller
              
             }
         }
-        Cache::forget('sidebars'.auth()->user()->id); 
+        Cache::forget(sidebarCacheKey()); 
     }
 
     public function resetMenu()
     {        
         try {          
-            Sidebar::where('user_id', auth()->user()->id)
+            Sidebar::whereNull('user_id')
             ->where('role_id', auth()->user()->role_id)
             ->delete();
             $this->resetSidebarStore();
-            Cache::forget('sidebars'.auth()->user()->id);  
+            Cache::forget(sidebarCacheKey());  
             return redirect()->back();
            
         } catch (\Exception $e) {
@@ -229,7 +270,7 @@ class SidebarManagerController extends Controller
     {
         try {
                     
-            Sidebar::where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id)->delete();
+            Sidebar::whereNull('user_id')->where('role_id', auth()->user()->role_id)->delete();
             $this->defaultSidebarStore();  
             return redirect()->back();           
         } catch (\Exception $e) {

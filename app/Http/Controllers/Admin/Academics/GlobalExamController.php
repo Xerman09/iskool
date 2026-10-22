@@ -348,11 +348,10 @@ class GlobalExamController extends Controller
                 $classes= $teacher_info->classes;
             } else {
                 $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id',Auth::user()->school_id)
                 ->get();
             } 
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $sections = SmSection::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.exam_setup', compact('exam', 'exams', 'classes', 'subjects', 'sections'));
         } catch (\Exception $e) {

@@ -50,7 +50,6 @@ class SubjectMarkSheetReportController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id',Auth::user()->school_id)
                     ->get();
             }
@@ -209,7 +208,6 @@ class SubjectMarkSheetReportController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id',Auth::user()->school_id)
                     ->get();
             }
@@ -370,7 +368,6 @@ class SubjectMarkSheetReportController extends Controller
                      ->get();
              } else {
                  $classes = SmClass::where('active_status', 1)
-                     ->where('academic_id', getAcademicId())
                      ->where('school_id',Auth::user()->school_id)
                      ->get();
              }
@@ -465,7 +462,7 @@ class SubjectMarkSheetReportController extends Controller
     //                  ->get();
     //          } else {
     //              $classes = SmClass::where('active_status', 1)
-    //                  ->where('academic_id', getAcademicId())
+    //                  
     //                  ->where('school_id',Auth::user()->school_id)
     //                  ->get();
     //          }
@@ -528,7 +525,6 @@ class SubjectMarkSheetReportController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id',Auth::user()->school_id)
                     ->get();
             }
@@ -596,7 +592,6 @@ class SubjectMarkSheetReportController extends Controller
                                 ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                                ->where('academic_id', getAcademicId())
                                 ->where('school_id',Auth::user()->school_id)
                                 ->get();
             }
@@ -755,7 +750,6 @@ class SubjectMarkSheetReportController extends Controller
                                     ->get();
                 } else {
                     $classes = SmClass::where('active_status', 1)
-                                    ->where('academic_id', getAcademicId())
                                     ->where('school_id',Auth::user()->school_id)
                                     ->get();
                 }
@@ -855,7 +849,6 @@ class SubjectMarkSheetReportController extends Controller
                             ->get();
         } else {
             $classes = SmClass::where('active_status', 1)
-                            ->where('academic_id', getAcademicId())
                             ->where('school_id',Auth::user()->school_id)
                             ->get();
         }
@@ -1005,7 +998,6 @@ class SubjectMarkSheetReportController extends Controller
                 
 
                 $classes = SmClass::where('active_status', 1)
-                            ->where('academic_id', getAcademicId())
                             ->where('school_id',Auth::user()->school_id)
                             ->get();
 

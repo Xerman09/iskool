@@ -54,7 +54,7 @@ class SmFeesController extends Controller
     public function feesForward(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
             }
@@ -82,7 +82,7 @@ class SmFeesController extends Controller
                 ->withInput();
         }
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $students = SmStudent::where('class_id', $request->class)->where('section_id', $request->section)->where('school_id',Auth::user()->school_id)->get();
             if ($students->count() != 0) {
                 foreach ($students as $student) {
@@ -171,7 +171,7 @@ class SmFeesController extends Controller
     public function collectFees(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
 
                 return ApiBaseMethod::sendResponse($classes, null);
@@ -218,7 +218,7 @@ class SmFeesController extends Controller
                 Toastr::error('No result found', 'Failed');
                 return redirect('collect-fees');
             }
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];
                 $data['classes'] = $classes->toArray();
@@ -621,7 +621,7 @@ class SmFeesController extends Controller
             }
 
 
-            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($fees_payments, null);
             }
@@ -649,7 +649,7 @@ class SmFeesController extends Controller
                 ->withInput();
         }
         try {
-            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $old_fees_payments = DB::table('sm_fees_payments')
                 ->join('sm_students', 'sm_fees_payments.student_id', '=', 'sm_students.id')
                 ->join('sm_fees_masters', 'sm_fees_payments.fees_type_id', '=', 'sm_fees_masters.fees_type_id')
@@ -691,7 +691,7 @@ class SmFeesController extends Controller
     public function searchFeesDue(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $fees_masters = SmFeesMaster::select('fees_group_id')->where('active_status', 1)->distinct('fees_group_id')->where('school_id',Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];
@@ -784,7 +784,7 @@ class SmFeesController extends Controller
 
             }
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $fees_masters = SmFeesMaster::select('fees_group_id')->where('active_status', 1)->distinct('fees_group_id')->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
 
             $class_id = $request->class;
@@ -1003,7 +1003,7 @@ class SmFeesController extends Controller
     public function feesStatemnt(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $fees_masters = SmFeesMaster::select('fees_group_id')->where('active_status', 1)->distinct('fees_group_id')->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];
@@ -1037,7 +1037,7 @@ class SmFeesController extends Controller
                 ->withInput();
         }
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $fees_masters = SmFeesMaster::select('fees_group_id')->where('active_status', 1)->distinct('fees_group_id')->where('school_id',Auth::user()->school_id)->get();
             $student = SmStudent::find($request->student);
             $fees_assigneds = SmFeesAssign::where('student_id', $request->student)->where('school_id',Auth::user()->school_id)->get();
@@ -1076,7 +1076,7 @@ class SmFeesController extends Controller
     public function balanceFeesReport(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
             }
@@ -1137,7 +1137,7 @@ class SmFeesController extends Controller
             }
             // return $master_ids;
             $class_id = $request->class;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];
@@ -1228,7 +1228,6 @@ class SmFeesController extends Controller
         try {
             $classes = SmClass::where('active_status', 1)
                 ->where('school_id', Auth::user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
@@ -1248,7 +1247,6 @@ class SmFeesController extends Controller
         try {
             $classes = SmClass::where('active_status', 1)
                 ->where('school_id', Auth::user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             if($request->date_range){
@@ -1342,7 +1340,7 @@ class SmFeesController extends Controller
     public function bankPaymentSlip()
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $bank_slips = SmBankPaymentSlip::where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->where('approve_status',0)->orderBy('id', 'desc')->get();
             return view('backEnd.feesCollection.bank_payment_slip', compact('classes','bank_slips'));
         } catch (\Exception $e) {
@@ -1377,7 +1375,7 @@ class SmFeesController extends Controller
             $class_id = $request->class;
             $approve_status = $request->approve_status;
             $section_id = $request->section;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $sections = SmSection::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
             return view('backEnd.feesCollection.bank_payment_slip', compact('all_bank_slips','classes','sections','date','class_id','section_id','approve_status'));
         } catch (\Exception $e) {
@@ -1586,7 +1584,7 @@ class SmFeesController extends Controller
             $date = $request->payment_date;
             $class_id = $request->class;
             $section_id = $request->section;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $sections = SmSection::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
 
             $student = SmStudent::find($bank_payment->student_id);
@@ -1636,7 +1634,6 @@ class SmFeesController extends Controller
 
     public function fineReport(){
         $classes = SmClass::where('active_status', 1)
-            ->where('academic_id', getAcademicId())
             ->where('school_id',Auth::user()->school_id)
             ->get();
 
@@ -1649,7 +1646,6 @@ class SmFeesController extends Controller
         try {
             $classes = SmClass::where('active_status', 1)
                 ->where('school_id', Auth::user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             if($request->date_range){

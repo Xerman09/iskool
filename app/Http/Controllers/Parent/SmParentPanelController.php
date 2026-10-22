@@ -504,7 +504,6 @@ class SmParentPanelController extends Controller
             $student = SmStudent::find($id);
 
             $classes = SmClass::where('active_status', '=', '1')
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -1500,11 +1499,8 @@ class SmParentPanelController extends Controller
                 ->join('sm_sections', 'sm_sections.id', '=', 'sm_students.section_id')
                 // ->join('sm_exams','sm_exams.id','=','sm_exam_types.id' )
                 // ->join('sm_subjects','sm_subjects.id','=','sm_result_stores.subject_id' )
-
                 ->where('sm_students.parent_id', '=', $parent->id)
-
                 ->select('sm_students.user_id', 'student_photo', 'sm_students.full_name as student_name', 'class_name', 'section_name', 'roll_no')
-
                 ->where('sm_students.school_id', Auth::user()->school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
@@ -1635,7 +1631,6 @@ class SmParentPanelController extends Controller
                         ->join('sm_class_times', 'sm_class_times.id', '=', 'sm_class_routine_updates.class_period_id')
                         ->join('sm_subjects', 'sm_subjects.id', '=', 'sm_class_routine_updates.subject_id')
                         ->join('sm_class_rooms', 'sm_class_rooms.id', '=', 'sm_class_routine_updates.room_id')
-
                         ->where([
                             ['sm_class_routine_updates.class_id', $class_id], ['sm_class_routine_updates.section_id', $section_id], ['sm_class_routine_updates.day', $row->id],
                         ])->where('sm_classes.school_id', Auth::user()->school_id)->get();

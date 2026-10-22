@@ -168,9 +168,7 @@
                                                     for="">@lang('system_settings.copy_with_academic_year')</label>
                                                 <select multiple name="copy_with_academic_year[]"
                                                     class="multypol_check_select active position-relative">
-                                                    <option value="App\SmClass"
-                                                        @if (isset($academic_year)) @if (in_array('App\SmClass', @$copy_with_academic_year)) selected @endif
-                                                        @endif >@lang('common.class') </option>
+                                                    {{-- Year levels are shared across academic years, so there is nothing to copy. --}}
                                                     <option value="App\SmSection"
                                                         @if (isset($academic_year)) @if (in_array('App\SmSection', @$copy_with_academic_year)) selected @endif
                                                         @endif >@lang('common.section')</option>

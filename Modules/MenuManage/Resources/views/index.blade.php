@@ -109,6 +109,49 @@
     <input type="hidden" id="menu_remove_url" value="{{ route('sidebar-manager.menu-remove') }}">
 
     <input type="hidden" id="section_sort_url" value="{{ route('sidebar-manager.sort-section') }}">
+
+    {{-- One modal for every entry; the pencil icons fill it from their own data attributes,
+         so no request is needed just to open it. --}}
+    <div class="modal fade" id="renameMenuModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered student-details" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">{{ __('menumanage::menuManage.rename_menu') }}</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                {!! Form::open(['route' => 'sidebar-manager.menu-rename', 'method' => 'POST']) !!}
+                <div class="modal-body">
+                    <input type="hidden" name="permission_id" id="rename_permission_id">
+                    <div class="primary_input mb-15">
+                        <label class="primary_input_label" for="rename_custom_name">{{ __('common.name') }}</label>
+                        <input class="primary_input_field" type="text" name="custom_name" id="rename_custom_name" autocomplete="off" maxlength="191">
+                    </div>
+                    <code id="rename_default_hint"></code>
+                    <p class="mt-10 mb-0 text-muted">{{ __('menumanage::menuManage.rename_menu_hint') }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="primary-btn tr-bg" data-dismiss="modal">@lang('common.cancel')</button>
+                    <button type="submit" class="primary-btn fix-gr-bg"><span class="ti-check"></span> @lang('common.save')</button>
+                </div>
+                {!! Form::close() !!}
+            </div>
+        </div>
+    </div>
 @endsection
+
+@push('script')
+    <script>
+        $(document).on('click', '.rename_menu', function (e) {
+            e.preventDefault();
+            var $icon = $(this);
+            $('#rename_permission_id').val($icon.data('permission-id'));
+            $('#rename_custom_name').val($icon.data('custom-name') || '');
+            $('#rename_default_hint').text($icon.data('default-name')
+                ? @json(__('menumanage::menuManage.rename_menu_default')) + ' ' + $icon.data('default-name')
+                : '');
+            $('#renameMenuModal').modal('show');
+        });
+    </script>
+@endpush
 
 

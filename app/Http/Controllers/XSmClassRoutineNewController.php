@@ -33,7 +33,7 @@ class SmClassRoutineNewController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
             }
@@ -55,7 +55,7 @@ class SmClassRoutineNewController extends Controller
 
             $sm_weekends = SmWeekend::where('school_id', Auth::user()->school_id)->orderBy('order', 'ASC')->where('active_status', 1)->get();
             
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
 
             // $customPaper = array(0, 0, 700.00, 1500.80);
             $pdf = \Pdf::loadView(
@@ -110,7 +110,7 @@ class SmClassRoutineNewController extends Controller
             ->where('active_status', 1)
             ->get();
             // return $sm_weekends;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];
@@ -284,7 +284,7 @@ class SmClassRoutineNewController extends Controller
         try {
             $sm_weekends = SmWeekend::where('school_id', Auth::user()->school_id)->orderBy('order', 'ASC')->where('active_status', 1)->get();
             $class_times = SmClassTime::where('type', 'class')->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             return view('backEnd.academics.class_routine_new', compact('classes', 'class_times', 'class_id', 'section_id', 'sm_weekends'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -324,7 +324,7 @@ class SmClassRoutineNewController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
             }
@@ -356,7 +356,7 @@ class SmClassRoutineNewController extends Controller
             $class_id = $request->class;
             $section_id = $request->section;
             $sm_weekends = SmWeekend::where('school_id', Auth::user()->school_id)->orderBy('order', 'ASC')->where('active_status', 1)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
 
             $sm_routine_updates = $classes->where('id',$request->class)->first()->routineUpdates->where('section_id',$section_id);
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
@@ -413,7 +413,7 @@ class SmClassRoutineNewController extends Controller
             $teacher_id = $request->teacher;
             $sm_weekends = SmWeekend::where('school_id', Auth::user()->school_id)->orderBy('order', 'ASC')->where('active_status', 1)->get();
             $teachers = SmStaff::where('role_id', 4)->select('id', 'full_name')->where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 $data = [];
                 $data['class_times'] = $class_times->toArray();

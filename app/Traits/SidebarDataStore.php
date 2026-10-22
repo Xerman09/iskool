@@ -17,7 +17,7 @@ trait SidebarDataStore
     {
         {
             $user = auth()->user();           
-            $exit = Sidebar::where('user_id', auth()->user()->id)->where('role_id', $user->role_id)->first();
+            $exit = Sidebar::whereNull('user_id')->where('role_id', $user->role_id)->first();
             if ($exit) {
                 return true;
             }
@@ -27,7 +27,7 @@ trait SidebarDataStore
 
                 Sidebar::updateOrCreate([
                     'permission_id' => 1,
-                    'user_id' => $user->id,
+                    'user_id' => null,
                     'role_id' => $user->role_id,
 
                 ], [
@@ -53,10 +53,10 @@ trait SidebarDataStore
                     }
                     if(auth()->user()->role_id == 2 || auth()->user()->role_id == 3){
                         Log::info('Update');
-                        Sidebar::where('user_id', auth()->user()->id)->where('permission_id','!=',1)->update(['parent'=>1]);
+                        Sidebar::whereNull('user_id')->where('role_id', auth()->user()->role_id)->where('permission_id','!=',1)->update(['parent'=>1]);
                     }
                 }
-                Cache::forget('sidebars' . auth()->user()->id);
+                Cache::forget(sidebarCacheKey());
                 return true;
             } elseif (count($oldSidebar) == 0 && (auth()->user()->role_id == 2 || auth()->user()->role_id == 3)) {
               
@@ -67,7 +67,7 @@ trait SidebarDataStore
 
                 }
               
-                Cache::forget('sidebars' . auth()->user()->id);
+                Cache::forget(sidebarCacheKey());
                 
 
             } else {
@@ -75,10 +75,10 @@ trait SidebarDataStore
             }
 
             if(auth()->user()->role_id == 2 || auth()->user()->role_id == 3){
-                Sidebar::whereNull('parent')->where('user_id', auth()->user()->id)->where('permission_id','!=',1)->update(['parent'=>1]);
+                Sidebar::whereNull('parent')->whereNull('user_id')->where('role_id', auth()->user()->role_id)->where('permission_id','!=',1)->update(['parent'=>1]);
             }
             
-            Cache::forget('sidebars' . auth()->user()->id);
+            Cache::forget(sidebarCacheKey());
         }
     }
     function resetSidebarStore()
@@ -104,12 +104,13 @@ trait SidebarDataStore
         $permissionSections = include base_path('resources/var/permission/permission_section_sidebar.php');
         $permissionSectionRoutes = [];
         foreach ($permissionSections as $item) {
-            storePermissionData($item, auth()->user()->id);
+            /* null owner: the section is shared, like the template that references it. */
+            storePermissionData($item, null);
             $permissionSectionRoutes[]=$item['route'];
         }
         // end
         $userPermissionSections = Permission::where('permission_section', 1)
-            ->where('user_id', auth()->user()->id)
+            ->whereNull('user_id')
             ->where('is_saas', 0)->get(['id', 'name', 'type', 'route', 'parent_route', 'permission_section']);
 
         foreach ($userPermissionSections as $key => $userSection) {
@@ -130,37 +131,37 @@ trait SidebarDataStore
             
             if (in_array($sidebar->route, $dashboardSections)) {
                 $parent_id = Permission::where('route', 'dashboard_section')
-                ->where('user_id', $user->id)->value('id');
+                ->whereNull('user_id')->value('id');
             }
             if (in_array($sidebar->route, $administration_sections)) {
-                $parent_id = Permission::where('route', 'administration_section')->where('user_id', $user->id)->value('id');
+                $parent_id = Permission::where('route', 'administration_section')->whereNull('user_id')->value('id');
             }
             if (in_array($sidebar->route, $student_sections)) {
                 $parent_id = Permission::where('route', 'student_section')
-                ->where('user_id', $user->id)->value('id');
+                ->whereNull('user_id')->value('id');
             }
             // if (in_array($sidebar->route, $alumni_sections)) {
             //     $parent_id = Permission::where('route', 'alumni_sections')
-            //     ->where('user_id', $user->id)->value('id');
+            //     ->whereNull('user_id')->value('id');
             // }
             if (in_array($sidebar->route, $exam_sections)) {
-                $parent_id = Permission::where('route', 'exam_section')->where('user_id', $user->id)->value('id');
+                $parent_id = Permission::where('route', 'exam_section')->whereNull('user_id')->value('id');
             }
             if (in_array($sidebar->route, $hr_sections)) {
-                $parent_id = Permission::where('route', 'hr_section')->where('user_id', $user->id)->value('id');
+                $parent_id = Permission::where('route', 'hr_section')->whereNull('user_id')->value('id');
             }
             if (in_array($sidebar->route, $account_sections)) {
-                $parent_id = Permission::where('route', 'accounts_section')->where('user_id', $user->id)->value('id');
+                $parent_id = Permission::where('route', 'accounts_section')->whereNull('user_id')->value('id');
             }
             if (in_array($sidebar->route, $utilities_sections)) {
-                $parent_id = Permission::where('route', 'utilities_section')->where('user_id', $user->id)->value('id');
+                $parent_id = Permission::where('route', 'utilities_section')->whereNull('user_id')->value('id');
             }
             if (in_array($sidebar->route, $report_sections)) {
                 $parent_id = Permission::where('route', 'report_section')
-                ->where('user_id', $user->id)->value('id');
+                ->whereNull('user_id')->value('id');
             }
             if (in_array($sidebar->route, $settings_sections)) {
-                $parent_id = Permission::where('route', 'settings_section')->where('user_id', $user->id)->value('id');
+                $parent_id = Permission::where('route', 'settings_section')->whereNull('user_id')->value('id');
             }
            
             if (!$sidebar->route && !$sidebar->parent_route) {
@@ -170,8 +171,8 @@ trait SidebarDataStore
         }
         $ignorePermissionRoutes = ['reports', 'fees.fees-report', 'exam-setting'];
         $getIgnoreIds = Permission::whereIn('route', $ignorePermissionRoutes)->pluck('id')->toArray();
-        Cache::forget('sidebars' . auth()->user()->id);
-        Sidebar::whereIn('permission_id', $getIgnoreIds)->where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id)->update(['active_status' => 0, 'ignore'=>1]);
+        Cache::forget(sidebarCacheKey());
+        Sidebar::whereIn('permission_id', $getIgnoreIds)->whereNull('user_id')->where('role_id', auth()->user()->role_id)->update(['active_status' => 0, 'ignore'=>1]);
         $this->deActiveForSaas();
        
     }
@@ -213,7 +214,7 @@ trait SidebarDataStore
 
         Sidebar::updateOrCreate([
             'permission_id' => $sidebar->id,
-            'user_id' => $user->id,
+            'user_id' => null,
             'role_id'=>$user->role_id
 
         ], [
@@ -225,7 +226,7 @@ trait SidebarDataStore
     function modulePermissionSidebar()
     {
         $permissionIds = $this->permissions()->whereNotNull('route')->pluck('id')->toArray();
-        $sidebarPermissionIds = Sidebar::where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id)->pluck('permission_id')->toArray();
+        $sidebarPermissionIds = Sidebar::whereNull('user_id')->where('role_id', auth()->user()->role_id)->pluck('permission_id')->toArray();
         $newPermissionIds = array_diff($permissionIds, $sidebarPermissionIds);
       
         if(empty($newPermissionIds)) return true;
@@ -238,7 +239,7 @@ trait SidebarDataStore
                 }
                 $this->storeSidebar($sidebar, $key, $parent_id);
             }
-            Cache::forget('sidebars' . auth()->user()->id);
+            Cache::forget(sidebarCacheKey());
         }
         
 
@@ -269,7 +270,7 @@ trait SidebarDataStore
         }
         
         if (in_array($sidebar->route, $this->paidModuleRoutes())) {
-            $parent_id = Permission::where('route', 'module_section')->where('user_id', auth()->user()->id)->value('id');
+            $parent_id = Permission::where('route', 'module_section')->whereNull('user_id')->value('id');
         }
         
         

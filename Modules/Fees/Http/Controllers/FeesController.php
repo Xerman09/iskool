@@ -323,7 +323,6 @@ class FeesController extends Controller
     {
         try {
             $classes = SmClass::where('school_id', Auth::user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             $feesGroups = FmFeesGroup::where('school_id', Auth::user()->school_id)
@@ -715,7 +714,6 @@ class FeesController extends Controller
         try {
             // View Start
             $classes = SmClass::where('school_id', Auth::user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             $feesGroups = FmFeesGroup::where('school_id', Auth::user()->school_id)
@@ -938,7 +936,6 @@ class FeesController extends Controller
     {
         try {
             $classes = SmClass::where('school_id', Auth::user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             $feesGroups = FmFeesGroup::where('school_id', Auth::user()->school_id)

@@ -385,11 +385,11 @@
             <div class="row flex-grow-1 d-flex justify-content-between input-right-icon">
                 <div class="col">
                     <div class="primary_input">
-                        <label class="primary_input_label" for="">@lang('admin.signature')</label>
+                        <label class="primary_input_label" for="">@lang('admin.official_signature')</label>
                         <input
                             class="primary_input_field form-control{{ $errors->has('signature') ? ' is-invalid' : '' }}"
                             type="text" id="placeholderFileFourName"
-                            placeholder="{{ isset($id_card) ? ($id_card->signature != '' ? getFilePath3($id_card->signature) : trans('admin.signature') . ' *') : trans('admin.signature') . ' *' }}"
+                            placeholder="{{ isset($id_card) ? ($id_card->signature != '' ? getFilePath3($id_card->signature) : trans('admin.official_signature') . ' *') : trans('admin.official_signature') . ' *' }}"
                             readonly>
 
                         @if ($errors->has('signature'))

@@ -127,7 +127,6 @@ class FeesReportController extends Controller
     private function allClass()
     {
             $data['classes'] = SmClass::where('school_id', auth()->user()->school_id)
-                        ->where('academic_id', getAcademicId())
                         ->get();
             return $data;
     }
@@ -136,7 +135,6 @@ class FeesReportController extends Controller
     {
         $data = [];
         $data['classes'] = SmClass::where('school_id', auth()->user()->school_id)
-                    ->where('academic_id', getAcademicId())
                     ->get();
         if ($request->date_range) {
             $rangeArr = $request->date_range ? explode('-', $request->date_range) : [date('m/d/Y'), date('m/d/Y')];

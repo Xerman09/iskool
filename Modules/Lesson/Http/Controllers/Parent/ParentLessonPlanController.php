@@ -65,7 +65,6 @@ class ParentLessonPlanController extends Controller
                 ->get();
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
             $records = StudentRecord::where('student_id', $id)->Where('school_id', auth()->user()->school_id)->get();

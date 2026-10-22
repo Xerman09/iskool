@@ -23,7 +23,6 @@ class BehaviourRecordsController extends Controller
     {
         try {
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -44,7 +43,7 @@ class BehaviourRecordsController extends Controller
     public function assignIncidentSearch(Request $request)
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
             $sessions = SmAcademicYear::where('school_id', Auth::user()->school_id)->get();
             $academic_year = $request->academic_year;
             $class_id = $request->class_id;

@@ -21,7 +21,7 @@
                                                 <div class="card-header item_header" id="heading_{{ $menu->id }}">
                                                     <div class="dd-handle">
                                                         <div class="float-left">
-                                                            {{ __($menu->permissionInfo->lang_name) }}
+                                                            {{ menuLabel($menu->permissionInfo) }}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -41,7 +41,7 @@
                                                                         id="heading_{{ $submenu->id }}">
                                                                         <div class="dd-handle">
                                                                             <div class="float-left">
-                                                                                {{ __($submenu->permissionInfo->lang_name) }}
+                                                                                {{ menuLabel($submenu->permissionInfo) }}
                                                                                
                                                                             </div>
                                                                         </div>

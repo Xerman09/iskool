@@ -27,17 +27,18 @@ class SmPostalReceiveController extends Controller
         }
     }
 
-    public function store(Request $request)
+    /**
+     * The attachment is optional here, as it is on update and on postal dispatch. This used
+     * to read $request->file->getClientOriginalExtension() before the try block, so saving
+     * without one was a fatal rather than a caught failure; SmPostalReceiveRequest already
+     * restricts the extension, and it validates the other fields too, which this action did
+     * not do at all.
+     */
+    public function store(SmPostalReceiveRequest $request)
     {
-        $fileExtenSion = $request->file->getClientOriginalExtension();
-        $supportedExtensions = ["pdf", "doc", "docx", "jpg", "jpeg", "png", "txt"];
-        if(!in_array($fileExtenSion, $supportedExtensions)){
-            Toastr::error('Unsupported File', 'Failed');
-            return redirect()->back();
-        }
         try{
             $destination =  'public/uploads/postal/';
-            $fileName=fileUpload($request->file,$destination);
+            $fileName=fileUpload($request->file('file'),$destination);
             $postal_receive = new SmPostalReceive();
             $postal_receive->from_title = $request->from_title;
             $postal_receive->reference_no = $request->reference_no;

@@ -57,7 +57,6 @@ class SmExamRoutineController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -263,7 +262,7 @@ class SmExamRoutineController extends Controller
                     ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
-                $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+                $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
                 $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
                 $class_id = $request->class;
                 if (empty($request->section)) {
@@ -423,7 +422,7 @@ class SmExamRoutineController extends Controller
 
         try {
             $exam_types = SmExamType::where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             return view('backEnd.reports.exam_routine_report', compact('classes', 'exam_types'));
         } catch (\Exception $e) {
@@ -447,7 +446,6 @@ class SmExamRoutineController extends Controller
             $exam_types = SmExamType::get();
 
             $exam_schedules = SmExamSchedule::where('school_id', Auth::user()->school_id)
-
                 ->when($request->exam, function ($query) use ($request) {
                     $query->where('exam_term_id', $request->exam);
                 })
@@ -493,7 +491,6 @@ class SmExamRoutineController extends Controller
                 $exam_types = SmExamType::get();
 
                 $exam_schedules = SmExamSchedule::where('school_id', Auth::user()->school_id)
-
                     ->when($request->exam, function ($query) use ($request) {
                         $query->where('exam_term_id', $request->exam);
                     })
@@ -660,7 +657,6 @@ class SmExamRoutineController extends Controller
                     ->get();
 
                 $subjects     = SmSubject::whereIn('id', $subject_ids)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get(['id', 'subject_name']);
 
@@ -860,7 +856,6 @@ class SmExamRoutineController extends Controller
                 ->pluck('subject_id')->toArray();
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
             $exams        = SmExam::where('active_status', 1)
@@ -882,7 +877,6 @@ class SmExamRoutineController extends Controller
                 ->get();
 
             $subjects     = SmSubject::whereIn('id', $subject_ids)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get(['id', 'subject_name']);
 

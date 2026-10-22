@@ -24,11 +24,11 @@ class Sidebar extends Model
     {
         return $this->hasMany('Modules\MenuManage\Entities\Sidebar','parent','permission_id')
         ->orderBy('position', 'ASC')
-        ->where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id)->where('active_status', 0);
+        ->whereNull('user_id')->where('role_id', auth()->user()->role_id)->where('active_status', 0);
     }
     public function userChildMenu()
     {
-        return $this->hasMany('Modules\MenuManage\Entities\Sidebar','parent','permission_id')->where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id);
+        return $this->hasMany('Modules\MenuManage\Entities\Sidebar','parent','permission_id')->whereNull('user_id')->where('role_id', auth()->user()->role_id);
     }
     public function subModule()
     { 
@@ -45,7 +45,7 @@ class Sidebar extends Model
                 $q->where('is_admin', 1)->orWhere('is_teacher', 1);
             });
         })
-        ->where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id)->where('active_status', 1)->orderBy('position', 'ASC');
+        ->whereNull('user_id')->where('role_id', auth()->user()->role_id)->where('active_status', 1)->orderBy('position', 'ASC');
     }
     public function deActiveSubMenu()
     { 
@@ -62,7 +62,7 @@ class Sidebar extends Model
                 $q->where('is_admin', 1);
             });
         })
-        ->where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id)->where('active_status', 0)->orderBy('position', 'ASC');
+        ->whereNull('user_id')->where('role_id', auth()->user()->role_id)->where('active_status', 0)->orderBy('position', 'ASC');
     }
     public function permissionSection()
     {
@@ -72,13 +72,13 @@ class Sidebar extends Model
     {
         return $q->where('ignore', 0)       
         ->where('active_status', 0)
-        ->where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id);
+        ->whereNull('user_id')->where('role_id', auth()->user()->role_id);
     }
     public function scopeActiveMenuUser($q)
     {
         return $q->where('ignore', 0)       
         ->where('active_status', 1)
-        ->where('user_id', auth()->user()->id)->where('role_id', auth()->user()->role_id);
+        ->whereNull('user_id')->where('role_id', auth()->user()->role_id);
     }
    
 }

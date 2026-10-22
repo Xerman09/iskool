@@ -73,7 +73,7 @@ class GlobalExaminationController extends Controller
     public function examSchedule()
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.exam_schedule', compact('classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -85,7 +85,7 @@ class GlobalExaminationController extends Controller
         try {
             $academic_years = SmAcademicYear::where('school_id', Auth::user()->school_id)->get();
             $exam_types = SmExamType::where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.resultsArchiveView', compact('classes', 'exam_types', 'academic_years'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -353,7 +353,6 @@ class GlobalExaminationController extends Controller
                     ->get();
 
         $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', $studentDetails->academic_id)
                 ->where('school_id',Auth::user()->school_id)
                 ->get();
 
@@ -480,9 +479,9 @@ class GlobalExaminationController extends Controller
     public function examScheduleCreate()
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $sections = SmSection::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $exams = SmExam::where('school_id', Auth::user()->school_id)->get();
             $exam_types = SmExamType::where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.exam_schedule_create', compact('classes', 'exams', 'exam_types'));
@@ -510,7 +509,7 @@ class GlobalExaminationController extends Controller
 
             $assign_subjects = SmAssignSubject::where('class_id', $request->class)->where('section_id', $request->section)->where('academic_id', getAcademicId())->get();
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             $class_id = $request->class;
             $section_id = $request->section;
@@ -630,7 +629,6 @@ class GlobalExaminationController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -667,11 +665,10 @@ class GlobalExaminationController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.masks_register_create', compact('exams', 'classes', 'subjects', 'exam_types'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -859,7 +856,7 @@ class GlobalExaminationController extends Controller
 
             }
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $exam_types = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             $exam_id = $request->exam;
             $class_id = $request->class;
@@ -1112,11 +1109,11 @@ class GlobalExaminationController extends Controller
         ]);
         try {
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $exam_types = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $exam_types = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
             $exam_id = $request->exam;
@@ -1187,8 +1184,8 @@ class GlobalExaminationController extends Controller
     {
         try {
             $exam_types = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.seat_plan', compact('exam_types', 'classes', 'subjects'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -1200,8 +1197,8 @@ class GlobalExaminationController extends Controller
     {
         try {
             $exam_types = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $class_rooms = SmClassRoom::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.seat_plan_create', compact('exam_types', 'classes', 'subjects', 'class_rooms'));
         } catch (\Exception $e) {
@@ -1235,7 +1232,7 @@ class GlobalExaminationController extends Controller
             }
 
             $exam_types = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             $class_rooms = SmClassRoom::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             $fill_uped = [];
@@ -1384,8 +1381,8 @@ class GlobalExaminationController extends Controller
             }
 
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             return view('backEnd.examination.seat_plan', compact('exams', 'classes', 'subjects', 'seat_plans'));
         } catch (\Exception $e) {
@@ -1414,11 +1411,10 @@ class GlobalExaminationController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.exam_attendance', compact('exams', 'classes', 'subjects'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -1518,11 +1514,10 @@ class GlobalExaminationController extends Controller
                         ->get();
                 } else {
                     $classes = SmClass::where('active_status', 1)
-                        ->where('academic_id', getAcademicId())
                         ->where('school_id', Auth::user()->school_id)
                         ->get();
                 }
-                $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+                $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
                 return view('backEnd.examination.exam_attendance', compact('exams', 'classes', 'subjects', 'exam_attendance_childs'));
             }
 
@@ -1551,11 +1546,10 @@ class GlobalExaminationController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -1645,13 +1639,11 @@ class GlobalExaminationController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
 
             $subjects = SmSubject::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -1825,7 +1817,6 @@ class GlobalExaminationController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -1855,7 +1846,6 @@ class GlobalExaminationController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -1877,7 +1867,7 @@ class GlobalExaminationController extends Controller
     {
         try {
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.reports.report_tabulation_sheet', compact('exams', 'classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -1888,7 +1878,7 @@ class GlobalExaminationController extends Controller
     {
         try {
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.reports.report_tabulation_sheet', compact('exams', 'classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -1911,8 +1901,8 @@ class GlobalExaminationController extends Controller
             // return redirect()->back()->with('message-danger', 'Your result is not found!');
         }
         $exams = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-        $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-        $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+        $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
+        $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
         $assign_subjects = SmAssignSubject::where('class_id', $class->id)->where('section_id', $section->id)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
         $class_name = $class->class_name;
         $exam_name = $exam->title;
@@ -2092,7 +2082,6 @@ class GlobalExaminationController extends Controller
                     }
 
                     $examSubjects = SmExam::where([ ['exam_type_id', $InputExamId], ['section_id', $InputSectionId], ['class_id', $InputClassId]])
-
                         ->where('school_id',Auth::user()->school_id)
                         ->where('academic_id',getAcademicId())
                         ->get();
@@ -2108,12 +2097,10 @@ class GlobalExaminationController extends Controller
                         ->get();
 
                     $classes = SmClass::where('active_status', 1)
-                        ->where('academic_id', getAcademicId())
                         ->where('school_id', Auth::user()->school_id)
                         ->get();
 
                     $subjects = SmSubject::where('active_status', 1)
-                        ->where('academic_id', getAcademicId())
                         ->where('school_id', Auth::user()->school_id)
                         ->get();
 
@@ -2370,12 +2357,10 @@ class GlobalExaminationController extends Controller
                 ->get();
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
             $subjects = SmSubject::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -2493,7 +2478,7 @@ class GlobalExaminationController extends Controller
     {
         try {
             $exams = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.reports.mark_sheet_report', compact('exams', 'classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -2527,7 +2512,7 @@ class GlobalExaminationController extends Controller
             }
             // $marks_register_childs = $marks_register->marksRegisterChilds;
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $grades = SmMarksGrade::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
             $exam_id = $request->exam;
@@ -2544,7 +2529,7 @@ class GlobalExaminationController extends Controller
     {
         try {
             $exams = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.reports.mark_sheet_report_student', compact('exams', 'classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -2741,7 +2726,6 @@ class GlobalExaminationController extends Controller
                     ->get();
 
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id',Auth::user()->school_id)
                     ->get();
 
@@ -2830,7 +2814,6 @@ class GlobalExaminationController extends Controller
                     ->get();
 
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id',Auth::user()->school_id)
                     ->get();
 
@@ -2916,7 +2899,6 @@ class GlobalExaminationController extends Controller
                 ->max('gpa');
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id',Auth::user()->school_id)
                 ->get();
 

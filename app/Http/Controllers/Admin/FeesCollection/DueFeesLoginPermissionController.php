@@ -17,7 +17,7 @@ class DueFeesLoginPermissionController extends Controller
     public function index(){
         try{
             $roles = InfixRole::whereIn('id', [2,3])->where('school_id', auth()->user()->school_id)->get();
-            $classes = SmClass::where('school_id',auth()->user()->school_id)->where('academic_id',getAcademicId())->get();
+            $classes = SmClass::where('school_id',auth()->user()->school_id)->get();
             return view('backEnd.feesCollection.due_fees_login_permission', compact('roles', 'classes'));
         }
         catch(\Exception $e){
@@ -29,7 +29,7 @@ class DueFeesLoginPermissionController extends Controller
     public function search(Request $request){
         try{
             $roles = InfixRole::whereIn('id', [2,3])->where('school_id', auth()->user()->school_id)->get();
-            $classes = SmClass::where('school_id',auth()->user()->school_id)->where('academic_id',getAcademicId())->get();
+            $classes = SmClass::where('school_id',auth()->user()->school_id)->get();
             $records = StudentRecord::query();
             $records->where('is_promote', 0)->where('school_id',auth()->user()->school_id);
             $records->when(moduleStatusCheck('University') && $request->filled('un_academic_id'), function ($u_query) use ($request) {
@@ -46,7 +46,6 @@ class DueFeesLoginPermissionController extends Controller
                     $query->where('class_id', $request->class_id);
                 });
             })
-            
             ->when(moduleStatusCheck('University') && $request->filled('un_department_id'), function ($u_query) use ($request) {
                 $u_query->where('un_department_id', $request->un_department_id);
             }, function ($query) use ($request) {
@@ -57,11 +56,9 @@ class DueFeesLoginPermissionController extends Controller
             ->when(!$request->academic_year && moduleStatusCheck('University')==false, function ($query) use ($request) {
                 $query->where('academic_id', getAcademicId());
             })
-            
             ->when( moduleStatusCheck('University') && $request->filled('un_session_id'), function ($query) use ($request) {
                 $query->where('un_session_id', $request->un_session_id);
             })
-            
             ->when( moduleStatusCheck('University') && $request->filled('un_semester_label_id'), function ($query) use ($request) {
                 $query->where('un_semester_label_id', $request->un_semester_label_id);
             });

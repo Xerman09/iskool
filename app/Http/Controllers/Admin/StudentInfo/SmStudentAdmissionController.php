@@ -129,7 +129,6 @@ class SmStudentAdmissionController extends Controller
                 ->when($request->filled('email_address') && $request->filled('phone_number'), function ($q) use ($request) {
                     $q->where('phone_number', $request->phone_number);
                 })
-
                 ->first();
             if ($user) {
                 if ($user->role_id == 2) {
@@ -845,7 +844,6 @@ class SmStudentAdmissionController extends Controller
     {
         try {
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 

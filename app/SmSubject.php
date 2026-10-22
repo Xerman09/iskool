@@ -4,6 +4,7 @@ namespace App;
 
 use App\Scopes\GlobalAcademicScope;
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\StatusSchoolScope;
 use App\Scopes\StatusAcademicSchoolScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -15,7 +16,11 @@ class SmSubject extends Model
     {
         parent::boot();
         static::addGlobalScope(new GlobalAcademicScope);
-        static::addGlobalScope(new StatusAcademicSchoolScope);
+        // Registered under the old identifier so the existing
+        // withoutGlobalScope(StatusAcademicSchoolScope::class) calls still lift it. The
+        // subject catalog and the curriculum built from it are school-level data a college
+        // reuses every year, so they are no longer filtered by academic year.
+        static::addGlobalScope(StatusAcademicSchoolScope::class, new StatusSchoolScope);
     }
 
     public function course()

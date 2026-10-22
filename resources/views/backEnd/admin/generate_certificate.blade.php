@@ -57,6 +57,33 @@
                                 )
                             @else
                                 <div class="col-lg-4 mt-30-md">
+                                    <label class="primary_input_label" for="">@lang('academics.program')</label>
+                                    <select class="primary_select form-control" name="course_id" id="select_certificate_program">
+                                        <option data-display="@lang('academics.program')" value="">@lang('academics.program')</option>
+                                        @foreach (@$courses ?? [] as $course)
+                                            <option value="{{ $course->id }}"
+                                                {{ isset($course_id) ? ($course_id == $course->id ? 'selected' : '') : '' }}>
+                                                {{ $course->course_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                {{-- Left blank on purpose: unlike the exam screens this narrows the student
+                                     list itself, so defaulting to the active semester would quietly drop
+                                     students whose current semester is a different one. --}}
+                                <div class="col-lg-4 mt-30-md">
+                                    <label class="primary_input_label" for="">@lang('academics.semester')</label>
+                                    <select class="primary_select form-control" name="semester_id" id="select_certificate_semester">
+                                        <option data-display="@lang('academics.semester')" value="">@lang('academics.semester')</option>
+                                        @foreach (@$semesters ?? [] as $semester)
+                                            <option value="{{ $semester->id }}"
+                                                {{ isset($semester_id) ? ($semester_id == $semester->id ? 'selected' : '') : '' }}>
+                                                {{ $semester->semester_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-4 mt-30-md">
                                     <label class="primary_input_label" for="">@lang('common.class') <span
                                             class="text-danger"> *</span></label>
                                     <select
@@ -82,6 +109,11 @@
                                     <select class="primary_select " id="select_section" name="section">
                                         <option data-display="@lang('common.select_section')" value="">
                                             @lang('common.select_section')</option>
+                                        {{-- Keep the searched section visible; the rest is loaded by ajax on class change. --}}
+                                        @if (isset($section_id) && $section_id)
+                                            <option value="{{ $section_id }}" selected>
+                                                {{ @App\SmSection::find($section_id)->section_name }}</option>
+                                        @endif
                                     </select>
                                     @if ($errors->has('section'))
                                         <span class="text-danger invalid-select" role="alert">

@@ -90,18 +90,19 @@ class SmAcademicYearController extends Controller
             }
         }
 
-        // Subjects belonging to an active curriculum always carry forward - this isn't
-        // optional like the other copy_with_academic_year tables, since losing a school's
-        // curriculum layout every year would be destructive. Teacher assignments
+        // The subject catalog, the curriculum subjects built from it and the year levels are
+        // school-level data now (see App\Scopes\StatusSchoolScope), so they are already
+        // visible in this new year and nothing is copied. Copying them used to mint new ids
+        // every year, which silently broke prerequisites, minor-subject equivalence and the
+        // marks already recorded against the previous year's rows. Teacher assignments
         // (SmAssignSubject) still never carry over - those must be redone by the admin
         // (e.g. a teacher may have resigned since).
-        if ($yr) {
-            $this->copyActiveCurriculumSubjects($yr->id, $academic_year->id, $created_year);
-        }
 
         if ($request->copy_with_academic_year != null) {
             $tables = $request->copy_with_academic_year;
-            $tables = array_filter($tables);
+            // Year levels are shared across academic years, so replicating them would only
+            // duplicate every entry in the year-level dropdowns.
+            $tables = array_diff(array_filter($tables), [SmClass::class]);
             if (!empty($tables)) {
                 if ($yr) {
                     foreach ($tables as $table_name) {
@@ -122,7 +123,7 @@ class SmAcademicYearController extends Controller
                         }
                     }
                 }
-                $classes = SmClass::where('academic_id', $academic_year->id)->where('school_id', Auth::user()->school_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
+                $classes = SmClass::where('school_id', Auth::user()->school_id)->get();
                 $sections = SmSection::where('academic_id', $academic_year->id)->where('school_id', Auth::user()->school_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
                 foreach ($classes as $class) {
                     foreach ($sections as $section) {
@@ -143,58 +144,6 @@ class SmAcademicYearController extends Controller
         DB::commit();
         Toastr::success('Operation successful', 'Success');
         return redirect()->back();
-    }
-
-    /**
-     * Copies every curriculum subject (course_id set) whose curriculum_version is active
-     * from $fromAcademicId into $toAcademicId, chaining source_subject_id back to the prior
-     * year's row and re-linking prerequisites between the newly copied subjects.
-     */
-    private function copyActiveCurriculumSubjects($fromAcademicId, $toAcademicId, $createdYear)
-    {
-        $activeCurriculumVersionIds = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)
-            ->where('is_active', 1)
-            ->pluck('id');
-
-        if ($activeCurriculumVersionIds->isEmpty()) {
-            return;
-        }
-
-        $subjects = \App\SmSubject::withoutGlobalScopes()
-            ->where('academic_id', $fromAcademicId)
-            ->where('school_id', Auth::user()->school_id)
-            ->whereNotNull('course_id')
-            ->whereIn('curriculum_version_id', $activeCurriculumVersionIds)
-            ->get();
-
-        if ($subjects->isEmpty()) {
-            return;
-        }
-
-        $subjectIdMap = [];
-        foreach ($subjects as $subject) {
-            $newSubject = $subject->replicate();
-            $newSubject->created_at = $createdYear;
-            $newSubject->updated_at = $createdYear;
-            $newSubject->academic_id = $toAcademicId;
-            $newSubject->source_subject_id = $subject->id;
-            $newSubject->save();
-
-            $subjectIdMap[$subject->id] = $newSubject->id;
-        }
-
-        $oldPrerequisites = \App\SubjectPrerequisite::whereIn('subject_id', array_keys($subjectIdMap))->get();
-        foreach ($oldPrerequisites as $prerequisite) {
-            $newSubjectId = $subjectIdMap[$prerequisite->subject_id] ?? null;
-            $newPrerequisiteSubjectId = $subjectIdMap[$prerequisite->prerequisite_subject_id] ?? null;
-            if ($newSubjectId && $newPrerequisiteSubjectId) {
-                $newPrerequisite = new \App\SubjectPrerequisite();
-                $newPrerequisite->subject_id = $newSubjectId;
-                $newPrerequisite->prerequisite_subject_id = $newPrerequisiteSubjectId;
-                $newPrerequisite->school_id = Auth::user()->school_id;
-                $newPrerequisite->save();
-            }
-        }
     }
 
     public function show(Request $request, $id)

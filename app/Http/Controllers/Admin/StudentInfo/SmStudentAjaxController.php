@@ -279,8 +279,7 @@ class SmStudentAjaxController extends Controller
     }
     public function ajaxPromoteYear(Request $request)
     {
-        $classes = SmClass::where('academic_id', $request->year)
-            ->where('school_id', Auth::user()->school_id)
+        $classes = SmClass::where('school_id', Auth::user()->school_id)
             ->withOutGlobalScope(StatusAcademicSchoolScope::class)
             ->get();
 
@@ -394,10 +393,10 @@ class SmStudentAjaxController extends Controller
         $academic_year = SmAcademicYear::where('id', $request->id)->first();
 
         if ($academic_year) {
-            $classes = SmClass::withOutGlobalScope(StatusAcademicSchoolScope::class)->where('active_status', '=', '1')->where('academic_id', $request->id)->where('school_id', $academic_year->school_id)->get();
+            $classes = SmClass::withOutGlobalScope(StatusAcademicSchoolScope::class)->where('active_status', '=', '1')->where('school_id', $academic_year->school_id)->get();
         } else {
             $school = app('school');
-            $classes = SmClass::where('active_status', '=', '1')->where('academic_id', $request->id)->where('school_id', $school->id)->get();
+            $classes = SmClass::where('active_status', '=', '1')->where('school_id', $school->id)->get();
         }
         return response()->json([$classes, $academic_year]);
     }

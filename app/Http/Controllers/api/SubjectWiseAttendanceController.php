@@ -53,9 +53,7 @@ class SubjectWiseAttendanceController extends Controller
             }
 
             return redirect()->back()
-
                 ->withErrors($validator)
-
                 ->withInput();
 
         }
@@ -94,7 +92,7 @@ class SubjectWiseAttendanceController extends Controller
         }
         try {
             $date = $request->attendance_date;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+            $classes = SmClass::where('active_status', 1)->get();
 
             $students = SmStudent::where('class_id', $request->class)->where('section_id', $request->section)->where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
 

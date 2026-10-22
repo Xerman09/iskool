@@ -271,7 +271,6 @@ class SmLessonController extends Controller
         ->where('teacher_id', $teacher_info->id)->get();
 
         $data['subjects'] = SmSubject::where('active_status', 1)
-        ->where('academic_id', getAcademicId())
         ->where('school_id', Auth::user()->school_id)->get();
         $data['sections'] = SmSection::where('active_status', 1)
         ->where('academic_id', getAcademicId())
@@ -289,7 +288,6 @@ class SmLessonController extends Controller
         }
         if (!teacherAccess()) {
             $data['classes'] = SmClass::where('active_status', 1)
-            ->where('academic_id', getAcademicId())
             ->where('school_id', Auth::user()->school_id)->get();
         } else {
             $data['classes'] = SmAssignSubject::where('teacher_id', $teacher_info->id)

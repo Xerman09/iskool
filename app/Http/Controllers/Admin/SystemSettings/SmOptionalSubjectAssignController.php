@@ -144,7 +144,7 @@ class SmOptionalSubjectAssignController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $class_optionals = SmClassOptionalSubject::join('sm_classes', 'sm_classes.id', '=', 'sm_class_optional_subject.class_id')
                 ->select('sm_class_optional_subject.*', 'class_name')
                 ->where('sm_class_optional_subject.school_id', Auth::user()->school_id)
@@ -201,7 +201,7 @@ class SmOptionalSubjectAssignController extends Controller
 
         try {
             $editData = SmClassOptionalSubject::findOrfail($id);
-            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->where('sm_classes.academic_id', getAcademicId())->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             //    return $classes;
             $class_optionals = SmClassOptionalSubject::join('sm_classes', 'sm_classes.id', '=', 'sm_class_optional_subject.class_id')
                 ->select('sm_class_optional_subject.*', 'class_name')

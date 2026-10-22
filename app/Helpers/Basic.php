@@ -309,7 +309,7 @@ if (!function_exists('sidebar_menus')) {
     function sidebar_menus()
     {
         $user = auth()->user();
-        return $sidebars = Cache::rememberForever('sidebars' . $user->id, function () use ($user) {
+        return $sidebars = Cache::rememberForever(sidebarCacheKey($user), function () use ($user) {
             return Sidebar::with(['subModule', 'permissionInfo'])
                 ->whereNull('parent')
                 ->whereHas('permissionInfo', function ($q) use ($user) {
@@ -322,7 +322,8 @@ if (!function_exists('sidebar_menus')) {
                             $q->where('is_admin', 1);
                         });
                 })
-                ->where('user_id', $user->id)->where('role_id', $user->role_id)->where('active_status', 1)
+                /* The role template, not a per-account copy - see sidebarRoleId(). */
+                ->whereNull('user_id')->where('role_id', $user->role_id)->where('active_status', 1)
                 ->orderBy('position', 'ASC')->get();
         });
     }
@@ -482,4 +483,89 @@ function hasDueFees($children_id)
     return $student_ids && in_array($children_id, $student_ids);
 
 
+}
+if (!function_exists('menuLabel')) {
+    /**
+     * The one place a sidebar entry is turned into text.
+     *
+     * A superadmin label typed in the Sidebar Manager wins; otherwise the shipped phrase,
+     * which the sidebar reads through __() because lang_name holds a translation key, not
+     * text. Sections carry a plain name and no key, so those fall through to name. The
+     * manager and the live sidebar both call this, so what you type is what you see in
+     * both - they used to disagree, name in the manager against __(lang_name) live.
+     */
+    function menuLabel($permission)
+    {
+        if (!$permission) {
+            return '';
+        }
+
+        if (filled($permission->custom_name)) {
+            return $permission->custom_name;
+        }
+
+        if (filled($permission->lang_name)) {
+            $translated = __($permission->lang_name);
+
+            /* __() hands back the key itself when nothing is registered for it, and hands back a
+               whole array when the key names a group or a file - a label is neither. */
+            if (is_string($translated) && $translated !== $permission->lang_name) {
+                return $translated;
+            }
+        }
+
+        return (string) $permission->name;
+    }
+}
+
+if (!function_exists('menuDefaultLabel')) {
+    /** The label a sidebar entry shipped with, ignoring any superadmin rename. */
+    function menuDefaultLabel($permission)
+    {
+        if (!$permission) {
+            return '';
+        }
+
+        $shipped = clone $permission;
+        $shipped->custom_name = null;
+
+        return menuLabel($shipped);
+    }
+}
+
+if (!function_exists('sidebarRoleId')) {
+    /**
+     * Sidebar layouts are shared by role, not owned by one account.
+     *
+     * The sidebars table still carries a user_id column; a row with user_id NULL is the
+     * template for its role_id, which is what every user of that role is served. Before
+     * this, the Sidebar Manager wrote rows stamped with the editor's own id, so an admin
+     * who regrouped the menu changed it for nobody but themselves.
+     */
+    function sidebarRoleId($user = null)
+    {
+        $user = $user ?: (auth()->check() ? auth()->user() : null);
+
+        return $user ? (int) $user->role_id : 0;
+    }
+}
+
+if (!function_exists('sidebarCacheKey')) {
+    /** One cached tree per role, so a change reaches every account of that role at once. */
+    function sidebarCacheKey($user = null)
+    {
+        return 'sidebars_role' . sidebarRoleId($user);
+    }
+}
+
+if (!function_exists('forgetAllSidebarCaches')) {
+    /** For changes that are school-wide, such as renaming a menu entry. */
+    function forgetAllSidebarCaches()
+    {
+        $roleIds = \Illuminate\Support\Facades\DB::table('roles')->pluck('id')->all();
+
+        foreach (array_unique(array_merge($roleIds, [0])) as $roleId) {
+            \Illuminate\Support\Facades\Cache::forget('sidebars_role' . $roleId);
+        }
+    }
 }

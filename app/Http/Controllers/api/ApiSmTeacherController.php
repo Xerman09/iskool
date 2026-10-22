@@ -225,7 +225,6 @@ class ApiSmTeacherController extends Controller
                     ->get();
             } elseif ($user->role_id == 5 || $user->role_id == 1) {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())
                     ->where('school_id', 1)
                     ->select('sm_classes.id', 'class_name')
                     ->get();

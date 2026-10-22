@@ -49,8 +49,8 @@
                         @foreach ($sidebar_menus as $sidebar_menu)
                         
                             @if($sidebar_menu->subModule->count() > 0 && sidebarPermission($sidebar_menu->permissionInfo)==true)
-                                @if ($sidebar_menu->permissionInfo->name)
-                                    <span class="menu_seperator" id="seperator_{{ $sidebar_menu->permissionInfo->route }}" data-section="{{ $sidebar_menu->permissionInfo->route }}">{{ $sidebar_menu->permissionInfo->name }} </span>
+                                @if (menuLabel($sidebar_menu->permissionInfo))
+                                    <span class="menu_seperator" id="seperator_{{ $sidebar_menu->permissionInfo->route }}" data-section="{{ $sidebar_menu->permissionInfo->route }}">{{ menuLabel($sidebar_menu->permissionInfo) }} </span>
                                 @endif
                             
                                 @foreach($sidebar_menu->subModule as $item)
@@ -67,7 +67,7 @@
                                                 <span class="{{ $item->permissionInfo->icon }}"></span>
                                             </div>
                                             <div class="nav_title">
-                                                <span>{{ __($item->permissionInfo->lang_name) }} 
+                                                <span>{{ menuLabel($item->permissionInfo) }} 
                                                 </span>
                                                 @if (config('app.app_sync') && $item->permissionInfo->module && in_array($item->permissionInfo->module, $paid_modules))
                                                     <span class="demo_addons">Addon</span>
@@ -86,7 +86,7 @@
                                                                     <a href="{{ validRouteUrl($sub->permissionInfo->route) }}"
                                                                         class="{{ spn_active_link(subModuleRoute($sub), 'active') }}">
                                                             @endif
-                                                            {{ __($sub->permissionInfo->lang_name) }} </a>
+                                                            {{ menuLabel($sub->permissionInfo) }} </a>
                                                             @if ($sub->subModule)
                                                                 <ul class="list-unstyled" id="{{ $key }}">
                                                                     @foreach ($sub->subModule as $child)
@@ -94,7 +94,7 @@
                                                                             <li>
                                                                                 <a  class="has-arrow" aria-expanded="false"
                                                                                     href="{{ validRouteUrl($child->permissionInfo->route) }}">
-                                                                                    {{ __($child->permissionInfo->lang_name) }} 
+                                                                                    {{ menuLabel($child->permissionInfo) }} 
                                                                                 </a>
                                                                                 <ul class="list-unstyled">
                                                                                     <li>Third level</li>
@@ -121,8 +121,8 @@
                     @isset($sidebar_menus)                                    
                         @foreach ($sidebar_menus as $sidebar_menu)
                             @if(sidebarPermission($sidebar_menu->permissionInfo)==true)
-                                @if($sidebar_menu->permissionInfo->lang_name)
-                                    <span class="menu_seperator">{{ __($sidebar_menu->permissionInfo->lang_name) }}</span>
+                                @if(menuLabel($sidebar_menu->permissionInfo))
+                                    <span class="menu_seperator">{{ menuLabel($sidebar_menu->permissionInfo) }}</span>
                                     @endif
                                     @foreach ($sidebar_menu->subModule as $item)
                                         @if(sidebarPermission($item->permissionInfo)==true)
@@ -139,7 +139,7 @@
                                                     <span class="{{ $item->permissionInfo->icon }}"></span>
                                                 </div>
                                                 <div class="nav_title">
-                                                        <span>{{ __($item->permissionInfo->lang_name) }}</span>
+                                                        <span>{{ menuLabel($item->permissionInfo) }}</span>
                                                         @if (config('app.app_sync') && $item->permissionInfo->module && in_array($item->permissionInfo->module, $paid_modules))
                                                         @if (config('app.app_sync'))
                                                             <span class="demo_addons">Addon</span>
@@ -159,7 +159,7 @@
                                                                             <a href="{{ validRouteUrl($sub->permissionInfo->route, $children->id) }}"
                                                                                 class="{{ spn_active_link(subModuleRoute($sub), 'active') }}">
 
-                                                                                {{ __($sub->permissionInfo->lang_name) }} - {{ $children->full_name }}
+                                                                                {{ menuLabel($sub->permissionInfo) }} - {{ $children->full_name }}
                                                                             </a>
                                                                         </li>
                                                                             
@@ -173,7 +173,7 @@
                                                                     <a href="{{ validRouteUrl($sub->permissionInfo->route) }}"
                                                                         class="{{ spn_active_link(subModuleRoute($sub), 'active') }}">
 
-                                                                        {{ __($sub->permissionInfo->lang_name) }} 
+                                                                        {{ menuLabel($sub->permissionInfo) }} 
                                                                     </a>
 
                                                                 </li>
@@ -193,7 +193,7 @@
                                                                         <a href="{{ validRouteUrl($item->permissionInfo->route, $children->id) }}"
                                                                             class="{{ spn_active_link(subModuleRoute($item), 'active') }}">
 
-                                                                            {{ __($item->permissionInfo->lang_name) }} -
+                                                                            {{ menuLabel($item->permissionInfo) }} -
                                                                             {{ $children->full_name }}</a>
 
                                                                     </li>
@@ -219,8 +219,8 @@
                     @isset($sidebar_menus)                                    
                         @foreach ($sidebar_menus as $sidebar_menu)
                             @if(sidebarPermission($sidebar_menu->permissionInfo)==true)
-                                    @if($sidebar_menu->permissionInfo->lang_name)
-                                    <span class="menu_seperator">{{ __($sidebar_menu->permissionInfo->lang_name) }}</span>
+                                    @if(menuLabel($sidebar_menu->permissionInfo))
+                                    <span class="menu_seperator">{{ menuLabel($sidebar_menu->permissionInfo) }}</span>
                                     @endif
                                     @foreach ($sidebar_menu->subModule as $item)
                                         @if(sidebarPermission($item->permissionInfo)==true)
@@ -237,7 +237,7 @@
                                                     <span class="{{ $item->permissionInfo->icon }}"></span>
                                                 </div>
                                                 <div class="nav_title">
-                                                        <span>{{ __($item->permissionInfo->lang_name) }}</span>
+                                                        <span>{{ menuLabel($item->permissionInfo) }}</span>
                                                         @if (config('app.app_sync') && $item->permissionInfo->module && in_array($item->permissionInfo->module, $paid_modules))
                                                         @if (config('app.app_sync'))
                                                             <span class="demo_addons">Addon</span>
@@ -257,7 +257,7 @@
                                                                             <a href="{{ validRouteUrl($sub->permissionInfo->route, $children->id) }}"
                                                                                 class="{{ spn_active_link(subModuleRoute($sub), 'active') }}">
 
-                                                                                {{ __($sub->permissionInfo->lang_name) }} - {{ $children->full_name }}
+                                                                                {{ menuLabel($sub->permissionInfo) }} - {{ $children->full_name }}
                                                                             </a>
                                                                         </li>
                                                                             
@@ -271,7 +271,7 @@
                                                                     <a href="{{ validRouteUrl($sub->permissionInfo->route) }}"
                                                                         class="{{ spn_active_link(subModuleRoute($sub), 'active') }}">
 
-                                                                        {{ __($sub->permissionInfo->lang_name) }} 
+                                                                        {{ menuLabel($sub->permissionInfo) }} 
                                                                     </a>
 
                                                                 </li>
@@ -291,7 +291,7 @@
                                                                         <a href="{{ validRouteUrl($item->permissionInfo->route, $children->id) }}"
                                                                             class="{{ spn_active_link(subModuleRoute($item), 'active') }}">
 
-                                                                            {{ __($item->permissionInfo->lang_name) }} -
+                                                                            {{ menuLabel($item->permissionInfo) }} -
                                                                             {{ $children->full_name }}</a>
 
                                                                     </li>

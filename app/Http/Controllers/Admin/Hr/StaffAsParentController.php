@@ -159,7 +159,7 @@ class StaffAsParentController extends Controller
     }
     private function loginSession($user_id)
     {
-        Cache::forget('sidebars' . auth()->user()->id); 
+        Cache::forget(sidebarCacheKey()); 
         userStatusChange($user_id, 0);
         Session::flush();    
         Auth::logout();

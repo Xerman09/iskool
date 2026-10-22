@@ -152,13 +152,11 @@ class SmStudentAttendanceController extends Controller
                         ->when(gv($student, 'un_section_id'), function ($q) use ($student) {
                             $q->where('un_section_id', gv($student, 'un_section_id'));
                         })
-
                         ->where('student_record_id', $record_id)
                         ->where('school_id', Auth::user()->school_id)->first();
                 } else {
                     $attendance = SmStudentAttendance::where('student_id', gv($student, 'student'))
                         ->where('attendance_date', date('Y-m-d', strtotime($request->date)))
-
                         ->when(!moduleStatusCheck('University'), function ($query) use ($student) {
                             $query->where('class_id', gv($student, 'class'));
                         })->when(!moduleStatusCheck('University'), function ($query) use ($student) {
@@ -433,7 +431,7 @@ class SmStudentAttendanceController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.studentInformation.student_attendance_import', compact('classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

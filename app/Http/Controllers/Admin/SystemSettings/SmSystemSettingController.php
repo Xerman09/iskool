@@ -112,8 +112,8 @@ class SmSystemSettingController extends Controller
         try {
             return $exams = SmExam::where('academic_id', getAcademicId())->get();
             $exams_types = SmExamType::where('academic_id', getAcademicId())->get();
-            $classes = SmClass::where('academic_id', getAcademicId())->where('active_status', 1)->get();
-            $subjects = SmSubject::where('academic_id', getAcademicId())->where('active_status', 1)->get();
+            $classes = SmClass::where('active_status', 1)->get();
+            $subjects = SmSubject::where('active_status', 1)->get();
             $sections = SmSection::where('academic_id', getAcademicId())->where('active_status', 1)->get();
             return view('frontEnd.home.light_news', compact('exams', 'classes', 'subjects', 'exams_types', 'sections'));
         } catch (\Exception $e) {

@@ -74,7 +74,8 @@ class ThemeManageController extends Controller
             ->whereIn('route',$default_routes)->update(['status'=>$default_status,'menu_status'=>$default_status]);
 
            
-            Cache::forget('sidebars' . auth()->user()->id);
+            // The theme flips menu_status on permissions for the whole school, not just this login.
+            forgetAllSidebarCaches();
             Toastr::success("Success", 'Theme Changes Successfully');
             return redirect()->back();
         } catch (\Exception $e) {

@@ -30,10 +30,10 @@ class MenuManageController extends Controller
     public function index()
     {
         $data = []; 
-        Cache::forget('sidebars'.auth()->user()->id);
+        Cache::forget(sidebarCacheKey());
         $data['unused_menus'] = SidebarManagerController::unUsedMenu();         
         $data['sidebar_menus'] = sidebar_menus();
-        $data['permission_sections'] = Permission::where('user_id', auth()->user()->id)->pluck('id')->toArray();
+        $data['permission_sections'] = Permission::whereNull('user_id')->pluck('id')->toArray();
       
         return view('menumanage::index', $data);
     }

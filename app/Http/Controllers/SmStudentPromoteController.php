@@ -35,7 +35,7 @@ class SmStudentPromoteController extends Controller
         try {
             $generalSetting = generalSetting();
             $sessions = SmAcademicYear::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())
+            $classes = SmClass::where('active_status', 1)
                 ->where('school_id', Auth::user()->school_id)->get();
             $exams = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)->get();
@@ -88,13 +88,11 @@ class SmStudentPromoteController extends Controller
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
             $currrent_academic_class = SmClass::where('active_status', 1)
-                ->where('academic_id', $request->current_session)
                 ->withOutGlobalScope(StatusAcademicSchoolScope::class)
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
             $classes = SmClass::with('classSection')->where('active_status', 1)
-                ->where('academic_id', $request->promote_session)
                 ->withOutGlobalScope(StatusAcademicSchoolScope::class)
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
@@ -702,7 +700,6 @@ class SmStudentPromoteController extends Controller
                 ->get();
 
             $classes = SmClass::with('classSection')->where('active_status', 1)
-                ->where('academic_id', $request->promote_session)
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 

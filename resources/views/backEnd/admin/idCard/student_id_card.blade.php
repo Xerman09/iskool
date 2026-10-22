@@ -922,7 +922,7 @@
 
         $(document).on("click", "#deleteSignImg", function(event) {
             $('#placeholderFileFourName').removeAttr('placeholder');
-            $('#placeholderFileFourName').attr("placeholder", "@lang('admin.signature')");
+            $('#placeholderFileFourName').attr("placeholder", "@lang('admin.official_signature')");
             $('#document_file_4').val('');
             if (pageLayout == "horizontal") {
                 $('.hSign').css('background-image',

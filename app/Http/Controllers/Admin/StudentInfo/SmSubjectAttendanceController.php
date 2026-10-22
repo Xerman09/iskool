@@ -434,7 +434,6 @@ class SmSubjectAttendanceController extends Controller
         try {
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -473,7 +472,6 @@ class SmSubjectAttendanceController extends Controller
 
             $days = cal_days_in_month(CAL_GREGORIAN, $request->month, $request->year);
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -581,12 +579,10 @@ class SmSubjectAttendanceController extends Controller
                     //  ->join('student_records','student_records.student_id','=','sm_subject_attendances.student_id')
 
                     // // ->where('subject_id', $subject_id)
-
                     ->where('attendance_date', 'like', $year . '-' . $month . '%')
                     ->where('sm_subject_attendances.student_record_id', $record->id)
                     ->where('sm_subject_attendances.academic_id', getAcademicId())
                     ->where('sm_subject_attendances.school_id', Auth::user()->school_id)
-
                     ->get();
 
                 if ($attendance) {

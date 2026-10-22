@@ -104,7 +104,9 @@ class CurriculumBuilderController extends Controller
             $subject->source_subject_id = $sourceSubject->id;
             $subject->subject_name = $sourceSubject->subject_name;
             $subject->subject_code = $sourceSubject->subject_code;
-            $subject->units = $request->units;
+            /* Units live on the catalog subject; the curriculum entry keeps a copy so tuition,
+               the layout totals and the schedule all read one column. */
+            $subject->units = $sourceSubject->units;
             $subject->subject_classification = $request->subject_classification;
             $subject->subject_type = 'T';
             $subject->created_by = auth()->user()->id;
@@ -133,7 +135,9 @@ class CurriculumBuilderController extends Controller
             $subject->source_subject_id = $sourceSubject->id;
             $subject->subject_name = $sourceSubject->subject_name;
             $subject->subject_code = $sourceSubject->subject_code;
-            $subject->units = $request->units;
+            /* Units live on the catalog subject; the curriculum entry keeps a copy so tuition,
+               the layout totals and the schedule all read one column. */
+            $subject->units = $sourceSubject->units;
             $subject->subject_classification = $request->subject_classification;
             $subject->updated_by = auth()->user()->id;
             $subject->save();
@@ -166,10 +170,10 @@ class CurriculumBuilderController extends Controller
             public function array(): array
             {
                 return [
-                    ['subject_code', 'class', 'semester', 'units', 'subject_classification', 'prerequisite_codes'],
-                    ['MATH-101', 'Year 1', 'Semester 1', 3, 'major', ''],
-                    ['MATH-102', 'Year 1', 'Semester 2', 3, 'major', 'MATH-101'],
-                    ['MATH-201', 'Year 2', 'Semester 1', 3, 'major', 'MATH-101,MATH-102'],
+                    ['subject_code', 'class', 'semester', 'subject_classification', 'prerequisite_codes'],
+                    ['MATH-101', 'Year 1', 'Semester 1', 'major', ''],
+                    ['MATH-102', 'Year 1', 'Semester 2', 'major', 'MATH-101'],
+                    ['MATH-201', 'Year 2', 'Semester 1', 'major', 'MATH-101,MATH-102'],
                 ];
             }
 
@@ -212,10 +216,10 @@ class CurriculumBuilderController extends Controller
             $headings = array_map(function ($heading) {
                 return strtolower(trim(str_replace(' ', '_', (string) $heading)));
             }, array_shift($rows));
-            $requiredHeadings = ['subject_code', 'class', 'semester', 'units', 'subject_classification'];
+            $requiredHeadings = ['subject_code', 'class', 'semester', 'subject_classification'];
 
             if (array_diff($requiredHeadings, $headings)) {
-                Toastr::error('Required columns: subject_code, class, semester, units, subject_classification.', 'Failed');
+                Toastr::error('Required columns: subject_code, class, semester, subject_classification.', 'Failed');
                 return redirect()->back();
             }
 
@@ -245,13 +249,12 @@ class CurriculumBuilderController extends Controller
                 $code = trim((string) ($data['subject_code'] ?? ''));
                 $className = trim((string) ($data['class'] ?? ''));
                 $semesterName = trim((string) ($data['semester'] ?? ''));
-                $units = $data['units'] ?? null;
                 $classification = strtolower(trim((string) ($data['subject_classification'] ?? '')));
                 $prerequisiteCodes = array_filter(array_map('trim', preg_split('/[,;]/', (string) ($data['prerequisite_codes'] ?? ''))));
 
                 $codeKey = strtolower($code);
 
-                if (!$code || !$className || !$semesterName || !is_numeric($units) || !in_array($classification, ['major', 'minor'], true)) {
+                if (!$code || !$className || !$semesterName || !in_array($classification, ['major', 'minor'], true)) {
                     $errors[] = "row {$line}";
                     continue;
                 }
@@ -279,7 +282,6 @@ class CurriculumBuilderController extends Controller
                     'codeKey' => $codeKey,
                     'class_id' => $classes[strtolower($className)]->id,
                     'semester_id' => $semesters[strtolower($semesterName)]->id,
-                    'units' => $units,
                     'classification' => $classification,
                     'prerequisite_codes' => $prerequisiteCodes,
                     'source_subject' => $baseSubjects[$codeKey],
@@ -326,7 +328,7 @@ class CurriculumBuilderController extends Controller
                     $subject->source_subject_id = $parsedRow['source_subject']->id;
                     $subject->subject_name = $parsedRow['source_subject']->subject_name;
                     $subject->subject_code = $parsedRow['source_subject']->subject_code;
-                    $subject->units = $parsedRow['units'];
+                    $subject->units = $parsedRow['source_subject']->units;
                     $subject->subject_classification = $parsedRow['classification'];
                     $subject->subject_type = 'T';
                     $subject->created_by = auth()->user()->id;

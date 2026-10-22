@@ -41,7 +41,6 @@ class SmStudentAttendanceController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -81,7 +80,6 @@ class SmStudentAttendanceController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -254,7 +252,7 @@ class SmStudentAttendanceController extends Controller
     public function studentAttendanceImport()
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.studentInformation.student_attendance_import', compact('classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

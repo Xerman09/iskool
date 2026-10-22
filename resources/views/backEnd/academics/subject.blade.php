@@ -119,6 +119,17 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="row  mt-15">
+                                    <div class="col-lg-12">
+                                        <div class="primary_input">
+                                            <label class="primary_input_label" for="">@lang('academics.units') <span class="text-danger"> *</span></label>
+                                            <input class="primary_input_field form-control{{ $errors->has('units') ? ' is-invalid' : '' }}" type="number" step="0.5" min="0" name="units" autocomplete="off" value="{{isset($subject)? $subject->units: old('units')}}">
+                                            @if ($errors->has('units'))
+                                                <span class="text-danger">{{ @$errors->first('units') }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
                                 @if (@generalSetting()->result_type == 'mark')
                                     <div class="row  mt-15">
                                         <div class="col-lg-12">
@@ -185,6 +196,7 @@
                                             <th> @lang('academics.subject')</th>
                                             <th> @lang('academics.subject_type')</th>
                                             <th>@lang('academics.subject_code')</th>
+                                            <th>@lang('academics.units')</th>
                                             @if (@generalSetting()->result_type == 'mark')
                                                 <th>@lang('academics.pass_mark')</th>
                                             @endif
@@ -200,6 +212,7 @@
                                             <td>{{@$subject->subject_name}}</td>
                                             <td>{{trans('academics.'.($subject->subject_type == 'T'? 'theory':'practical'))}} </td>
                                             <td>{{@$subject->subject_code}}</td>
+                                            <td>{{@$subject->units}}</td>
                                             @if (@generalSetting()->result_type == 'mark')
                                                 <td>{{@$subject->pass_mark}}</td>
                                             @endif

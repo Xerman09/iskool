@@ -32,7 +32,7 @@ class ApiSmAssignClassTeacherControler extends Controller
     {
 
         try{
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->get();
+            $classes = SmClass::where('active_status', 1)->get();
             $teachers = SmStaff::where('active_status', 1)->where('role_id', 4)->get();
             $assign_class_teachers = SmAssignClassTeacher::where('active_status', 1)->get();
     
@@ -158,7 +158,7 @@ class ApiSmAssignClassTeacherControler extends Controller
     {
 
         try{
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->get();
+            $classes = SmClass::where('active_status', 1)->get();
             $teachers = SmStaff::where('active_status', 1)->where(function($q)  {
 	$q->where('role_id', 4)->orWhere('previous_role_id', 4);})->get();
             $assign_class_teachers = SmAssignClassTeacher::where('active_status', 1)->where('academic_id', getAcademicId())->get();

@@ -124,7 +124,7 @@ class SmAssignSubjectController extends Controller
 
             $class_id = $request->class;
             $section_id = $request->section;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
             $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
@@ -317,7 +317,7 @@ class SmAssignSubjectController extends Controller
             $teachers = SmStaff::status()->where(function ($q) {
                 $q->where('role_id', 4)->orWhere('previous_role_id', 4);
             })->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
             $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();

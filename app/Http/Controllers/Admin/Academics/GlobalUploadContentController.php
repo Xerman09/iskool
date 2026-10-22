@@ -930,7 +930,7 @@ class GlobalUploadContentController extends Controller
                                                             ->withoutGlobalScope(GlobalAcademicScope::class)
                                                             ->find($uploadContent);
                     if($parentContent && $parentContent->class){
-                        $class = SmClass::where('parent_id',$parentContent->class)->where('academic_id',getAcademicId())->first();
+                        $class = SmClass::where('parent_id',$parentContent->class)->first();
                     } 
                     
                     if($parentContent && $parentContent->section){

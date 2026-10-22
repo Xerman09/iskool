@@ -173,7 +173,7 @@ class AdmitCardSettingController extends Controller
                 ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
-            $classes = SmClass::where('academic_id', getAcademicId())->where('school_id', auth()->user()->school_id)->get();
+            $classes = SmClass::where('school_id', auth()->user()->school_id)->get();
             return view('examplan::admitCard', compact('exams', 'classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Error');
@@ -335,8 +335,7 @@ class AdmitCardSettingController extends Controller
                         ->where('academic_id', getAcademicId())
                         ->where('school_id', Auth::user()->school_id)
                         ->get();
-                    $classes = SmClass::where('academic_id', getAcademicId())
-                        ->where('school_id', auth()->user()->school_id)
+                    $classes = SmClass::where('school_id', auth()->user()->school_id)
                         ->get();
                     return view('examplan::admitCard', compact('exams', 'classes', 'records', 'exam_id', 'class_id', 'old_admit_ids'));
                 } else {

@@ -122,7 +122,7 @@ class SmStudentAdmissionController extends Controller
             $max_admission_id = SmStudent::where('school_id', Auth::user()->school_id)->max('admission_no');
             $max_roll_id = SmStudent::where('school_id', Auth::user()->school_id)->max('roll_no');
 
-            $classes = SmClass::where('active_status', '=', '1')->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', '=', '1')->where('school_id', Auth::user()->school_id)->get();
 
             $religions = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '2')->where('school_id', Auth::user()->school_id)->get();
             $blood_groups = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '3')->where('school_id', Auth::user()->school_id)->get();
@@ -329,7 +329,6 @@ class SmStudentAdmissionController extends Controller
             $academic_year = SmAcademicYear::select('id')->where('school_id', Auth::user()->school_id)->where('id', $request->id)->first();
 
             $classes = SmClass::where('active_status', '=', '1')
-                ->where('academic_id', $academic_year->id)
                 ->where('school_id', Auth::user()->school_id)
                 ->withoutGlobalScope(StatusAcademicSchoolScope::class)
                 ->get(['class_name', 'id']);
@@ -994,7 +993,6 @@ class SmStudentAdmissionController extends Controller
     {
         try {
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -1024,7 +1022,6 @@ class SmStudentAdmissionController extends Controller
     public function getClassBySchool($schoolId)
     {
         return  $classes = SmClass::where('active_status', 1)
-            ->where('academic_id', getAcademicId())
             ->where('school_id', $schoolId)
             ->pluck('class_name', 'id');
     }
@@ -1059,7 +1056,6 @@ class SmStudentAdmissionController extends Controller
                 ->get();
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -1581,7 +1577,7 @@ class SmStudentAdmissionController extends Controller
             $Upsessions = SmAcademicYear::where('active_status', 1)->whereYear('created_at', '>', date('Y', strtotime($UpYear->year)) . ' 00:00:00')
                 ->where('school_id', Auth::user()->school_id)->get();
             $sessions = SmAcademicYear::where('active_status', 1)->where('id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $promot_year = SmAcademicYear::find($request->promote_session);
 
             if ($request->promote_class == "" || $request->promote_session == "") {
@@ -1663,7 +1659,7 @@ class SmStudentAdmissionController extends Controller
     public function studentReport(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $types = SmStudentCategory::where('school_id', Auth::user()->school_id)->get();
             $genders = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '1')->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.studentInformation.student_report', compact('classes', 'types', 'genders'));
@@ -1703,7 +1699,7 @@ class SmStudentAdmissionController extends Controller
             }
             $students = $students->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $types = SmStudentCategory::where('school_id', Auth::user()->school_id)->get();
             $genders = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '1')->where('school_id', Auth::user()->school_id)->get();
 
@@ -1732,7 +1728,6 @@ class SmStudentAdmissionController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -1781,7 +1776,6 @@ class SmStudentAdmissionController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -1881,7 +1875,7 @@ class SmStudentAdmissionController extends Controller
             // End check student limitation for subscription
 
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $genders = SmBaseSetup::where('base_group_id', 1)->where('school_id', Auth::user()->school_id)->get();
             $blood_groups = SmBaseSetup::where('base_group_id', 3)->where('school_id', Auth::user()->school_id)->get();
             $religions = SmBaseSetup::where('base_group_id', 2)->where('school_id', Auth::user()->school_id)->get();
@@ -2208,7 +2202,7 @@ class SmStudentAdmissionController extends Controller
     {
         try {
             $students = SmStudent::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.studentInformation.guardian_report', compact('classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -2237,7 +2231,7 @@ class SmStudentAdmissionController extends Controller
             }
             $students = $students->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
 
             $class_id = $request->class;
@@ -2253,7 +2247,7 @@ class SmStudentAdmissionController extends Controller
     {
         try {
             $students = SmStudent::where('school_id', Auth::user()->school_id)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.studentInformation.login_info', compact('classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -2283,7 +2277,7 @@ class SmStudentAdmissionController extends Controller
             }
             $students = $students->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $class_id = $request->class;
             $clas = SmClass::find($request->class);
             return view('backEnd.studentInformation.login_info', compact('students', 'classes', 'class_id', 'clas'));
@@ -2301,7 +2295,7 @@ class SmStudentAdmissionController extends Controller
             $pt = trans('student.disabled_student');
             $students = SmStudent::where('active_status', 0)->where('school_id', Auth::user()->school_id)->get();
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
 
             return view('backEnd.studentInformation.disabled_student', compact('students', 'classes', 'pt'));
@@ -2321,7 +2315,6 @@ class SmStudentAdmissionController extends Controller
                 ->when($request->section, function ($query) use ($request) {
                     $query->where('section_id', $request->section);
                 })
-
                 ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->pluck('student_id')->unique();
@@ -2342,7 +2335,7 @@ class SmStudentAdmissionController extends Controller
 
             $students = $students->whereIn('id', $student_ids)->where('school_id', Auth::user()->school_id)->get();
 
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             $class_id = $request->class_id;
             $section_id = $request->section_id;
@@ -2592,7 +2585,6 @@ class SmStudentAdmissionController extends Controller
     {
         try {
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -2626,7 +2618,7 @@ class SmStudentAdmissionController extends Controller
                 ->withInput();
         }
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $students = SmStudent::query();
             $students->where('academic_id', getAcademicId())->where('active_status', 1);
             $students->where('class_id', $request->class);
@@ -2665,7 +2657,6 @@ class SmStudentAdmissionController extends Controller
             $exam_types = SmExamType::where('school_id', Auth::user()->school_id)->get();
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
             return view('backEnd.examination.previous_record', compact('classes', 'exam_types', 'academic_years'));
@@ -2756,7 +2747,7 @@ class SmStudentAdmissionController extends Controller
         try {
             $pt = trans('student.unassigned_student_list');
             $students = SmStudent::wheredoesnthave('studentRecords')->where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.studentInformation.unassigned_student', compact('students', 'classes', 'pt'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

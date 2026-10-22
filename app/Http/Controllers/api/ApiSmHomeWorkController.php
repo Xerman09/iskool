@@ -44,7 +44,7 @@ class ApiSmHomeWorkController extends Controller
                     ->select('sm_homeworks.id', 'sm_homeworks.class_id', 'sm_homeworks.section_id', 'sm_homeworks.homework_date', 'sm_homeworks.submission_date', 'sm_homeworks.evaluation_date', 'users.full_name', 'sm_classes.class_name', 'sm_sections.section_name', 'sm_subjects.subject_name', 'sm_homeworks.marks', 'sm_homeworks.file', 'sm_homeworks.description')
                     ->get();
 
-                $classes = SmClass::where('active_status', '=', '1')->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+                $classes = SmClass::where('active_status', '=', '1')->get();
 
             } else {
                 $homeworkLists = SmHomework::orderBy('homework_date','desc')->where('sm_homeworks.academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())
@@ -96,7 +96,7 @@ class ApiSmHomeWorkController extends Controller
                     ->select('sm_homeworks.id', 'sm_homeworks.class_id', 'sm_homeworks.section_id', 'sm_homeworks.homework_date', 'sm_homeworks.submission_date', 'sm_homeworks.evaluation_date', 'users.full_name', 'sm_classes.class_name', 'sm_sections.section_name', 'sm_subjects.subject_name', 'sm_homeworks.marks', 'sm_homeworks.file', 'sm_homeworks.description')
                     ->get();
 
-                $classes = SmClass::where('active_status', '=', '1')->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+                $classes = SmClass::where('active_status', '=', '1')->get();
 
             } else {
                 $homeworkLists = SmHomework::where('sm_homeworks.academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())
@@ -148,7 +148,7 @@ class ApiSmHomeWorkController extends Controller
                     ->select('sm_homeworks.id', 'sm_homeworks.class_id', 'sm_homeworks.section_id', 'sm_homeworks.homework_date', 'sm_homeworks.submission_date', 'sm_homeworks.evaluation_date', 'users.full_name', 'sm_classes.class_name', 'sm_sections.section_name', 'sm_subjects.subject_name', 'sm_homeworks.marks', 'sm_homeworks.file', 'sm_homeworks.description')
                     ->get();
 
-                $classes = SmClass::where('active_status', '=', '1')->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+                $classes = SmClass::where('active_status', '=', '1')->get();
 
             } else {
                 $homeworkLists = SmHomework::where('sm_homeworks.academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())
@@ -330,7 +330,6 @@ class ApiSmHomeWorkController extends Controller
                 ->get();
         } else {
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
         }

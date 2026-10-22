@@ -73,7 +73,7 @@ class SmAcademicsController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
             }
@@ -102,7 +102,7 @@ class SmAcademicsController extends Controller
         }
         try {
             $assign_subjects = SmAssignSubject::where('class_id', $request->class)->where('section_id', $request->section)->get();
-            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $teachers = SmStaff::where('active_status', 1)->where('school_id', Auth::user()->school_id)->where(function($q) {
                         $q->where('role_id', 4)->orWhere('previous_role_id', 4);
                     })->get();
@@ -130,7 +130,7 @@ class SmAcademicsController extends Controller
     {
 
         try {
-            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $teachers = SmStaff::where('active_status', 1)->where('school_id', Auth::user()->school_id)->where(function($q)  {
                         $q->where('role_id', 4)->orWhere('previous_role_id', 4);
                 })->get();
@@ -381,7 +381,7 @@ class SmAcademicsController extends Controller
     public function classReport(Request $request)
     {
         try {
-            $classes = SmClass::where('academic_id', getAcademicId())->where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
             }
@@ -493,7 +493,7 @@ class SmAcademicsController extends Controller
             }
     
             try {
-                $search_class = SmClass::where('academic_id', getAcademicId())->where('id', $request->class)->where('school_id', Auth::user()->school_id)->first();
+                $search_class = SmClass::where('id', $request->class)->where('school_id', Auth::user()->school_id)->first();
     
                 if ($request->section != "") {
                     $sectionInfo = SmSection::where('academic_id', getAcademicId())->where('id', $request->section)->where('school_id', Auth::user()->school_id)->first();
@@ -562,7 +562,7 @@ class SmAcademicsController extends Controller
                         $applied_discount+=SmFeesAssign::where('student_id',$student->id)->where('fees_master_id',$master)->sum('applied_discount');
                     }
                 }
-                $classes = SmClass::where('academic_id', getAcademicId())->where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
+                $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
                 $section_id = $request->section;
                 $class_id = $request->class;
     

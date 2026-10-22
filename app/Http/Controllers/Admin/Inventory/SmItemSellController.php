@@ -310,11 +310,9 @@ class SmItemSellController extends Controller
                                         ->get();
             } else {
                 $staffsByRole = SmStaff::where('role_id', $editData->role_id)
-                   
                     ->get();
             }
             $editDataChildren = SmItemSellChild::where('item_sell_id', $id)
-              
                 ->get();
 
          
@@ -719,7 +717,7 @@ class SmItemSellController extends Controller
             })->where(function ($q) {
                 $q->where('school_id', Auth::user()->school_id)->orWhere('type', 'System');
             })->get();
-            $classes = SmClass::where('school_id', Auth::user()->school_id)->where('academic_id',getAcademicId())->get();
+            $classes = SmClass::where('school_id', Auth::user()->school_id)->get();
             $itemCat = SmItemCategory::where('school_id', Auth::user()->school_id)->get();
             $issuedItems = SmItemIssue::where('active_status', '=', 1)->where('school_id', Auth::user()->school_id)->orderby('id','DESC')->get();
 

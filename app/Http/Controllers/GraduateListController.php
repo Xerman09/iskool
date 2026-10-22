@@ -23,14 +23,14 @@ class GraduateListController extends Controller
     {
         $graduates = Graduate::where('school_id',auth()->user()->school_id)->with('student','section','smClass','unFaculty','unDepartment')->get();
         $sessions = SmAcademicYear::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
-        $classes  = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())
+        $classes  = SmClass::where('active_status', 1)
             ->where('school_id', Auth::user()->school_id)->get();
         return view('backEnd.graduate.graduate_list',compact('graduates','sessions','classes'));
     }
     public function search(Request $request)
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
             $sessions = SmAcademicYear::where('school_id', Auth::user()->school_id)->get();
             $academic_year = $request->academic_year;
             $class_id = $request->class_id;
@@ -73,7 +73,6 @@ class GraduateListController extends Controller
             ->when(!$request->academic_year && moduleStatusCheck('University') == false && Schema::hasColumn('graduates', 'academic_id'), function ($query) use ($request) {
                 $query->where('academic_id', getAcademicId());
             })
-            
             ->when(moduleStatusCheck('University') && $request->filled('un_session_id'), function ($query) use ($request) {
                 $query->where('un_session_id', $request->un_session_id);
             })
@@ -167,7 +166,6 @@ class GraduateListController extends Controller
                     $gender = $row->student->gender;
                     return $gender ? $gender->base_setup_name : null;
                 })
-
                 ->addColumn('action', function ($row) {
                     $view = view('backEnd.graduate.graduateAction', compact('row'));
                     return (string)$view;

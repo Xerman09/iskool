@@ -193,8 +193,8 @@ class SmGeneralSettings extends Model
                 // return redirect()->back()->with('message-danger', 'Your result is not found!');
             }
             $exams = SmExamType::where('active_status', 1)->where('academic_id', getAcademicId())->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->get();
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->get();
+            $classes = SmClass::where('active_status', 1)->get();
+            $subjects = SmSubject::where('active_status', 1)->get();
             $assign_subjects = SmAssignSubject::where('class_id', $class->id)->where('section_id', $section->id)->where('academic_id', getAcademicId())->get();
             $class_name = $class->class_name;
             $exam_name = $exam->title;

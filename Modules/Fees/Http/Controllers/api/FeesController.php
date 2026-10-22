@@ -243,7 +243,6 @@ class FeesController extends Controller
     {
         try {
             $classes = SmClass::where('school_id', auth()->user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             $feesGroups = FmFeesGroup::where('school_id', auth()->user()->school_id)
@@ -446,7 +445,6 @@ class FeesController extends Controller
         try {
             // View Start
             $classes = SmClass::where('school_id', auth()->user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             $feesGroups = FmFeesGroup::where('school_id', auth()->user()->school_id)
@@ -606,7 +604,6 @@ class FeesController extends Controller
     {
         try {
             $classes = SmClass::where('school_id', auth()->user()->school_id)
-                ->where('academic_id', getAcademicId())
                 ->get();
 
             $feesGroups = FmFeesGroup::where('school_id', auth()->user()->school_id)
@@ -864,7 +861,6 @@ class FeesController extends Controller
     public function bankPayment()
     {
         $classes = SmClass::where('active_status', 1)
-            ->where('academic_id', getAcademicId())
             ->where('school_id', auth()->user()->school_id)
             ->get();
 
@@ -889,7 +885,6 @@ class FeesController extends Controller
             }
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', auth()->user()->school_id)
                 ->get();
 

@@ -39,8 +39,8 @@
                     <div class="white-box">
                         <p class="mb-20">Upload an XLSX, XLS, or CSV file (maximum 5 MB). The first row must contain these columns:</p>
                         <div class="alert alert-info">
-                            <code>subject_name, subject_code, subject_type{{ @generalSetting()->result_type == 'mark' ? ', pass_mark' : '' }}</code><br>
-                            Use <code>T</code> for theory or <code>P</code> for practical. Subject names and codes must be unique for the active academic year.
+                            <code>subject_name, subject_code, subject_type, units{{ @generalSetting()->result_type == 'mark' ? ', pass_mark' : '' }}</code><br>
+                            Use <code>T</code> for theory or <code>P</code> for practical. <code>units</code> is the credit units the subject carries wherever it appears in a curriculum. Subject codes must be unique for the school.
                         </div>
                         <div class="row mt-30">
                             <div class="col-lg-6">

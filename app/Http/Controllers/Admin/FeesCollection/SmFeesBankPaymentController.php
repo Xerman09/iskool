@@ -46,7 +46,7 @@ class SmFeesBankPaymentController extends Controller
     public function bankPaymentSlip()
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             return view('backEnd.feesCollection.bank_payment_slip', compact('classes'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -383,7 +383,7 @@ class SmFeesBankPaymentController extends Controller
             $date = $request->payment_date;
             $class_id = $request->class;
             $section_id = $request->section;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $sections = SmSection::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
 
             $student = SmStudent::find($bank_payment->student_id);

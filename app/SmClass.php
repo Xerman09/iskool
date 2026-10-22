@@ -6,6 +6,7 @@ use App\Models\StudentRecord;
 use App\Scopes\GlobalAcademicScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\StatusSchoolScope;
 use App\Scopes\StatusAcademicSchoolScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Modules\BehaviourRecords\Entities\AssignIncident;
@@ -18,7 +19,11 @@ class SmClass extends Model
     {
         parent::boot();
 
-        static::addGlobalScope(new StatusAcademicSchoolScope);
+        // Year levels (First Year, Second Year, ...) are the same every academic year and
+        // curriculum subjects point at them, so they are no longer filtered by academic
+        // year. Registered under the old identifier to keep the existing
+        // withoutGlobalScope(StatusAcademicSchoolScope::class) calls working.
+        static::addGlobalScope(StatusAcademicSchoolScope::class, new StatusSchoolScope);
         static::addGlobalScope(new GlobalAcademicScope);
     }
 

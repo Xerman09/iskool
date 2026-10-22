@@ -318,7 +318,7 @@ class SmStudentReportController extends Controller
     public function studentLoginReport(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             return view('backEnd.studentInformation.login_info', compact('classes'));
         } catch (\Exception $e) {
@@ -402,7 +402,7 @@ class SmStudentReportController extends Controller
         }
         try {
             $student_ids = $this->classSectionStudent($request);
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $students = SmStudent::query();
             $students->where('academic_id', getAcademicId())->where('active_status', 1);
             if ($request->admission_year != "") {

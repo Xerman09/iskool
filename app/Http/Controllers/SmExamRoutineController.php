@@ -47,7 +47,6 @@ class SmExamRoutineController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -73,12 +72,11 @@ class SmExamRoutineController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
             $sections = SmSection::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
-            $subjects = SmSubject::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $subjects = SmSubject::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $exams = SmExam::where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             $exam_types = SmExamType::where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.examination.exam_schedule_create', compact('classes', 'exams', 'exam_types'));
@@ -232,7 +230,7 @@ class SmExamRoutineController extends Controller
                 ->where('school_id', Auth::user()->school_id)
                 ->distinct(['section_id', 'subject_id'])
                 ->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $exams = SmExam::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             $class_id = $request->class;
             if (empty($request->section)) {
@@ -371,7 +369,7 @@ class SmExamRoutineController extends Controller
 
         try {
             $exam_types = SmExamType::where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             return view('backEnd.reports.exam_routine_report', compact('classes', 'exam_types'));
         } catch (\Exception $e) {
@@ -475,7 +473,6 @@ class SmExamRoutineController extends Controller
                     ->get();
             } else {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
@@ -500,7 +497,6 @@ class SmExamRoutineController extends Controller
                 ->get();
 
             $subjects = SmSubject::whereIn('id', $subject_ids)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get(['id', 'subject_name']);
 
@@ -616,7 +612,6 @@ class SmExamRoutineController extends Controller
                 ->pluck('id')->toArray();
 
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
             $exams = SmExam::where('active_status', 1)
@@ -638,7 +633,6 @@ class SmExamRoutineController extends Controller
                 ->get();
 
             $subjects = SmSubject::whereIn('id', $subject_ids)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get(['id', 'subject_name']);
 

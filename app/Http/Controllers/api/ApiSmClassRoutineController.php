@@ -51,7 +51,7 @@ class ApiSmClassRoutineController extends Controller
                 ->get(['id', 'name', 'order', 'is_weekend']);
 
             // return $sm_weekends;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())
+            $classes = SmClass::where('active_status', 1)
                 ->where('school_id', $school_id)->get();
 
             $subjects = SmAssignSubject::where('class_id', $class_id)

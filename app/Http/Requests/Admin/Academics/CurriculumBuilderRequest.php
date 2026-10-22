@@ -19,7 +19,6 @@ class CurriculumBuilderRequest extends FormRequest
             'class_id' => ['required', 'exists:sm_classes,id'],
             'semester_id' => ['required', 'exists:semesters,id'],
             'source_subject_id' => ['required', 'exists:sm_subjects,id'],
-            'units' => ['required', 'numeric', 'min:0'],
             'subject_classification' => ['required', 'in:major,minor'],
             'has_prerequisite' => ['sometimes', 'boolean'],
             'prerequisite_subject_ids' => ['sometimes', 'array'],

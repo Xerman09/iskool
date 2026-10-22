@@ -251,7 +251,7 @@ class GlobalAssignSubjectController extends Controller
             $assign_subjects = SmAssignSubject::where('class_id', $request->class)->where('section_id', $request->section)->get();
             $subjects = SmSubject::get();
             $teachers = SmStaff::status()->where('role_id', 4)->get();
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
 
             if ($assign_subjects->count() == 0) {
                 Toastr::error('No Result Found', 'Failed');

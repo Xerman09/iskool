@@ -275,6 +275,9 @@
     "vertical" => "Vertical",
     "logo" => "Logo",
     "signature" => "Signature",
+    // The ID card template carries the school official's signature image, printed at the
+    // bottom-right of every card made from that template.
+    "official_signature" => "Official's Signature",
     "user_photo_style" => "User Photo Style",
     "user_photo_size_width" => "User Photo Size Width",
     "user_photo_size_height" => "User Photo Size Height",

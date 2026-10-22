@@ -46,7 +46,7 @@ class DatatableQueryController extends Controller
     public function studentDetailsDatatable(Request $request)
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
             $sessions = SmAcademicYear::where('school_id', Auth::user()->school_id)->get();
             $academic_year = $request->academic_year;
             $class_id = $request->class_id;
@@ -83,7 +83,6 @@ class DatatableQueryController extends Controller
                     $query->where('class_id', $request->class);
                 });
             })
-            
             ->when(moduleStatusCheck('University') && $request->filled('un_department_id'), function ($u_query) use ($request) {
                 $u_query->where('un_department_id', $request->un_department_id);
             }, function ($query) use ($request) {
@@ -94,11 +93,9 @@ class DatatableQueryController extends Controller
             ->when(!$request->academic_year && !($request->program_status == 1) && moduleStatusCheck('University')==false, function ($query) use ($request) {
                 $query->where('academic_id', getAcademicId());
             })
-
             ->when( moduleStatusCheck('University') && $request->filled('un_session_id'), function ($query) use ($request) {
                 $query->where('un_session_id', $request->un_session_id);
             })
-            
             ->when( moduleStatusCheck('University') && $request->filled('un_semester_label_id'), function ($query) use ($request) {
                 $query->where('un_semester_label_id', $request->un_semester_label_id);
             });
@@ -145,7 +142,6 @@ class DatatableQueryController extends Controller
                             $query->where('class_id', $request->class);
                         });
                     })
-
                     ->when(moduleStatusCheck('University') && $request->filled('un_department_id'), function ($u_query) use ($request) {
                         $u_query->where('un_department_id', $request->un_department_id);
                     }, function ($query) use ($request) {
@@ -197,18 +193,14 @@ class DatatableQueryController extends Controller
                     $dob = dateConvert(@$row->date_of_birth);
                     return $dob;
                 })
-               
-
                 ->addColumn('full_name', function ($row) {
                     $full_name_link = '<a target="_blank" href="'. route('student_view', [$row->id]) . '">' . $row->first_name .' '. $row->last_name . '</a>';
                     return $full_name_link;
                 })
-                
                 ->addColumn('mobile', function ($row) {
                     $mobile = '<a href="tel:'.$row->mobile.'">' .$row->mobile. '</a>';
                     return $mobile;
                 })
-
                 ->addColumn('status', function ($row) {
                     $status = '<span class="badge fix-gr-bg">' . ($row->program_status == 1 ? __('academics.status_alumni') : __('academics.status_student')) . '</span>';
                     if ($row->program_status == 1) {
@@ -216,7 +208,6 @@ class DatatableQueryController extends Controller
                     }
                     return $status;
                 })
-
                 ->addColumn('semester_label', function ($row) use ($request) {
                     $semester_label=[];
                     foreach ($row->studentRecords as $label) {
@@ -226,7 +217,6 @@ class DatatableQueryController extends Controller
                     }
                     return $semester_label;
                 })
-
                 ->addColumn('class_sec', function ($row) use ($request) {
                     $class_sec=[];
                     foreach ($row->studentRecords as $classSec) {
@@ -239,7 +229,6 @@ class DatatableQueryController extends Controller
 
                     return implode(', ', $class_sec);
                 })
-
                 ->addColumn('action', function ($row) {
                     $langName = (moduleStatusCheck('University')) ? app('translator')->get('university::un.assign_faculty_department') : app('translator')->get('academics.assign_program') ;
                     $assignHref = moduleStatusCheck('University') ? route('student.assign-class', [$row->id]) : route('assign-program', ['student_id' => $row->id]);
@@ -298,7 +287,6 @@ class DatatableQueryController extends Controller
 
 
         $students = $students->whereIn('id', $student_ids)->where('school_id', Auth::user()->school_id)
-           
             ->with(array('parents' => function ($query) {
                 $query->select('id', 'fathers_name');
             }))
@@ -322,7 +310,6 @@ class DatatableQueryController extends Controller
                 $full_name_link = '<a target="_blank" href="'. route('student_view', [$row->id]) . '">' . $row->first_name .' '. $row->last_name . '</a>';
                 return $full_name_link;
             })
-            
             ->editColumn('mobile', function ($row) {
                 $mobile = '<a href="tel:'.$row->mobile.'">' .$row->mobile. '</a>';
                 return $mobile;
@@ -374,7 +361,7 @@ class DatatableQueryController extends Controller
         try {
             // $date = $request->attendance_date;
             if (getClassActeacherAccesscess()) {
-                $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+                $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             } else {
                 $teacher_info = SmStaff::where('user_id', Auth::user()->id)->first();
                 $classes = SmAssignSubject::where('teacher_id', $teacher_info->id)->join('sm_classes', 'sm_classes.id', 'sm_assign_subjects.class_id')
@@ -450,7 +437,6 @@ class DatatableQueryController extends Controller
                     return $note_input;
                 })
                 // ->rawColumns(['teacher_note'])
-
                 ->addColumn('action', function ($row) {
 
                     $btn = '<div class="d-flex radio-btn-flex">
@@ -1123,19 +1109,14 @@ class DatatableQueryController extends Controller
               $dob = dateConvert(@$row->date_of_birth);
               return $dob;
           })
-         
-
           ->addColumn('full_name', function ($row) {
               $full_name_link = '<a target="_blank" href="'. route('student_view', [$row->id]) . '">' . $row->first_name .' '. $row->last_name . '</a>';
               return $full_name_link;
           })
-          
           ->addColumn('mobile', function ($row) {
               $mobile = '<a href="tel:'.$row->mobile.'">' .$row->mobile. '</a>';
               return $mobile;
           })
-
-
           ->addColumn('semester_label', function ($row) use ($request) {
               $semester_label=[];
               foreach ($row->studentRecords as $label) {
@@ -1145,7 +1126,6 @@ class DatatableQueryController extends Controller
               }
               return $semester_label;
           })
-
           ->addColumn('class_sec', function ($row) use ($request) {
               $class_sec=[];
               foreach ($row->studentRecords as $classSec) {
@@ -1158,7 +1138,6 @@ class DatatableQueryController extends Controller
 
               return implode(', ', $class_sec);
           })
-
           ->addColumn('action', function ($row) {
               $langName = (moduleStatusCheck('University')) ? app('translator')->get('university::un.assign_faculty_department') : app('translator')->get('student.assign_class') ;
               $btn = '<div class="dropdown CRM_dropdown">
@@ -1476,7 +1455,6 @@ class DatatableQueryController extends Controller
                     return $row->recordDetail->class->class_name.'('.$row->recordDetail->section->section_name.')';
                 }
             })
-
             ->addColumn('action', function ($row) {
                 $btn = '<div class="dropdown CRM_dropdown">
                                     <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">' . app('translator')->get('common.select') . '</button>
@@ -1645,8 +1623,6 @@ class DatatableQueryController extends Controller
                 ->addColumn('a_date', function ($row) {
                     return   dateConvert(@$row->apply_date);
                 })
-                
-            
                 ->addColumn('status', function ($row) {
                     if ($row->approve_status == 'P') {
                     $btn = '<button class="primary-btn bg-warning text-white border-0 small tr-bg">' . app('translator')->get('common.pending') . '</button>';
@@ -1698,7 +1674,6 @@ class DatatableQueryController extends Controller
                 ->addColumn('a_date', function ($row) {
                     return   dateConvert(@$row->apply_date);
                 })
-            
                 ->addColumn('status', function ($row) {
                     if ($row->approve_status == 'P') {
                     $btn = '<button class="primary-btn bg-warning text-white border-0 small tr-bg">' . app('translator')->get('common.pending') . '</button>';
@@ -1769,7 +1744,6 @@ class DatatableQueryController extends Controller
                     ->addColumn('evaluation_date', function ($row) {
                         return $row->evaluation_date ? dateConvert(@$row->evaluation_date) : "-";
                     })
-                    
                     ->addColumn('action', function ($row) {
                         $btn = '<div class="dropdown CRM_dropdown">
                                             <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">' . app('translator')->get('common.select') . '</button>
@@ -1869,7 +1843,6 @@ class DatatableQueryController extends Controller
                 ->addColumn('due_date', function($row){
                     return dateConvert($row->due_date );
                 })
-               
                 ->rawColumns(['issue_status','given_date','due_date'])
                 ->make(true);
             }
@@ -1914,7 +1887,6 @@ class DatatableQueryController extends Controller
                 ->addColumn('receive_date', function ($row) {
                         return dateConvert($row->receive_date);
                 })
-                
                 ->addColumn('grand_total', function ($row) {
                     return number_format( (float) $row->grand_total, 2, '.', '');
                 })

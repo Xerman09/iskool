@@ -42,6 +42,7 @@ class SmSubjectController extends Controller
             $subject->subject_name = $request->subject_name;
             $subject->subject_type = $request->subject_type;
             $subject->subject_code = $request->subject_code;
+            $subject->units = $request->units;
             if (@generalSetting()->result_type == 'mark'){
                 $subject->pass_mark = $request->pass_mark;
             }
@@ -76,15 +77,15 @@ class SmSubjectController extends Controller
 
             public function array(): array
             {
-                $headings = ['subject_name', 'subject_code', 'subject_type'];
-                $example = ['Mathematics', 'MATH-101', 'T'];
+                $headings = ['subject_name', 'subject_code', 'subject_type', 'units'];
+                $example = ['Mathematics', 'MATH-101', 'T', 3];
 
                 if ($this->usesMarks) {
                     $headings[] = 'pass_mark';
                     $example[] = 40;
                 }
 
-                $practicalExample = ['Chemistry Lab', 'CHEM-LAB', 'P'];
+                $practicalExample = ['Chemistry Lab', 'CHEM-LAB', 'P', 2];
                 if ($this->usesMarks) {
                     $practicalExample[] = 40;
                 }
@@ -125,10 +126,10 @@ class SmSubjectController extends Controller
             $headings = array_map(function ($heading) {
                 return strtolower(trim(str_replace(' ', '_', (string) $heading)));
             }, array_shift($rows));
-            $requiredHeadings = ['subject_name', 'subject_code', 'subject_type'];
+            $requiredHeadings = ['subject_name', 'subject_code', 'subject_type', 'units'];
 
             if (array_diff($requiredHeadings, $headings)) {
-                Toastr::error('Required columns: subject_name, subject_code, subject_type.', 'Failed');
+                Toastr::error('Required columns: subject_name, subject_code, subject_type, units.', 'Failed');
                 return redirect()->back();
             }
 
@@ -152,9 +153,10 @@ class SmSubjectController extends Controller
                 $name = trim((string) ($data['subject_name'] ?? ''));
                 $code = trim((string) ($data['subject_code'] ?? ''));
                 $type = strtoupper(trim((string) ($data['subject_type'] ?? '')));
+                $units = $data['units'] ?? null;
                 $passMark = $data['pass_mark'] ?? null;
 
-                if (!$name || !$code || !in_array($type, ['T', 'P'], true)) {
+                if (!$name || !$code || !in_array($type, ['T', 'P'], true) || !is_numeric($units) || $units < 0) {
                     $errors[] = "row {$line}";
                     continue;
                 }
@@ -172,6 +174,7 @@ class SmSubjectController extends Controller
                     'subject_name' => $name,
                     'subject_code' => $code,
                     'subject_type' => $type,
+                    'units' => $units,
                     'pass_mark' => @generalSetting()->result_type == 'mark' ? $passMark : null,
                     'created_by' => auth()->id(),
                     'school_id' => auth()->user()->school_id,
@@ -219,10 +222,18 @@ class SmSubjectController extends Controller
             $subject->subject_name = $request->subject_name;
             $subject->subject_type = $request->subject_type;
             $subject->subject_code = $request->subject_code;
+            $subject->units = $request->units;
             if (@generalSetting()->result_type == 'mark'){
                 $subject->pass_mark = $request->pass_mark;
             }
             $subject->save();
+
+            /* The catalog holds the units; every curriculum entry built from this subject
+               carries a copy so tuition, the layout totals and the schedule keep reading one
+               column. Push the new value down to them. */
+            SmSubject::whereNotNull('course_id')
+                ->where('source_subject_id', $subject->id)
+                ->update(['units' => $subject->units]);
 
             Toastr::success('Operation successful', 'Success');
             return redirect()->route('subject');

@@ -40,8 +40,8 @@
                         <p class="mb-10">Program: <strong>{{ $course->course_name }}</strong> &middot; Curriculum Version: <strong>{{ $curriculumVersion->version_label }}</strong></p>
                         <p class="mb-20">Upload an XLSX, XLS, or CSV file (maximum 5 MB). The first row must contain these columns:</p>
                         <div class="alert alert-info">
-                            <code>subject_code, class, semester, units, subject_classification, prerequisite_codes</code><br>
-                            <code>subject_code</code> must match an existing base subject. <code>class</code> and <code>semester</code> must match existing names. Use <code>major</code> or <code>minor</code> for subject_classification. <code>prerequisite_codes</code> is optional &mdash; separate multiple codes with a comma or semicolon; each must belong to a subject already in this program &amp; curriculum version (existing or elsewhere in this file).
+                            <code>subject_code, class, semester, subject_classification, prerequisite_codes</code><br>
+                            <code>subject_code</code> must match an existing base subject, and its units are taken from that subject. <code>class</code> and <code>semester</code> must match existing names. Use <code>major</code> or <code>minor</code> for subject_classification. <code>prerequisite_codes</code> is optional &mdash; separate multiple codes with a comma or semicolon; each must belong to a subject already in this program &amp; curriculum version (existing or elsewhere in this file).
                         </div>
 
                         <input type="hidden" name="course_id" value="{{ $course->id }}">

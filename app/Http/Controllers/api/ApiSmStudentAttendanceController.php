@@ -541,7 +541,7 @@ class ApiSmStudentAttendanceController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+            $classes = SmClass::where('active_status', 1)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
@@ -556,7 +556,7 @@ class ApiSmStudentAttendanceController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', $school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
@@ -586,7 +586,7 @@ class ApiSmStudentAttendanceController extends Controller
         }
         try {
             $date = $request->attendance_date;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+            $classes = SmClass::where('active_status', 1)->get();
 
             $students = SmStudent::where('class_id', $request->class)->where('section_id', $request->section)->where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
 
@@ -652,7 +652,7 @@ class ApiSmStudentAttendanceController extends Controller
         }
         try {
             $date = $request->attendance_date;
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+            $classes = SmClass::where('active_status', 1)->get();
 
             $students = SmStudent::where('class_id', $request->class)->where('section_id', $request->section)->where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
 
@@ -703,7 +703,7 @@ class ApiSmStudentAttendanceController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+            $classes = SmClass::where('active_status', 1)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
@@ -718,7 +718,7 @@ class ApiSmStudentAttendanceController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', $school_id)->get();
 
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {
                 return ApiBaseMethod::sendResponse($classes, null);
@@ -799,7 +799,7 @@ class ApiSmStudentAttendanceController extends Controller
     public function studentAttendanceReport(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+            $classes = SmClass::where('active_status', 1)->get();
             $types = SmStudentCategory::all();
             $genders = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '1')->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
 
@@ -819,7 +819,7 @@ class ApiSmStudentAttendanceController extends Controller
     public function saas_studentAttendanceReport(Request $request, $school_id)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', $school_id)->get();
             $types = SmStudentCategory::where('school_id', $school_id)->get();
             $genders = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '1')->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
 
@@ -864,7 +864,7 @@ class ApiSmStudentAttendanceController extends Controller
             $clas = SmClass::findOrFail($request->class);
             $sec = SmSection::findOrFail($request->section);
             $days = cal_days_in_month(CAL_GREGORIAN, $request->month, $request->year);
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+            $classes = SmClass::where('active_status', 1)->get();
             $students = SmStudent::where('class_id', $request->class)->where('section_id', $request->section)->where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
 
             $attendances = [];
@@ -922,7 +922,7 @@ class ApiSmStudentAttendanceController extends Controller
             $clas = SmClass::where('school_id', $school_id)->findOrFail($request->class);
             $sec = SmSection::where('school_id', $school_id)->findOrFail($request->section);
             $days = cal_days_in_month(CAL_GREGORIAN, $request->month, $request->year);
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', $school_id)->get();
             $students = SmStudent::where('class_id', $request->class)->where('section_id', $request->section)->where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
 
             $attendances = [];
@@ -955,7 +955,7 @@ class ApiSmStudentAttendanceController extends Controller
     public function studentAttendanceReport_search(Request $request)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
+            $classes = SmClass::where('active_status', 1)->get();
             $types = SmStudentCategory::all();
             $genders = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '1')->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->get();
 
@@ -975,7 +975,7 @@ class ApiSmStudentAttendanceController extends Controller
     public function saas_studentAttendanceReport_search(Request $request, $school_id)
     {
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id', $school_id)->get();
             $types = SmStudentCategory::where('school_id', $school_id)->get();
             $genders = SmBaseSetup::where('active_status', '=', '1')->where('base_group_id', '=', '1')->where('academic_id', SmAcademicYear::SINGLE_SCHOOL_API_ACADEMIC_YEAR())->where('school_id', $school_id)->get();
 

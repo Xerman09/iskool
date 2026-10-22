@@ -94,7 +94,7 @@ class SmClassController extends Controller
 
             $sections = SmSection::where('active_status', '=', 1)->where('created_at', 'LIKE', '%' . $this->date . '%')->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
 
-            $classes = SmClass::where('active_status', '=', 1)->orderBy('id', 'desc')->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->withCount('records')->get();
+            $classes = SmClass::where('active_status', '=', 1)->orderBy('id', 'desc')->where('school_id', Auth::user()->school_id)->withCount('records')->get();
             return view('backEnd.academics.class', compact('classById', 'classes', 'sections', 'sectionId'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

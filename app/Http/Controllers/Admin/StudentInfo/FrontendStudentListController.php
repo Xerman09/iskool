@@ -13,8 +13,7 @@ class FrontendStudentListController extends Controller
 {
     public function ajaxFrontendClass(Request $request)
     {
-        $classes = SmClass::where('academic_id', $request->year)
-            ->where('school_id', app('school')->id)
+        $classes = SmClass::where('school_id', app('school')->id)
             ->get();
         return response()->json([$classes]);
     }

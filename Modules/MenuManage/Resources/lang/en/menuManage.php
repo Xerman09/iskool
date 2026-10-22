@@ -419,4 +419,7 @@
     'Quiz Report'=>'Quiz Report',
     'Certificate'=>'Certificate',
     'My Wallet'=>'My Wallet',
+    'rename_menu' => 'Rename menu',
+    'rename_menu_default' => 'Default:',
+    'rename_menu_hint' => 'Applies to everyone in the school. Leave it empty to go back to the default name.',
 );

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin\AdminSection;
 
+use App\Course;
+use App\Semester;
 use App\SmClass;
 use App\SmStudent;
 use App\Models\StudentRecord;
@@ -157,9 +159,11 @@ class SmStudentCertificateController extends Controller
     {
 
         try {
-            $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+            $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
             $certificates = SmStudentCertificate::where('school_id',auth()->user()->school_id)->get();
-            return view('backEnd.admin.generate_certificate', compact('classes', 'certificates'));
+            $courses = Course::where('school_id', Auth::user()->school_id)->get();
+            $semesters = Semester::where('school_id', Auth::user()->school_id)->get();
+            return view('backEnd.admin.generate_certificate', compact('classes', 'certificates', 'courses', 'semesters'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -225,7 +229,7 @@ class SmStudentCertificateController extends Controller
 
             }else{
                 $class_id = $request->class;
-                $classes = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id',Auth::user()->school_id)->get();
+                $classes = SmClass::where('active_status', 1)->where('school_id',Auth::user()->school_id)->get();
                 
                 $students = StudentRecord::when($request->academic_year, function ($query) use ($request) {
                         $query->where('academic_id', $request->academic_year);
@@ -238,9 +242,26 @@ class SmStudentCertificateController extends Controller
                     })
                     ->when(!$request->academic_year, function ($query) use ($request) {
                         $query->where('academic_id', getAcademicId());
+                    })
+                    /* Program and semester are held on the student, not on the record. */
+                    ->when($request->filled('course_id') || $request->filled('semester_id'), function ($query) use ($request) {
+                        $query->whereHas('student', function ($q) use ($request) {
+                            $q->when($request->filled('course_id'), function ($q2) use ($request) {
+                                $q2->where('course_id', $request->course_id);
+                            })->when($request->filled('semester_id'), function ($q2) use ($request) {
+                                $q2->where('semester_id', $request->semester_id);
+                            });
+                        });
                     })->where('school_id', auth()->user()->school_id)->get();
 
-                    return view('backEnd.admin.generate_certificate', compact('classes', 'certificates', 'certificate_id', 'certificates', 'students', 'class_id'));
+                    /* Carried back so the criteria panel still shows what was searched. */
+                    $courses = Course::where('school_id', Auth::user()->school_id)->get();
+                    $semesters = Semester::where('school_id', Auth::user()->school_id)->get();
+                    $course_id = $request->course_id;
+                    $semester_id = $request->semester_id;
+                    $section_id = $request->section;
+
+                    return view('backEnd.admin.generate_certificate', compact('classes', 'certificates', 'certificate_id', 'students', 'class_id', 'courses', 'course_id', 'semesters', 'semester_id', 'section_id'));
             }
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

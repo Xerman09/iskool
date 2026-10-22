@@ -160,7 +160,6 @@ class FrontendController extends Controller
                     ->get();
 
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', $school_id)
                     ->get();
 
@@ -235,7 +234,6 @@ class FrontendController extends Controller
                     ->get();
 
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id', $school_id)
                     ->get();
 

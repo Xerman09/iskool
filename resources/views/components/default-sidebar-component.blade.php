@@ -62,7 +62,7 @@
                             <span class="flaticon-reading"></span>
                         </div>
                         <div class="nav_title">
-                            <span>{{ @$item->permissionInfo->name }} - {{ @$item->permission_id }}</span>
+                            <span>{{ @menuLabel($item->permissionInfo) }} - {{ @$item->permission_id }}</span>
                             @if (config('app.app_sync'))
                                 <span class="demo_addons">Addon</span>
                             @endif
@@ -75,7 +75,7 @@
                         
                         
                                 <li data-position="">
-                                    <a href="">{{@$sub->permissionInfo->name }} - {{ $sub->permission_id }}</a>
+                                    <a href="">{{@menuLabel($sub->permissionInfo) }} - {{ $sub->permission_id }}</a>
                                 </li>
                         
                             @endforeach

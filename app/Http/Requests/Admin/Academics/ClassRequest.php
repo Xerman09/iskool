@@ -24,16 +24,18 @@ class ClassRequest extends FormRequest
      */
     public function rules()
     {
+        // Year levels are shared across academic years, so a name must be unique across
+        // the whole school rather than within the selected year.
         if(generalSetting()->result_type == 'mark'){
             return [
-                'name' => ['required', 'max:200' , Rule::unique('sm_classes', 'class_name')->where('academic_id', getAcademicId())->where('school_id', auth()->user()->school_id)->ignore($this->id)],
+                'name' => ['required', 'max:200' , Rule::unique('sm_classes', 'class_name')->where('school_id', auth()->user()->school_id)->ignore($this->id)],
                 'section' => "required",
                 'pass_mark' => "required",
             ];
         }
         else{
             return [
-                'name' => ['required', 'max:200' , Rule::unique('sm_classes', 'class_name')->where('academic_id', getAcademicId())->where('school_id', auth()->user()->school_id)->ignore($this->id)],
+                'name' => ['required', 'max:200' , Rule::unique('sm_classes', 'class_name')->where('school_id', auth()->user()->school_id)->ignore($this->id)],
                 'section' => "required",
             ];
         }

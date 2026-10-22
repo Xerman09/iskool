@@ -16,14 +16,13 @@
                             data-parent_section="{{ $sidebar_menu->permission_id }}">
                             <div id="accordion" class="dd">
                                 <div class="section_nav">
-                                    <h5>{{ $sidebar_menu->permissionInfo->name }}</h5>
+                                    <h5>{{ menuLabel($sidebar_menu->permissionInfo) }}</h5>
                                     <div class="setting_icons">
                                         <span class="edit-btn">
-                                            <a class=" btn-modal" data-container="#commonModal" type="button"
-                                                href="{{ route('sidebar-manager.section-edit-form', $sidebar_menu->permission_id) }}">
-                                                <i class="ti-pencil-alt"></i>
-                                            </a>
-
+                                            <i class="ti-pencil-alt rename_menu" title="{{ __('menumanage::menuManage.rename_menu') }}"
+                                               data-permission-id="{{ $sidebar_menu->permission_id }}"
+                                               data-custom-name="{{ $sidebar_menu->permissionInfo->custom_name }}"
+                                               data-default-name="{{ menuDefaultLabel($sidebar_menu->permissionInfo) }}"></i>
                                         </span>
                                         <i class="ti-close delete_section" data-id="{{ $sidebar_menu->id }}"></i>
                                         <i class="ti-angle-up toggle_up_down"></i>
@@ -51,13 +50,15 @@
                                                                         id="heading_{{ $menu->id }}">
                                                                         <div class="dd-handle">
                                                                             <div class="float-left">
-                                                                                {{ $menu->permissionInfo->name }} 
+                                                                                {{ menuLabel($menu->permissionInfo) }} 
                                                                             </div>
                                                                         </div>
                                                                         <div class="float-right btn_div">
                                                                             <div class="edit_icon">
-                                                                                
-
+                                                                                <i class="ti-pencil-alt rename_menu" title="{{ __('menumanage::menuManage.rename_menu') }}"
+                                                                                   data-permission-id="{{ $menu->permission_id }}"
+                                                                                   data-custom-name="{{ $menu->permissionInfo->custom_name }}"
+                                                                                   data-default-name="{{ menuDefaultLabel($menu->permissionInfo) }}"></i>
                                                                                 <i class="ti-close remove_menu"></i>
                                                                             </div>
                                                                         </div>
@@ -78,14 +79,16 @@
                                                                                     id="heading_{{ $submenu->id }}">
                                                                                     <div class="dd-handle">
                                                                                         <div class="float-left">
-                                                                                            {{ $submenu->permissionInfo->name }}
+                                                                                            {{ menuLabel($submenu->permissionInfo) }}
                                                                                             
                                                                                         </div>
                                                                                     </div>
                                                                                 <div class="float-right btn_div">
                                                                                     <div class="edit_icon">
-                                                                                        
-
+                                                                                        <i class="ti-pencil-alt rename_menu" title="{{ __('menumanage::menuManage.rename_menu') }}"
+                                                                                           data-permission-id="{{ $submenu->permission_id }}"
+                                                                                           data-custom-name="{{ $submenu->permissionInfo->custom_name }}"
+                                                                                           data-default-name="{{ menuDefaultLabel($submenu->permissionInfo) }}"></i>
                                                                                         <i class="ti-close remove_menu"></i>
                                                                                     </div>
                                                                                 </div>

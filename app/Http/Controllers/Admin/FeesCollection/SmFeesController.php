@@ -396,7 +396,6 @@ class SmFeesController extends Controller
     {
         try {
             $classes = SmClass::where('active_status', 1)
-                ->where('academic_id', getAcademicId())
                 ->where('school_id',Auth::user()->school_id)
                 ->get();
 
@@ -522,7 +521,6 @@ class SmFeesController extends Controller
         } else {
             try {
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id',Auth::user()->school_id)
                     ->get();
     
@@ -705,7 +703,6 @@ class SmFeesController extends Controller
                     }
                 }
                 $classes = SmClass::where('active_status', 1)
-                    ->where('academic_id', getAcademicId())
                     ->where('school_id',Auth::user()->school_id)
                     ->get();
 
@@ -1198,14 +1195,12 @@ class SmFeesController extends Controller
     public function directFeesSetting(){
 
         $data['model'] = DirectFeesSetting::where('school_id', auth()->user()->school_id)
-
             ->first();
 
         $data['feesInvoice'] = FeesInvoice::where('school_id', auth()->user()->school_id)
             ->first();
 
         $data['paymentReminder'] = DirectFeesReminder::where('school_id', auth()->user()->school_id)
-
             ->first();
 
         if(is_null($data['model'])){

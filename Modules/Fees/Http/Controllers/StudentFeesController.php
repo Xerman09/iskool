@@ -78,7 +78,6 @@ class StudentFeesController extends Controller
     {
         try{
             $classes = SmClass::where('school_id',Auth::user()->school_id)
-            ->where('academic_id',getAcademicId())
             ->get();
 
             $feesGroups = FmFeesGroup::where('school_id',Auth::user()->school_id)

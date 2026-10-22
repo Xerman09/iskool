@@ -304,7 +304,7 @@ class SmTopicController extends Controller
         }
 
         if (!teacherAccess()) {
-            $data['classes'] = SmClass::where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+            $data['classes'] = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
         } else {
             $data['classes'] = SmAssignSubject::where('teacher_id', $teacher_info->id)
                 ->join('sm_classes', 'sm_classes.id', 'sm_assign_subjects.class_id')
