@@ -14,6 +14,8 @@
                  
                         <div class="closed_section" data-id="{{ $sidebar_menu->id }}"
                             data-parent_section="{{ $sidebar_menu->permission_id }}">
+                            {{-- Unnamed rows are structural, not sections: no heading, no rename. --}}
+                            @if (menuLabel($sidebar_menu->permissionInfo))
                             <div id="accordion" class="dd">
                                 <div class="section_nav">
                                     <h5>{{ menuLabel($sidebar_menu->permissionInfo) }}</h5>
@@ -29,6 +31,7 @@
                                     </div>
                                 </div>
                             </div>
+                            @endif
                             @if ($sidebar_menu->subModule->count())
                                 <div class="card">
                                     <div class="card-body">

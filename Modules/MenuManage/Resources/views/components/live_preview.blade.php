@@ -7,9 +7,12 @@
             @if (isset($sidebar_menus))
                 @foreach($sidebar_menus as $preview_section)
                     @if($preview_section->subModule->count() > 0)
+                        {{-- Unnamed rows are structural, not sections: no heading for them. --}}
+                        @if (menuLabel($preview_section->permissionInfo))
                         <li class="preview_section">
                             {{ menuLabel($preview_section->permissionInfo) }}
                         </li>
+                        @endif
                         @foreach (@$preview_section->subModule as $key => $item)
                             @if(sidebarPermission($item->permissionInfo)==true)
                                 <li class="">

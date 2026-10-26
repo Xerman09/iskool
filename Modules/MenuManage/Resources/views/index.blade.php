@@ -3,6 +3,8 @@
     @lang('menumanage::menuManage.manage_position')
 @endsection
 @push('css')
+    <link rel="stylesheet" href="{{ asset('public/backEnd/multiselect/css/jquery.multiselect.css') }}" />
+    <link rel="stylesheet" href="{{ asset('public/backEnd/multiselect/css/custom_style.css') }}" />
     <link rel="stylesheet" href="{{ asset('Modules/MenuManage/Resources/assets/css/style.css') }}" />
     <link rel="stylesheet" href="{{ asset('Modules/MenuManage/Resources/assets/css/icon-picker.css') }}" />
 @endpush
@@ -10,9 +12,20 @@
     <div class="role_permission_wrap">
         <div class="permission_title d-flex flex-wrap justify-content-between mb_10">
             <h4>{{ trans('menumanage::menuManage.menu_manage') }}</h4>
-            <div class="">
-             
-                <a href="{{ route('menumanage.reset-with-section') }}" 
+            <div class="d-flex flex-wrap align-items-center">
+                {{-- Which role's menu is being arranged. Submits on change; the choice is kept
+                     in the session so the drag-and-drop ajax keeps aiming at the same role. --}}
+                {!! Form::open(['route' => 'sidebar-manager.select-role', 'method' => 'POST', 'id' => 'managerRoleForm', 'class' => 'd-flex align-items-center mr-20 mb-0']) !!}
+                    <label class="mb-0 mr-10 text-nowrap" for="manager_role_id">{{ __('menumanage::menuManage.arranging_menu_for') }}</label>
+                    <select class="form-control" name="role_id" id="manager_role_id" onchange="document.getElementById('managerRoleForm').submit();">
+                        @foreach (@$manager_roles ?? [] as $managerRole)
+                            <option value="{{ $managerRole->id }}" {{ (isset($manager_role_id) && $manager_role_id == $managerRole->id) ? 'selected' : '' }}>
+                                {{ $managerRole->name }}</option>
+                        @endforeach
+                    </select>
+                {!! Form::close() !!}
+
+                <a href="{{ route('menumanage.reset-with-section') }}"
                 class="primary-btn radius_30px  fix-gr-bg">{{ __('menumanage::menuManage.Reset to  with Section') }}</a>
             </div>
            
@@ -72,6 +85,58 @@
                             </div>
                         </div>
 
+                        <div class="card">
+                            <div class="card-header pt-0 pb-0" id="headingCreateMenu">
+                                <h5 class="mb-0 create-title" data-toggle="collapse" data-target="#collapseCreateMenu"
+                                    aria-expanded="false" aria-controls="collapseCreateMenu">
+                                    <button class="btn btn-link add_btn_link">
+                                        {{ __('menumanage::menuManage.create_menu') }}
+                                    </button>
+                                </h5>
+                            </div>
+                            <div id="collapseCreateMenu" class="collapse" aria-labelledby="headingCreateMenu" data-parent="#accordion">
+                                <div class="card-body">
+                                    {!! Form::open(['route' => 'sidebar-manager.menu-create', 'method' => 'POST']) !!}
+                                        <div class="primary_input mb-20">
+                                            <label class="primary_input_label" for="create_menu_name">{{ __('common.name') }} <span class="textdanger">*</span></label>
+                                            <input class="primary_input_field" type="text" name="name" id="create_menu_name" autocomplete="off" maxlength="191" value="{{ old('name') }}">
+                                            @if ($errors->has('name'))
+                                                <span class="text-danger d-block">{{ $errors->first('name') }}</span>
+                                            @endif
+                                        </div>
+                                        <div class="primary_input mb-20">
+                                            <label class="primary_input_label" for="create_menu_section">{{ __('menumanage::menuManage.add_menu_section') }} <span class="textdanger">*</span></label>
+                                            <select class="form-control" name="section_id" id="create_menu_section">
+                                                {{-- The unnamed root row is where a student or parent menu has to go,
+                                                     so it gets a readable label here instead of being skipped. --}}
+                                                @foreach (@$sidebar_menus ?? [] as $addSection)
+                                                    <option value="{{ $addSection->permission_id }}">
+                                                        {{ menuLabel($addSection->permissionInfo) ?: __('menumanage::menuManage.top_level') }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        {{-- Tick several roles to create the same menu in each of their layouts.
+                                             A role whose layout lacks the chosen section gets it in its own
+                                             top-level section instead, so it is never left orphaned. --}}
+                                        <div class="primary_input mb-20">
+                                            <label class="primary_input_label" for="create_menu_roles">{{ __('menumanage::menuManage.create_for_roles') }}</label>
+                                            <select multiple class="multypol_check_select active position-relative"
+                                                name="role_ids[]" id="create_menu_roles" style="width:100%">
+                                                @foreach (@$manager_roles ?? [] as $createRole)
+                                                    <option value="{{ $createRole->id }}"
+                                                        {{ (isset($manager_role_id) && $manager_role_id == $createRole->id) ? 'selected' : '' }}>
+                                                        {{ $createRole->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-12 text-center">
+                                            <button type="submit" class="primary-btn fix-gr-bg">
+                                                <span class="ti-check"></span> {{ __('common.save') }}</button>
+                                        </div>
+                                    {!! Form::close() !!}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="mt_20" id="available_menu_div">
                         @include('menumanage::components.available_list')
@@ -138,6 +203,8 @@
         </div>
     </div>
 @endsection
+
+@include('backEnd.partials.multi_select_js')
 
 @push('script')
     <script>

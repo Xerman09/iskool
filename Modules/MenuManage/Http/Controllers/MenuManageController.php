@@ -30,6 +30,17 @@ class MenuManageController extends Controller
     public function index()
     {
         $data = []; 
+        /* Arrange the picked role's menu, not necessarily the editor's own. */
+        Sidebar::$layoutRoleId = sidebarManagerRoleId();
+        $data['manager_roles'] = sidebarManagerRoles();
+        $data['manager_role_id'] = Sidebar::$layoutRoleId;
+
+        /* A role nobody has signed in as yet has no layout; build it so the manager has
+           something to show instead of an empty page. */
+        if (!Sidebar::whereNull('user_id')->where('role_id', Sidebar::$layoutRoleId)->exists()) {
+            $this->defaultSidebarStore();
+        }
+
         Cache::forget(sidebarCacheKey());
         $data['unused_menus'] = SidebarManagerController::unUsedMenu();         
         $data['sidebar_menus'] = sidebar_menus();

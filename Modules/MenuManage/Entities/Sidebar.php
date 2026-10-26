@@ -11,6 +11,14 @@ class Sidebar extends Model
     use HasFactory;
 
     protected $guarded = ['id'];
+
+    /**
+     * The role whose layout is being read or written, when it is not the signed-in
+     * user's own. The Sidebar Manager sets this so a super admin can arrange the menu
+     * for any role; left null everywhere else, so the live sidebar keeps serving the
+     * viewer their own role. Read through sidebarRoleId().
+     */
+    public static $layoutRoleId = null;
  
     public function permissionInfo()
     {
@@ -24,11 +32,11 @@ class Sidebar extends Model
     {
         return $this->hasMany('Modules\MenuManage\Entities\Sidebar','parent','permission_id')
         ->orderBy('position', 'ASC')
-        ->whereNull('user_id')->where('role_id', auth()->user()->role_id)->where('active_status', 0);
+        ->whereNull('user_id')->where('role_id', sidebarRoleId())->where('active_status', 0);
     }
     public function userChildMenu()
     {
-        return $this->hasMany('Modules\MenuManage\Entities\Sidebar','parent','permission_id')->whereNull('user_id')->where('role_id', auth()->user()->role_id);
+        return $this->hasMany('Modules\MenuManage\Entities\Sidebar','parent','permission_id')->whereNull('user_id')->where('role_id', sidebarRoleId());
     }
     public function subModule()
     { 
@@ -37,15 +45,15 @@ class Sidebar extends Model
         // ->whereNotIn('permission_id', deActivePermissions())
         ->with('permissionInfo', 'subModule')
         ->whereHas('permissionInfo', function($q) use ($user){
-            $q->where('menu_status', 1)->when($user->role_id == 2, function($q){
+            $q->where('menu_status', 1)->when(sidebarRoleId() == 2, function($q){
                 $q->where('is_student', 1);
-            })->when($user->role_id == 3, function($q){
+            })->when(sidebarRoleId() == 3, function($q){
                 $q->where('is_parent', 1);
-            })->when(!in_array($user->role_id, [2,3]) , function($q){
+            })->when(!in_array(sidebarRoleId(), [2,3]) , function($q){
                 $q->where('is_admin', 1)->orWhere('is_teacher', 1);
             });
         })
-        ->whereNull('user_id')->where('role_id', auth()->user()->role_id)->where('active_status', 1)->orderBy('position', 'ASC');
+        ->whereNull('user_id')->where('role_id', sidebarRoleId())->where('active_status', 1)->orderBy('position', 'ASC');
     }
     public function deActiveSubMenu()
     { 
@@ -54,15 +62,15 @@ class Sidebar extends Model
         // ->whereNotIn('permission_id', deActivePermissions())
         ->with('permissionInfo', 'deActiveSubMenu')
         ->whereHas('permissionInfo', function($q) use ($user){
-            $q->where('menu_status', 1)->when($user->role_id == 2, function($q){
+            $q->where('menu_status', 1)->when(sidebarRoleId() == 2, function($q){
                 $q->where('is_student', 1);
-            })->when($user->role_id == 3, function($q){
+            })->when(sidebarRoleId() == 3, function($q){
                 $q->where('is_parent', 1);
-            })->when(!in_array($user->role_id, [2,3]) , function($q){
+            })->when(!in_array(sidebarRoleId(), [2,3]) , function($q){
                 $q->where('is_admin', 1);
             });
         })
-        ->whereNull('user_id')->where('role_id', auth()->user()->role_id)->where('active_status', 0)->orderBy('position', 'ASC');
+        ->whereNull('user_id')->where('role_id', sidebarRoleId())->where('active_status', 0)->orderBy('position', 'ASC');
     }
     public function permissionSection()
     {
@@ -72,13 +80,13 @@ class Sidebar extends Model
     {
         return $q->where('ignore', 0)       
         ->where('active_status', 0)
-        ->whereNull('user_id')->where('role_id', auth()->user()->role_id);
+        ->whereNull('user_id')->where('role_id', sidebarRoleId());
     }
     public function scopeActiveMenuUser($q)
     {
         return $q->where('ignore', 0)       
         ->where('active_status', 1)
-        ->whereNull('user_id')->where('role_id', auth()->user()->role_id);
+        ->whereNull('user_id')->where('role_id', sidebarRoleId());
     }
    
 }

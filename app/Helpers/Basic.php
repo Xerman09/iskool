@@ -314,16 +314,16 @@ if (!function_exists('sidebar_menus')) {
                 ->whereNull('parent')
                 ->whereHas('permissionInfo', function ($q) use ($user) {
                     $q->where('menu_status', 1)
-                        ->when($user->role_id == 2 || $user->role_id == GlobalVariable::isAlumni(), function ($q) {
+                        ->when(sidebarRoleId($user) == 2 || sidebarRoleId($user) == GlobalVariable::isAlumni(), function ($q) {
                             $q->where('is_student', 1);
-                        })->when($user->role_id == 3, function ($q) {
+                        })->when(sidebarRoleId($user) == 3, function ($q) {
                             $q->where('is_parent', 1);
-                        })->when(!in_array($user->role_id, [2, 3, GlobalVariable::isAlumni()]), function ($q) {
+                        })->when(!in_array(sidebarRoleId($user), [2, 3, GlobalVariable::isAlumni()]), function ($q) {
                             $q->where('is_admin', 1);
                         });
                 })
                 /* The role template, not a per-account copy - see sidebarRoleId(). */
-                ->whereNull('user_id')->where('role_id', $user->role_id)->where('active_status', 1)
+                ->whereNull('user_id')->where('role_id', sidebarRoleId($user))->where('active_status', 1)
                 ->orderBy('position', 'ASC')->get();
         });
     }
@@ -544,6 +544,12 @@ if (!function_exists('sidebarRoleId')) {
      */
     function sidebarRoleId($user = null)
     {
+        /* The Sidebar Manager aims at one role at a time; everywhere else this is just
+           the viewer's own role. */
+        if (\Modules\MenuManage\Entities\Sidebar::$layoutRoleId !== null) {
+            return (int) \Modules\MenuManage\Entities\Sidebar::$layoutRoleId;
+        }
+
         $user = $user ?: (auth()->check() ? auth()->user() : null);
 
         return $user ? (int) $user->role_id : 0;
@@ -567,5 +573,33 @@ if (!function_exists('forgetAllSidebarCaches')) {
         foreach (array_unique(array_merge($roleIds, [0])) as $roleId) {
             \Illuminate\Support\Facades\Cache::forget('sidebars_role' . $roleId);
         }
+    }
+}
+
+if (!function_exists('sidebarManagerRoles')) {
+    /** The roles a super admin can arrange a menu for, in the Sidebar Manager's picker. */
+    function sidebarManagerRoles()
+    {
+        return \Illuminate\Support\Facades\DB::table('roles')->orderBy('id')->get(['id', 'name']);
+    }
+}
+
+if (!function_exists('sidebarManagerRoleId')) {
+    /**
+     * Which role the Sidebar Manager is currently arranging.
+     *
+     * Remembered in the session so it survives the ajax round trips the manager makes while
+     * dragging, and falls back to the editor's own role. Only a role that exists is honoured,
+     * so a stale or hand-edited session value cannot aim the manager at nothing.
+     */
+    function sidebarManagerRoleId()
+    {
+        $selected = session('sidebar_manager_role_id');
+
+        if ($selected && \Illuminate\Support\Facades\DB::table('roles')->where('id', $selected)->exists()) {
+            return (int) $selected;
+        }
+
+        return auth()->check() ? (int) auth()->user()->role_id : 0;
     }
 }

@@ -34,7 +34,12 @@ Route::prefix('sidebar-manager')->middleware(['auth', 'subdomain', 'userRolePerm
 
     Route::post('/section/menu-store', 'SidebarManagerController@menuStore')->name('sidebar-manager.menu-store');
     Route::post('/section/menu-update', 'SidebarManagerController@menuUpdate')->name('sidebar-manager.menu-update');
-    Route::post('/section/menu-edit', 'SidebarManagerController@menuEdit')->name('sidebar-manager.menu-edit');
+    /* menu-edit removed: it pointed at a SidebarManagerController@menuEdit that was never
+       written, so any call to it was a 500. Nothing posts to it. */
+    // Creates a new dropdown inside a section.
+    Route::post('/menu-create', 'SidebarManagerController@menuCreate')->name('sidebar-manager.menu-create');
+    // Picks which role the manager arranges.
+    Route::post('/select-role', 'SidebarManagerController@selectRole')->name('sidebar-manager.select-role');
     // Renames any entry, section header or menu item, for the whole school.
     Route::post('/menu-rename', 'SidebarManagerController@menuRename')->name('sidebar-manager.menu-rename');
 
