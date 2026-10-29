@@ -159,6 +159,20 @@
                                 </select>
                             </div>
 
+                            {{-- A cohort keeps the curriculum it was admitted under, so two
+                                 versions of one program run side by side and both carry a
+                                 subject of the same name for the same year level and term.
+                                 Without this the timetable cannot tell them apart. --}}
+                            <div class="col-lg-6 mt-15">
+                                <label class="primary_input_label" for="">@lang('academics.curriculum_version')</label>
+                                <select class="primary_select form-control" name="curriculum_version_id">
+                                    <option value="">@lang('fees.all')</option>
+                                    @foreach ($curriculumVersions as $cv)
+                                        <option value="{{$cv->id}}" {{isset($curriculum_version_id) && $curriculum_version_id == $cv->id ? 'selected' : ''}}>{{$cv->version_label}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
                             <div class="col-lg-6 mt-15">
                                 <label class="primary_input_label" for="">@lang('academics.semester')</label>
                                 <select class="primary_select form-control" name="semester_id">

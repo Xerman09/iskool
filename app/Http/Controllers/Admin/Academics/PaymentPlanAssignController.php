@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Traits\EnrollmentBalanceBreakdown;
 use Brian2694\Toastr\Facades\Toastr;
 use Modules\Fees\Entities\FmFeesInvoice;
+use Illuminate\Support\Facades\Log;
 
 class PaymentPlanAssignController extends Controller
 {
@@ -27,14 +28,24 @@ class PaymentPlanAssignController extends Controller
         try {
             $schoolId = auth()->user()->school_id;
 
-            $eligibleStudents = SmStudent::where('school_id', $schoolId)
+            // Enrolled for the year being looked at, not enrolled at some point in the
+            // past - a plan is paid against this year's invoice, so last year's standing
+            // has no bearing on who may be given one now.
+            $enrolledStudentIds = StudentRecord::where('school_id', $schoolId)
+                ->where('academic_id', getAcademicId())
+                ->where('is_promote', 0)
                 ->where('enrollment_status', 'enrolled')
+                ->pluck('student_id');
+
+            $eligibleStudents = SmStudent::where('school_id', $schoolId)
+                ->whereIn('id', $enrolledStudentIds)
                 ->orderBy('first_name')
                 ->get();
 
             $paymentPlanTypes = PaymentPlanType::where('school_id', $schoolId)->orderBy('id')->get();
 
             $assignedPlans = PaymentPlanAssign::where('school_id', $schoolId)
+                ->where('academic_id', getAcademicId())
                 ->where('active_status', 1)
                 ->with(['planType', 'student', 'installments', 'invoice'])
                 ->orderByDesc('id')
@@ -51,6 +62,7 @@ class PaymentPlanAssignController extends Controller
                 'assignedPlans'
             ));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -167,6 +179,7 @@ class PaymentPlanAssignController extends Controller
                 ? redirect()->route('fees.fees-invoice-view', ['id' => $invoice->id, 'state' => 'view'])
                 : redirect()->back();
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -205,6 +218,7 @@ class PaymentPlanAssignController extends Controller
                 'daysBetween'
             ));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -273,6 +287,7 @@ class PaymentPlanAssignController extends Controller
             Toastr::success("Payment plan rescheduled. {$newCount} remaining installment(s) recreated, totaling " . number_format($amountRemaining, 2) . '.', 'Success');
             return redirect()->route('payment-plan-assign');
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }

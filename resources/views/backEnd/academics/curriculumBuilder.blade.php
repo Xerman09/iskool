@@ -46,6 +46,13 @@
 
                     {{ Form::open(['class' => 'form-horizontal', 'route' => 'curriculum-builder', 'method' => 'GET']) }}
                         <div class="row">
+                            {{-- Basic education still builds a curriculum - it is what the grade level
+                                 follows - but it has no programs and one term per school year, so those
+                                 two criteria post their stand-in rows and the curriculum version and
+                                 year level split the row between them. --}}
+                            @if(isBasicEd())
+                            <input type="hidden" name="course_id" value="{{ optional(basicEdProgram())->id }}">
+                            @else
                             <div class="col-lg-3 mb-3 mb-lg-0">
                                 <select class="primary_select form-control{{ @$errors->has('course_id') ? ' is-invalid' : '' }}" name="course_id" required>
                                     <option value="">@lang('academics.program') *</option>
@@ -57,7 +64,8 @@
                                     <span class="text-danger">{{ @$errors->first('course_id') }}</span>
                                 @endif
                             </div>
-                            <div class="col-lg-3 mb-3 mb-lg-0">
+                            @endif
+                            <div class="{{ isBasicEd() ? 'col-lg-4 mb-3 mb-lg-0' : 'col-lg-3 mb-3 mb-lg-0' }}">
                                 <select class="primary_select form-control{{ @$errors->has('curriculum_version_id') ? ' is-invalid' : '' }}" name="curriculum_version_id" required>
                                     <option value="">@lang('academics.curriculum_version') *</option>
                                     @foreach($curriculumVersions as $curriculumVersion)
@@ -68,7 +76,7 @@
                                     <span class="text-danger">{{ @$errors->first('curriculum_version_id') }}</span>
                                 @endif
                             </div>
-                            <div class="col-lg-3 mb-3 mb-lg-0">
+                            <div class="{{ isBasicEd() ? 'col-lg-4 mb-3 mb-lg-0' : 'col-lg-3 mb-3 mb-lg-0' }}">
                                 <select class="primary_select form-control{{ @$errors->has('class_id') ? ' is-invalid' : '' }}" name="class_id" required>
                                     <option value="">@lang('academics.year_level') *</option>
                                     @foreach($classes as $class)
@@ -79,9 +87,9 @@
                                     <span class="text-danger">{{ @$errors->first('class_id') }}</span>
                                 @endif
                             </div>
-                            <div class="col-lg-3 mb-3 mb-lg-0">
+                            <div class="{{ isBasicEd() ? 'col-lg-4 mb-3 mb-lg-0' : 'col-lg-3 mb-3 mb-lg-0' }}">
                                 <select class="primary_select form-control{{ @$errors->has('semester_id') ? ' is-invalid' : '' }}" name="semester_id" required>
-                                    <option value="">@lang('academics.semester') *</option>
+                                    <option value="">{{ termLabel() }} *</option>
                                     @foreach($semesters as $semester)
                                     <option value="{{$semester->id}}" {{@$criteria['semester_id'] == $semester->id ? 'selected' : ''}}>{{$semester->semester_name}}</option>
                                     @endforeach

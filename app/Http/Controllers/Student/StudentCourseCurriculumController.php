@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
 use Modules\Fees\Entities\FmFeesType;
+use Illuminate\Support\Facades\Log;
 
 class StudentCourseCurriculumController extends Controller
 {
@@ -104,6 +105,7 @@ class StudentCourseCurriculumController extends Controller
                 'student'
             ));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -122,14 +124,18 @@ class StudentCourseCurriculumController extends Controller
             $student->course_id = $request->course_id;
             $student->curriculum_version_id = $request->curriculum_version_id;
             $student->payment_plan = $request->payment_plan;
-            if ($student->enrollment_status === null) {
-                $student->enrollment_status = 'pending';
-            }
             $student->save();
+
+            $record = enrollmentRecord($student);
+            if ($record && $record->enrollment_status === null) {
+                $record->enrollment_status = 'pending';
+                $record->save();
+            }
 
             Toastr::success('Enrollment request submitted. Please proceed to the Registrar/Cashier to complete payment.', 'Success');
             return redirect()->back();
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }

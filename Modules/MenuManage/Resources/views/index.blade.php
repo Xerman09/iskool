@@ -104,6 +104,26 @@
                                                 <span class="text-danger d-block">{{ $errors->first('name') }}</span>
                                             @endif
                                         </div>
+                                        {{-- The icons this installation already draws its sidebar with, so a
+                                             new menu sits among the others instead of standing out. Typing a
+                                             class by hand still works for anything not already in use. --}}
+                                        <div class="primary_input mb-20">
+                                            <label class="primary_input_label" for="create_menu_icon">{{ __('common.Icon') }}</label>
+                                            <input class="primary_input_field" type="text" name="icon" id="create_menu_icon"
+                                                autocomplete="off" maxlength="100" value="{{ old('icon') }}"
+                                                placeholder="flaticon-reading">
+                                            @if ($errors->has('icon'))
+                                                <span class="text-danger d-block">{{ $errors->first('icon') }}</span>
+                                            @endif
+                                            <div id="create_menu_icon_choices" class="menu_icon_choices">
+                                                @foreach (menuIconChoices() as $iconChoice)
+                                                    <button type="button" class="menu_icon_choice"
+                                                        data-icon="{{ $iconChoice }}" title="{{ $iconChoice }}">
+                                                        <span class="{{ $iconChoice }}"></span>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
                                         <div class="primary_input mb-20">
                                             <label class="primary_input_label" for="create_menu_section">{{ __('menumanage::menuManage.add_menu_section') }} <span class="textdanger">*</span></label>
                                             <select class="form-control" name="section_id" id="create_menu_section">
@@ -221,4 +241,50 @@
     </script>
 @endpush
 
+@push('css')
+<style>
+    .menu_icon_choices {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 8px;
+        border: 1px solid #e4e8f0;
+        border-radius: 4px;
+    }
+    .menu_icon_choice {
+        width: 34px;
+        height: 34px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background: #f7f8fb;
+        cursor: pointer;
+        line-height: 1;
+        font-size: 15px;
+        color: #415094;
+    }
+    .menu_icon_choice:hover { border-color: #415094; }
+    .menu_icon_choice.is_selected { border-color: #415094; background: #e8ecfb; }
+</style>
+@endpush
 
+@push('script')
+<script>
+    $(document).on('click', '.menu_icon_choice', function () {
+        var icon = $(this).data('icon');
+        $('#create_menu_icon').val(icon);
+        $('#create_menu_icon_choices .menu_icon_choice').removeClass('is_selected');
+        $(this).addClass('is_selected');
+    });
+
+    // Typing a class by hand keeps the grid in step, so the two never disagree.
+    $(document).on('input', '#create_menu_icon', function () {
+        var value = $.trim($(this).val());
+        $('#create_menu_icon_choices .menu_icon_choice').each(function () {
+            $(this).toggleClass('is_selected', $(this).data('icon') === value);
+        });
+    });
+</script>
+@endpush

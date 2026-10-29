@@ -191,7 +191,7 @@ if (!function_exists('students')) {
 if (!function_exists('courses')) {
     function courses()
     {
-        return \App\Course::where('school_id', auth()->user()->school_id)->get();
+        return \App\Course::selectable()->where('school_id', auth()->user()->school_id)->get();
     }
 }
 if (!function_exists('semesters')) {
@@ -319,7 +319,15 @@ if (!function_exists('sidebar_menus')) {
                         })->when(sidebarRoleId($user) == 3, function ($q) {
                             $q->where('is_parent', 1);
                         })->when(!in_array(sidebarRoleId($user), [2, 3, GlobalVariable::isAlumni()]), function ($q) {
-                            $q->where('is_admin', 1);
+                            /* is_admin OR is_teacher, the same pair Sidebar::subModule()
+                               accepts for children. The Sidebar Manager stamps is_teacher
+                               when a menu is added to a teacher's layout, so requiring
+                               is_admin here meant such a menu rendered as a child of a
+                               section but vanished if it sat at the top level - added,
+                               saved, confirmed, and still not there. */
+                            $q->where(function ($q2) {
+                                $q2->where('is_admin', 1)->orWhere('is_teacher', 1);
+                            });
                         });
                 })
                 /* The role template, not a per-account copy - see sidebarRoleId(). */
@@ -576,6 +584,24 @@ if (!function_exists('forgetAllSidebarCaches')) {
     }
 }
 
+if (!function_exists('menuIconChoices')) {
+    /**
+     * The icon classes this installation already uses, for the menu icon picker.
+     *
+     * Read from the menus themselves rather than from a bundled icon font, so what a
+     * new menu can be given is exactly what the rest of the sidebar is drawn with -
+     * the flaticon set and the Font Awesome classes side by side, as they already are.
+     */
+    function menuIconChoices()
+    {
+        return \Illuminate\Support\Facades\DB::table('permissions')
+            ->whereNotNull('icon')
+            ->where('icon', '!=', '')
+            ->distinct()
+            ->orderBy('icon')
+            ->pluck('icon');
+    }
+}
 if (!function_exists('sidebarManagerRoles')) {
     /** The roles a super admin can arrange a menu for, in the Sidebar Manager's picker. */
     function sidebarManagerRoles()

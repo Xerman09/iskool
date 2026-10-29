@@ -30,6 +30,7 @@ class SidebarComponent extends Component
         $this->modulePermissionSidebar();     
         $this->deActiveForPgsql();
         $this->deActiveForSaas();
+        $this->deActiveForSchoolType();
         session()->put('role_permission_user_type', '');
         $user = auth()->user();
         $data['sidebar_menus'] = sidebar_menus();

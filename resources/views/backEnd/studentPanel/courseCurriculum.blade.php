@@ -65,7 +65,7 @@
                     <h3 class="mb-10">
                         {{$course->course_name}} &mdash; {{$curriculumVersion->version_label}}
                         @if($student && $student->course_id == $course->id && $student->curriculum_version_id == $curriculumVersion->id)
-                            @if($student->enrollment_status == 'enrolled')
+                            @if(enrollmentStatus($student) == 'enrolled')
                                 <span class="badge badge-success">@lang('academics.enrolled')</span>
                             @else
                                 <span class="badge badge-warning">@lang('academics.pending_enrollment')</span>
@@ -178,7 +178,7 @@
             </div>
         </div>
 
-        @if(!$student || $student->enrollment_status != 'enrolled')
+        @if(!$student || enrollmentStatus($student) != 'enrolled')
         <div class="row mt-30">
             <div class="col-lg-12">
                 <div class="white-box">

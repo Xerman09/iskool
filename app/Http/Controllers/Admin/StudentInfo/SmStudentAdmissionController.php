@@ -80,6 +80,7 @@ class SmStudentAdmissionController extends Controller
     use FeesAssignTrait;
     use NotificationSend;
     use DirectFeesAssignTrait;
+    use \App\Traits\EnrollmentBalanceBreakdown;
 
     public function index()
     {
@@ -1044,6 +1045,17 @@ class SmStudentAdmissionController extends Controller
         }
         if (directFees()) {
             $this->assignDirectFees($studentRecord->id, $studentRecord->class_id, $studentRecord->section_id, null);
+        }
+
+        // Basic education enrols at admission. There is no program to assign and no
+        // subjects for the learner to register, so the invoice that gates enrolment is
+        // raised right here instead of on three more screens. Does nothing on a
+        // college deployment, or before the school has finished setting its fees up.
+        if (isBasicEd()) {
+            $learner = SmStudent::find($request->student_id);
+            if ($learner) {
+                $this->enrollBasicEdLearner($learner, $studentRecord);
+            }
         }
 
         $groups = \Modules\Chat\Entities\Group::where([

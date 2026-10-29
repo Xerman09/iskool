@@ -47,7 +47,7 @@
                                 <select class="primary_select form-control{{ @$errors->has('curriculum_version_id') ? ' is-invalid' : '' }}" name="curriculum_version_id" required>
                                     <option value="">@lang('academics.curriculum_version') *</option>
                                     @foreach($curriculumVersions as $cv)
-                                    <option value="{{$cv->id}}">{{$cv->version_label}}</option>
+                                    <option value="{{$cv->id}}" data-courses="{{ isset($coursesByVersion[$cv->id]) ? $coursesByVersion[$cv->id]->implode(',') : '' }}">{{$cv->version_label}}</option>
                                     @endforeach
                                 </select>
                                 @if ($errors->has('curriculum_version_id'))
@@ -149,7 +149,7 @@
                                                 @endif
                                             </td>
                                             <td valign="top">
-                                                @if($s->enrollment_status == 'enrolled')
+                                                @if($s->enrollmentStatusThisYear == 'enrolled')
                                                     {{ __('academics.enrolled') }}
                                                 @elseif($s->hasRegisteredSubjects)
                                                     {{ __('academics.awaiting_invoice') }}
@@ -266,9 +266,29 @@
         $('#graduateProgramHint').toggle(!hasGraduated);
     }
 
+    // A curriculum version only stays selectable while it actually holds subjects for
+    // the chosen program - mirrors the server-side guard in AssignProgramController::
+    // store(). A student keeps their version for their whole stay, so a wrong pairing
+    // here is not undone by the next term.
+    function refreshCurriculumVersionOptions() {
+        var courseId = String($('#assignProgramCourseSelect').val() || '');
+        var versionSelect = $('select[name="curriculum_version_id"]');
+
+        versionSelect.find('option[value!=""]').each(function () {
+            var covered = String($(this).data('courses') || '').split(',');
+            $(this).prop('disabled', courseId !== '' && covered.indexOf(courseId) === -1);
+        });
+
+        if (versionSelect.find('option:selected').prop('disabled')) {
+            versionSelect.val('');
+        }
+    }
+
     $(document).on('change', '#assignProgramStudentSelect', refreshGraduateProgramOptions);
+    $(document).on('change', '#assignProgramCourseSelect', refreshCurriculumVersionOptions);
     $(function () {
         refreshGraduateProgramOptions();
+        refreshCurriculumVersionOptions();
     });
 </script>
 @endsection

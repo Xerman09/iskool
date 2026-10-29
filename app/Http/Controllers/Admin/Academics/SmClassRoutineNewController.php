@@ -41,8 +41,9 @@ class SmClassRoutineNewController extends Controller
             $class_routines = SmClassRoutineUpdate::where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
             $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+            $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
             Session::put('session_day_id', null);
-            return view('backEnd.academics.class_routine_new', compact('classes', 'class_routines', 'courses', 'semesters'));
+            return view('backEnd.academics.class_routine_new', compact('classes', 'class_routines', 'courses', 'curriculumVersions', 'semesters'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -115,6 +116,7 @@ class SmClassRoutineNewController extends Controller
             $class_id = $request->class;
             $section_id = $request->section;
             $course_id = $request->course_id;
+            $curriculum_version_id = $request->curriculum_version_id;
             $semester_id = $request->semester_id;
 
             $sm_weekends = SmWeekend::with('classRoutine')->where('school_id', Auth::user()->school_id)
@@ -125,13 +127,21 @@ class SmClassRoutineNewController extends Controller
             $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
             $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+            $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
 
             $subjects = SmAssignSubject::where('class_id', $class_id)
                 ->where('section_id', $section_id)
                 ->where('school_id', Auth::user()->school_id)
-                ->when($course_id || $semester_id, function ($query) use ($course_id, $semester_id) {
-                    $query->whereHas('subject', function ($q) use ($course_id, $semester_id) {
+                /* Curriculum version matters as much as program here. A cohort keeps the
+                   curriculum it was admitted under, so two versions of the same program run
+                   side by side for years - and both carry a subject of the same name, for the
+                   same year level and term. Without this the list showed each one twice, with
+                   nothing to tell them apart, and a slot could be timetabled against the
+                   version the students in that block do not follow. */
+                ->when($course_id || $curriculum_version_id || $semester_id, function ($query) use ($course_id, $curriculum_version_id, $semester_id) {
+                    $query->whereHas('subject', function ($q) use ($course_id, $curriculum_version_id, $semester_id) {
                         $q->when($course_id, fn ($q2) => $q2->where('course_id', $course_id))
+                            ->when($curriculum_version_id, fn ($q2) => $q2->where('curriculum_version_id', $curriculum_version_id))
                             ->when($semester_id, fn ($q2) => $q2->where('semester_id', $semester_id));
                     });
                 })
@@ -150,7 +160,7 @@ class SmClassRoutineNewController extends Controller
                 Session::put('session_day_id', null);
             }
             $smClass = $class_id ? SmClass::with('classSection')->find($class_id) : null;
-            return view('backEnd.academics.class_routine_new', compact('classes', 'teachers', 'rooms', 'subjects', 'class_id', 'section_id', 'sm_weekends', 'smClass', 'courses', 'semesters', 'course_id', 'semester_id'));
+            return view('backEnd.academics.class_routine_new', compact('classes', 'teachers', 'rooms', 'subjects', 'class_id', 'section_id', 'sm_weekends', 'smClass', 'courses', 'curriculumVersions', 'semesters', 'course_id', 'curriculum_version_id', 'semester_id'));
         } catch (\Exception $e) {
              ;
             Toastr::error('Operation Failed', 'Failed');

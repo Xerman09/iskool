@@ -174,6 +174,8 @@ return[
 
     'semester' => 'Semester',
     'semesters' => 'Semesters',
+    'term' => 'Term',
+    'terms' => 'Terms',
     'semester_name' => 'Semester Name',
     'sort_order' => 'Sort Order',
     'add_semester' => 'Add Semester',

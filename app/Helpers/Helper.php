@@ -4214,6 +4214,101 @@ if (!function_exists('studentFeesRemainingBalance')) {
     }
 }
 
+if (!function_exists('enrollmentRecord')) {
+    /**
+     * A student's enrolment record for one academic year.
+     *
+     * Enrolment status, and everything else that is true of a student only within a
+     * year, hangs off this row rather than off sm_students - a person studies for
+     * many years, and what they owe, chose and were admitted to differs in each.
+     * Promoted rows are skipped: those are the history of a year already left behind.
+     */
+    function enrollmentRecord($student, $academic_id = null)
+    {
+        $student_id = is_object($student) ? $student->id : $student;
+
+        if (!$student_id) {
+            return null;
+        }
+
+        $school_id = is_object($student) && $student->school_id
+            ? $student->school_id
+            : auth()->user()->school_id;
+
+        return StudentRecord::where('student_id', $student_id)
+            ->where('school_id', $school_id)
+            ->where('academic_id', $academic_id ?: getAcademicId())
+            ->where('is_promote', 0)
+            ->first();
+    }
+}
+
+if (!function_exists('enrollmentStatus')) {
+    /**
+     * Where a student stands in this year's enrolment: null when they have not begun,
+     * 'pending' once they have asked to enrol, 'enrolled' once the cashier is satisfied.
+     */
+    function enrollmentStatus($student, $academic_id = null)
+    {
+        return optional(enrollmentRecord($student, $academic_id))->enrollment_status;
+    }
+}
+if (!function_exists('sectionStudents')) {
+    /**
+     * The students enrolled in any block of one section.
+     *
+     * blockStudents() answers "who sits in this subject's block"; this answers "who sits
+     * in this section at all", which is what whole-day attendance needs. A student belongs
+     * to the section once they have registered for a single block of it, so a cross-enrolled
+     * student is listed under every section they actually attend and is marked separately in
+     * each. Same enrollment chain and the same academic-year, not-promoted and active-student
+     * gates as blockStudents(), only without the subject filter.
+     */
+    function sectionStudents($class_id, $section_id)
+    {
+        $school_id = auth()->user()->school_id;
+
+        $block_ids = SmAssignSubject::where('class_id', $class_id)
+            ->where('section_id', $section_id)
+            ->where('academic_id', getAcademicId())
+            ->where('school_id', $school_id)
+            ->pluck('id');
+
+        if ($block_ids->isEmpty()) {
+            // An Eloquent collection, not collect(): callers eager-load on the
+            // result, and Support\Collection has no load().
+            return (new StudentRecord)->newCollection();
+        }
+
+        $enrollments = SmOptionalSubjectAssign::whereIn('assign_subject_id', $block_ids)
+            ->where('school_id', $school_id)
+            ->get(['record_id', 'student_id']);
+
+        if ($enrollments->isEmpty()) {
+            return (new StudentRecord)->newCollection();
+        }
+
+        $record_ids = $enrollments->pluck('record_id')->filter()->values();
+        $student_ids = $enrollments->pluck('student_id')->filter()->values();
+
+        return StudentRecord::with('class', 'section')
+            ->where(function ($q) use ($record_ids, $student_ids) {
+                $q->whereIn('id', $record_ids)
+                    ->orWhereIn('student_id', $student_ids);
+            })
+            ->whereHas('studentDetail', function ($q) {
+                $q->where('active_status', 1);
+            })
+            ->where('school_id', $school_id)
+            ->where('academic_id', getAcademicId())
+            ->where('is_promote', 0)
+            ->get()
+            ->unique('id')
+            ->sortBy('roll_no')
+            ->values();
+    }
+}
+
 if (!function_exists('blockStudents')) {
     /**
      * The students enrolled in one block of one subject.
@@ -4236,7 +4331,9 @@ if (!function_exists('blockStudents')) {
             ->pluck('id');
 
         if ($block_ids->isEmpty()) {
-            return collect();
+            // An Eloquent collection, not collect(): callers eager-load on the
+            // result, and Support\Collection has no load().
+            return (new StudentRecord)->newCollection();
         }
 
         $enrollments = SmOptionalSubjectAssign::whereIn('assign_subject_id', $block_ids)
@@ -4244,7 +4341,7 @@ if (!function_exists('blockStudents')) {
             ->get(['record_id', 'student_id']);
 
         if ($enrollments->isEmpty()) {
-            return collect();
+            return (new StudentRecord)->newCollection();
         }
 
         $record_ids = $enrollments->pluck('record_id')->filter()->values();
@@ -4312,11 +4409,15 @@ if (!function_exists('teacherStudentIds')) {
             ->where('school_id', $school_id)
             ->pluck('student_id');
 
-        /* Advisory classes, when the school uses them. */
+        /* Advisory classes, when the school uses them. Scoped to the year: who advises a
+           section is decided again each year, and SmAssignClassTeacher carries no global
+           scope of its own, so without this an adviser kept their old sections for good. */
         $adviser_pairs = SmAssignClassTeacher::whereIn(
             'id',
             SmClassTeacher::where('teacher_id', $staff_id)->pluck('assign_class_teacher_id')
-        )->get(['class_id', 'section_id']);
+        )->where('academic_id', getAcademicId())
+            ->where('school_id', $school_id)
+            ->get(['class_id', 'section_id']);
 
         if ($adviser_pairs->isNotEmpty()) {
             $advised = StudentRecord::where('school_id', $school_id)
@@ -4336,5 +4437,103 @@ if (!function_exists('teacherStudentIds')) {
         }
 
         return $student_ids->filter()->unique()->values();
+    }
+}
+
+if (!function_exists('schoolType')) {
+    /**
+     * Which kind of school this deployment serves: 'basic_ed' or 'tertiary'.
+     *
+     * Set once at setup time - one client, one deployment, one value. Falls back to
+     * 'tertiary' so a deployment that predates the column, or one whose settings row
+     * has not loaded, behaves exactly as it does today.
+     */
+    function schoolType()
+    {
+        return @generalSetting()->school_type ?: 'tertiary';
+    }
+}
+
+if (!function_exists('isBasicEd')) {
+    /**
+     * True on a preschool-through-high-school deployment, where the year level
+     * identifies the learner on its own.
+     *
+     * Callers use this for the four things that actually differ: the program and term
+     * dropdowns come off Assign Class Teacher and Assign Subject, tuition is flat
+     * rather than units times a rate, enrollment assigns the curriculum's subjects
+     * instead of waiting for the student to pick them, and a section gets a class
+     * adviser. Subject teachers are assigned either way - advisory and subject
+     * teaching are different jobs, so only the adviser screen is conditional.
+     */
+    function isBasicEd()
+    {
+        return schoolType() === 'basic_ed';
+    }
+}
+
+if (!function_exists('basicEdProgram')) {
+    /**
+     * The one stand-in program a basic-education deployment carries internally.
+     *
+     * Basic education has no programs - the year level identifies the learner - but
+     * "course_id IS NULL" is how this codebase marks a row in the SUBJECT CATALOG, in
+     * SmSubjectController, CurriculumBuilderController and SmSubjectRequest alike.
+     * Leaving curriculum entries without a course would make them surface on the
+     * Subjects screen as if they were catalog subjects.
+     *
+     * So the deployment keeps a single hidden row instead and every curriculum entry
+     * points at it. Nobody sees it: the Programs and Assign Program screens are off the
+     * sidebar, and the dropdowns that would offer it render as hidden inputs. It exists
+     * only to keep that catalog invariant true everywhere it is already relied on.
+     */
+    function basicEdProgram()
+    {
+        static $cache = [];
+
+        $schoolId = Auth::check() ? Auth::user()->school_id : 1;
+
+        if (isset($cache[$schoolId])) {
+            return $cache[$schoolId];
+        }
+
+        $course = \App\Course::where('school_id', $schoolId)
+            ->where('course_code', '__BASIC_ED__')
+            ->first();
+
+        // Only ever created on a basic-education deployment: a stray call on a tertiary
+        // one must not leave a junk row showing up in the Programs dropdown.
+        if (!$course && isBasicEd()) {
+            $course = new \App\Course();
+            $course->course_name = 'Basic Education';
+            $course->course_code = '__BASIC_ED__';
+            $course->description = 'Internal placeholder. Basic education has no programs; this row exists so curriculum entries stay out of the subject catalog.';
+            $course->price_per_unit = 0;
+            $course->school_id = $schoolId;
+            $course->save();
+        }
+
+        $cache[$schoolId] = $course;
+
+        return $course;
+    }
+}
+
+if (!function_exists('termLabel')) {
+    /**
+     * What this deployment calls a term.
+     *
+     * Basic education runs quarterly or periodical terms inside the school year, so
+     * "Term" is what a registrar there expects to see; a college runs semesters. Both
+     * sit in the same table and mean the same thing - a period inside the academic
+     * year - so only the label changes.
+     *
+     * The rows themselves are always the school's to enter. Nothing is seeded: the
+     * academic year is already step 1 of setup, so a term standing in for the whole
+     * year would only repeat it.
+     */
+    function termLabel()
+    {
+        return isBasicEd() ? __('academics.term') : __('academics.semester');
     }
 }

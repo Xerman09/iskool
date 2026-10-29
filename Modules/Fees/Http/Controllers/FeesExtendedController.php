@@ -301,7 +301,12 @@ class FeesExtendedController extends Controller
         }
 
         $student = SmStudent::find($studentId);
-        if (!$student || !$student->course_id || $student->enrollment_status !== 'pending') {
+
+        // A college student without a program has nothing to be enrolled into yet, so
+        // the gate stays shut. A basic-education learner never has one - the grade
+        // level identifies them - so requiring it there would leave them stuck on
+        // 'pending' no matter how much they paid.
+        if (!$student || (!isBasicEd() && !$student->course_id)) {
             return;
         }
 
@@ -311,7 +316,10 @@ class FeesExtendedController extends Controller
             ->where('is_promote', 0)
             ->first();
 
-        if (!$record) {
+        // The gate reads this year's record. Held on sm_students it never reopened:
+        // a student who enrolled once stayed 'enrolled' for good, and the cashier
+        // could not take their money for any year after that one.
+        if (!$record || $record->enrollment_status !== 'pending') {
             return;
         }
 
@@ -331,13 +339,13 @@ class FeesExtendedController extends Controller
         // still-pending invoice instead of collecting a down payment - any payment
         // has landed against that plan at all. See hasPaymentPlanProgress().
         $isSettled = $downPayment <= 0
-            || (float) $enrollmentInvoice->Tpaidamount >= $downPayment - 0.01
+            || $this->tuitionPaidOn($enrollmentInvoice) >= $downPayment - 0.01
             || $this->hasPaymentPlanProgress($enrollmentInvoice);
 
         if ($isSettled) {
-            $student->enrollment_status = 'enrolled';
-            $student->enrolled_at = now();
-            $student->save();
+            $record->enrollment_status = 'enrolled';
+            $record->enrolled_at = now();
+            $record->save();
         }
     }
 }

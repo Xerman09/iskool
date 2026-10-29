@@ -187,6 +187,13 @@
                                                     <option value="App\SmClassRoom"
                                                         @if (isset($academic_year)) @if (in_array('App\SmClassRoom', @$copy_with_academic_year)) selected @endif
                                                         @endif >@lang('academics.class_room')</option>
+                                                    {{-- Both carry a section_id; the controller remaps it to the new year's sections. --}}
+                                                    <option value="App\SmAssignSubject"
+                                                        @if (isset($academic_year)) @if (in_array('App\SmAssignSubject', @$copy_with_academic_year)) selected @endif
+                                                        @endif >@lang('academics.assign_subject')</option>
+                                                    <option value="App\Models\StudentRecord"
+                                                        @if (isset($academic_year)) @if (in_array('App\Models\StudentRecord', @$copy_with_academic_year)) selected @endif
+                                                        @endif >@lang('student.student_record')</option>
                                                 </select>
                                             </div>
                                         </div>

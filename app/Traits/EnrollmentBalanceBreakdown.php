@@ -20,14 +20,27 @@ trait EnrollmentBalanceBreakdown
 
     protected function balanceBreakdownFor(SmStudent $student)
     {
-        $course = Course::where('school_id', $student->school_id)->find($student->course_id);
-        $pricePerUnit = optional($course)->price_per_unit ?: 0;
+        $basicEd = isBasicEd();
 
-        $semesterIds = SmSubject::where('course_id', $student->course_id)
-            ->where('class_id', $student->class_id)
-            ->distinct()
-            ->orderBy('semester_id')
-            ->pluck('semester_id');
+        $course = Course::where('school_id', $student->school_id)->find($student->course_id);
+        $pricePerUnit = $basicEd ? 0 : (optional($course)->price_per_unit ?: 0);
+
+        // Which terms this learner is billed for. A college reads them off the
+        // curriculum, because the subject load is what sets the price. Basic education
+        // charges a flat amount per grade level instead, so the terms that matter are
+        // simply the ones someone has defined a fee against for this year level.
+        $semesterIds = $basicEd
+            ? FmFeesType::where('school_id', $student->school_id)
+                ->where('class_id', $student->class_id)
+                ->distinct()
+                ->orderBy('semester_id')
+                ->pluck('semester_id')
+            : SmSubject::where('course_id', $student->course_id)
+                ->where('curriculum_version_id', $student->curriculum_version_id)
+                ->where('class_id', $student->class_id)
+                ->distinct()
+                ->orderBy('semester_id')
+                ->pluck('semester_id');
 
         $allLines = collect();
         $firstSemLines = collect();
@@ -37,7 +50,12 @@ trait EnrollmentBalanceBreakdown
         foreach ($semesterIds as $index => $semesterId) {
             $semester = \App\Semester::find($semesterId);
 
-            $units = SmSubject::where('course_id', $student->course_id)
+            /* One curriculum version. A student follows the version they were admitted
+               under, and the others stay on file for the cohorts still finishing them -
+               so summing without this charged every version of the year level at once,
+               and the bill grew by a whole curriculum each time one was added. */
+            $units = $basicEd ? 0 : SmSubject::where('course_id', $student->course_id)
+                ->where('curriculum_version_id', $student->curriculum_version_id)
                 ->where('class_id', $student->class_id)
                 ->where('semester_id', $semesterId)
                 ->sum('units');
@@ -46,14 +64,22 @@ trait EnrollmentBalanceBreakdown
             // 'feesType' is null for the tuition line (billing resolves it lazily via
             // tuitionFeesType(), which finds-or-creates - we don't want a plain read
             // like this to have the side effect of creating that fee type row).
-            $semesterLines = collect([[
+            //
+            // Basic education has no units line at all: every peso it charges is a fee
+            // type entered against the grade level, tuition included, so a computed
+            // line here would only add a zero on top of them.
+            $semesterLines = $basicEd ? collect() : collect([[
                 'label' => trim('Tuition' . ($semester ? ' — ' . $semester->semester_name : '') . " ({$units} units)"),
                 'amount' => $unitsPrice,
                 'feesType' => null,
             ]]);
 
             $miscFees = FmFeesType::where('school_id', $student->school_id)
-                ->where('course_id', $student->course_id)
+                ->when(!$basicEd, function ($q) use ($student) {
+                    // Scoped by program for a college. Basic education has none, so the
+                    // grade level and term are the whole key.
+                    $q->where('course_id', $student->course_id);
+                })
                 ->where('class_id', $student->class_id)
                 ->where('semester_id', $semesterId)
                 ->get();
@@ -73,7 +99,11 @@ trait EnrollmentBalanceBreakdown
             $total += $semesterTotal;
         }
 
-        $isPerYear = $student->payment_plan == 'per_year';
+        // A college student chooses whether to settle a semester at a time or the whole
+        // year. Basic education enrolls for the school year as a whole - the quarters
+        // are grading periods, not separate enrollments - so the invoice covers the
+        // year and a payment plan is what spreads it across months.
+        $isPerYear = $basicEd ? true : ($student->payment_plan == 'per_year');
         $tuitionMiscTotal = $isPerYear ? $total : ($firstSemTotal ?: 0);
         $lines = $isPerYear ? $allLines : $firstSemLines;
 
@@ -142,6 +172,61 @@ trait EnrollmentBalanceBreakdown
     }
 
     /**
+     * Raise the enrollment invoice for a basic-education learner at admission.
+     *
+     * A college takes five screens to enroll someone: admit, assign a program, let the
+     * student register subjects, generate the invoice, collect. None of those middle
+     * steps mean anything here - there is no program to assign and the curriculum
+     * already decides the subject load - so admission carries the whole thing. The
+     * registrar fills one form and the learner comes out invoiced and pending.
+     *
+     * Returns the invoice, or null when there is nothing to bill yet: no grade level
+     * on the record, or no fees defined against that grade level, which is simply a
+     * school that has not finished its fee setup. That is not an error - admission
+     * still succeeds, and the invoice appears once the fees exist.
+     */
+    protected function enrollBasicEdLearner(SmStudent $student, StudentRecord $record)
+    {
+        if (!isBasicEd() || !$record->class_id) {
+            return null;
+        }
+
+        // Admission is editable, so this runs again on every save. One invoice per
+        // record, and never a second set of lines on top of the first.
+        $existing = FmFeesInvoice::where('school_id', $student->school_id)
+            ->where('record_id', $record->id)
+            ->where('type', 'fees')
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $breakdown = $this->balanceBreakdownFor($student);
+
+        if ($breakdown['lines']->isEmpty()) {
+            return null;
+        }
+
+        if ($record->enrollment_status === null) {
+            $record->enrollment_status = 'pending';
+            $record->save();
+        }
+
+        // Reuse an open store order if the learner already bought something, so the
+        // order of operations does not strand two invoices against one record.
+        $invoice = $this->openOrderInvoiceFor($record) ?: $this->newOrderInvoice($student, $record, 'fees', 3);
+        $invoice->type = 'fees';
+        $invoice->save();
+
+        foreach ($breakdown['lines'] as $line) {
+            $this->addChieldLine($invoice, $line['feesType'] ?? $this->tuitionFeesType(), $line['amount']);
+        }
+
+        return $invoice;
+    }
+
+    /**
      * How much more is owed to fully cover the schedule's currently-"next"
      * installment - installment.amount minus whatever partial has already landed
      * on it (prior installments are, by definition of "next", already covered).
@@ -180,12 +265,17 @@ trait EnrollmentBalanceBreakdown
         }
 
         $student = SmStudent::find($invoice->student_id);
-        if (!$student || $student->enrollment_status === 'enrolled') {
+
+        // The invoice names the record it was raised against, so the standing that
+        // matters is that year's, not whatever the student's latest year says.
+        $record = $invoice->record_id ? StudentRecord::find($invoice->record_id) : null;
+
+        if (!$student || optional($record)->enrollment_status === 'enrolled') {
             return $totalDue;
         }
 
         $downPayment = $this->balanceBreakdownFor($student)['downPayment'];
-        $downPaymentRemaining = max(0, $downPayment - (float) $invoice->Tpaidamount);
+        $downPaymentRemaining = max(0, $downPayment - $this->tuitionPaidOn($invoice));
 
         return min($downPaymentRemaining, $totalDue);
     }
@@ -262,10 +352,15 @@ trait EnrollmentBalanceBreakdown
 
     private function activePaymentPlanFor(SmStudent $student)
     {
+        /* Scoped to the year. A plan is a schedule for settling one year's invoice, and
+           payment_plan_assigns records which year it was raised for - but this never read
+           it, so last year's finished plan was still being reported as this year's, with
+           its installments already "paid". */
         $assign = PaymentPlanAssign::where('school_id', $student->school_id)
             ->where('student_id', $student->id)
             ->where('course_id', $student->course_id)
             ->where('context', 'tuition')
+            ->where('academic_id', getAcademicId())
             ->where('active_status', 1)
             ->with('planType', 'installments', 'invoice')
             ->latest()
@@ -466,9 +561,37 @@ trait EnrollmentBalanceBreakdown
      */
     protected function priorYearBalanceFor(SmStudent $student)
     {
+        /* A record belongs to a past year either because the promote flow moved the
+           student on (is_promote), or simply because its academic year started before
+           the one being looked at. Only the first was checked, so a school that rolls
+           over by creating the next academic year - rather than by promoting - carried
+           no prior balance at all, and the arrears warning never once appeared. */
+        $currentYear = SmAcademicYear::where('school_id', $student->school_id)
+            ->find(getAcademicId());
+
+        /* Earlier by start date, or - when two years carry the same one, which happens
+           readily because the date is typed by hand and a year copied from another
+           inherits its dates - by the order they were created in. Without the tie-break
+           a school whose dates all read the same had no prior years at all. */
+        $priorYearIds = $currentYear
+            ? SmAcademicYear::where('school_id', $student->school_id)
+                ->where('id', '!=', $currentYear->id)
+                ->where(function ($q) use ($currentYear) {
+                    $q->where('starting_date', '<', $currentYear->starting_date)
+                        ->orWhere(function ($q2) use ($currentYear) {
+                            $q2->where('starting_date', $currentYear->starting_date)
+                                ->where('id', '<', $currentYear->id);
+                        });
+                })
+                ->pluck('id')
+            : collect();
+
         $priorRecordIds = StudentRecord::where('student_id', $student->id)
             ->where('school_id', $student->school_id)
-            ->where('is_promote', 1)
+            ->where(function ($q) use ($priorYearIds) {
+                $q->where('is_promote', 1)
+                    ->orWhereIn('academic_id', $priorYearIds);
+            })
             ->pluck('id');
 
         if ($priorRecordIds->isEmpty()) {

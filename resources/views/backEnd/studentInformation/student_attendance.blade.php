@@ -254,7 +254,7 @@ $breadCrumbs = [
                                                     <input type="hidden" name="attendance[{{$student->id}}][class]"
                                                         value="{{$student->class_id}}">
                                                     <input type="hidden" name="attendance[{{$student->id}}][section]"
-                                                        value="{{$student->section_id}}">
+                                                        value="{{ isBasicEd() ? $student->section_id : $section_id }}">
                                                     @if(moduleStatusCheck('University'))
     
                                                     <input type="hidden" name="attendance[{{$student->id}}][un_session_id]"

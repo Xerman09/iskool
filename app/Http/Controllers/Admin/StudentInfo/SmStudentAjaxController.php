@@ -237,13 +237,27 @@ class SmStudentAjaxController extends Controller
                     ->withoutGlobalScope(StatusAcademicSchoolScope::class)
                     ->get();
             } else {
+                /* SmClassSection has its StatusAcademicSchoolScope commented out, so this
+                   query carried no academic year and no school at all - the withoutGlobalScope
+                   call that used to sit here removed a scope the model never registered. Every
+                   year holds its own sections, so once a second year existed the list came back
+                   holding each name once per year - A, B, A, B - with nothing to tell them
+                   apart, and picking the wrong one addressed a section no assignment in the
+                   current year points at. Both filters are spelled out instead. */
                 $sectionIds = SmClassSection::where('class_id', $request->id)
-                    ->withoutGlobalScope(StatusAcademicSchoolScope::class)->get();
+                    ->where('academic_id', getAcademicId())
+                    ->where('school_id', Auth::user()->school_id)
+                    ->get();
             }
 
             $promote_sections = [];
             foreach ($sectionIds as $sectionId) {
-                $promote_sections[] = SmSection::where('id', $sectionId->section_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->first(['id', 'section_name']);
+                $section = SmSection::where('id', $sectionId->section_id)->withoutGlobalScope(StatusAcademicSchoolScope::class)->first(['id', 'section_name']);
+                // A pairing left pointing at a deleted section would otherwise reach the
+                // dropdown as a null entry and stop the whole list from rendering.
+                if ($section) {
+                    $promote_sections[] = $section;
+                }
             }
         }
 

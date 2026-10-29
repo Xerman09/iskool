@@ -119,6 +119,20 @@ trait EnrollmentInvoicing
     }
 
     /**
+     * What has been paid toward tuition and fees on an invoice, leaving store items out.
+     *
+     * While an enrolment invoice is still unpaid it stays open, so anything bought from
+     * the item store lands on it too (see openOrderInvoiceFor()). Counting every peso on
+     * the invoice therefore let a student buy something dear enough to clear the down
+     * payment and come out enrolled without having paid a centavo of tuition. The
+     * threshold itself is built from tuition and misc fees alone, and this is its match.
+     */
+    protected function tuitionPaidOn(FmFeesInvoice $invoice)
+    {
+        return (float) $invoice->invoiceDetails()->whereNull('sm_item_id')->sum('paid_amount');
+    }
+
+    /**
      * Start a brand new invoice for this record - one per order/checkout. Used both
      * for the initial itemized enrollment invoice (type 'fees') and any later,
      * standalone item-store checkout (type 'store').

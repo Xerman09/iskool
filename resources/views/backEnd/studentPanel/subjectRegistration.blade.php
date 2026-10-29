@@ -48,7 +48,7 @@
                 <div class="main-title">
                     <h4 class="mb-20">
                         @lang('academics.enrolling_for_semester') {{$activeSemester->semester_name}}
-                        @if($student->enrollment_status == 'enrolled')
+                        @if(enrollmentStatus($student) == 'enrolled')
                             <span class="badge badge-success">@lang('academics.enrolled')</span>
                         @elseif($hasSubmitted)
                             <span class="badge badge-warning">@lang('academics.awaiting_invoice')</span>

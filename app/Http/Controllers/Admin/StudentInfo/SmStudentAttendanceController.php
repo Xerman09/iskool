@@ -47,6 +47,7 @@ class SmStudentAttendanceController extends Controller
             }
             return view('backEnd.studentInformation.student_attendance', compact('classes'));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -66,24 +67,51 @@ class SmStudentAttendanceController extends Controller
                 $classes = SmClass::get();
             }
 
-            $students = StudentRecord::with('studentDetail', 'studentDetail.DateWiseAttendances')
-                ->when($request->class_id, function ($query) use ($request) {
-                    $query->where('class_id', $request->class_id);
-                })
-                ->whereHas('studentDetail', function ($q) use ($request) {
-                    $q->where('active_status', 1)
-                        ->when($request->filled('course_id'), function ($q2) use ($request) {
-                            $q2->where('course_id', $request->course_id);
-                        })
-                        ->when($request->filled('semester_id'), function ($q2) use ($request) {
-                            $q2->where('semester_id', $request->semester_id);
-                        });
-                })
-                ->when($request->section_id, function ($query) use ($request) {
-                    $query->where('section_id', $request->section_id);
-                })->where('academic_id', getAcademicId())
-                ->where('school_id', Auth::user()->school_id)
-                ->get()->sortBy('roll_no');
+            /* Basic education keeps the original lookup: one advisory section per learner,
+               read straight off their record. A college student has no single section - they
+               sit in a different block per subject - so there the roll is built from who
+               actually enrolled in this section, which lists a cross-enrolled student under
+               every section they attend and lets each one be marked separately. */
+            if (isBasicEd()) {
+                $students = StudentRecord::with('studentDetail', 'studentDetail.DateWiseAttendances')
+                    ->when($request->class_id, function ($query) use ($request) {
+                        $query->where('class_id', $request->class_id);
+                    })
+                    ->whereHas('studentDetail', function ($q) use ($request) {
+                        $q->where('active_status', 1)
+                            ->when($request->filled('course_id'), function ($q2) use ($request) {
+                                $q2->where('course_id', $request->course_id);
+                            })
+                            ->when($request->filled('semester_id'), function ($q2) use ($request) {
+                                $q2->where('semester_id', $request->semester_id);
+                            });
+                    })
+                    ->when($request->section_id, function ($query) use ($request) {
+                        $query->where('section_id', $request->section_id);
+                    })->where('academic_id', getAcademicId())
+                    ->where('school_id', Auth::user()->school_id)
+                    ->get()->sortBy('roll_no');
+            } else {
+                $students = sectionStudents($request->class_id, $request->section_id);
+
+                if ($request->filled('course_id') || $request->filled('semester_id')) {
+                    $students = $students->filter(function ($record) use ($request) {
+                        $student = $record->studentDetail;
+                        if (!$student) {
+                            return false;
+                        }
+                        if ($request->filled('course_id') && $student->course_id != $request->course_id) {
+                            return false;
+                        }
+                        if ($request->filled('semester_id') && $student->semester_id != $request->semester_id) {
+                            return false;
+                        }
+                        return true;
+                    })->values();
+                }
+
+                $students->load('studentDetail', 'studentDetail.DateWiseAttendances');
+            }
 
             if (moduleStatusCheck('University')) {
                 $model = StudentRecord::query();
@@ -117,6 +145,7 @@ class SmStudentAttendanceController extends Controller
 
             return view('backEnd.studentInformation.student_attendance', compact('classes', 'sections', 'class_id', 'section_id', 'date', 'students', 'attendance_type', 'search_info', 'selected'))->with($search_info);
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -321,11 +350,15 @@ class SmStudentAttendanceController extends Controller
             $interface = App::make(UnCommonRepositoryInterface::class);
             $studentRecords  = $interface->searchStudentRecord($request)->get();
         } else {
-            $studentRecords = StudentRecord::where('class_id', $request->class_id)
-                ->where('section_id', $request->section_id)
-                ->where('academic_id', getAcademicId())
-                ->where('school_id', Auth::user()->school_id)
-                ->get();
+            if (isBasicEd()) {
+                $studentRecords = StudentRecord::where('class_id', $request->class_id)
+                    ->where('section_id', $request->section_id)
+                    ->where('academic_id', getAcademicId())
+                    ->where('school_id', Auth::user()->school_id)
+                    ->get();
+            } else {
+                $studentRecords = sectionStudents($request->class_id, $request->section_id);
+            }
         }
 
 
@@ -357,7 +390,9 @@ class SmStudentAttendanceController extends Controller
                 $attendance->student_id = $record->student_id;
                 $attendance->student_record_id = $record->id;
                 $attendance->class_id = $record->class_id;
-                $attendance->section_id = $record->section_id;
+                // Stamped with the section being marked: a college student's record carries
+                // no section, and a cross-enrolled one needs a row per section they attend.
+                $attendance->section_id = isBasicEd() ? $record->section_id : $request->section_id;
                 $attendance->academic_id = getAcademicId();
                 $attendance->school_id = Auth::user()->school_id;
                 if (moduleStatusCheck('University')) {
@@ -434,6 +469,7 @@ class SmStudentAttendanceController extends Controller
             $classes = SmClass::where('active_status', 1)->where('school_id', Auth::user()->school_id)->get();
             return view('backEnd.studentInformation.student_attendance_import', compact('classes'));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -451,6 +487,7 @@ class SmStudentAttendanceController extends Controller
                 });
             })->download('xlsx');
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -576,6 +613,7 @@ class SmStudentAttendanceController extends Controller
                 return redirect()->back();
             }
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }

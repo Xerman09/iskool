@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\Admin\Academics\AssignOptionalSubjectSearch;
 use App\Http\Requests\Admin\GeneralSettings\SmOptionalSetupStoreRequest;
@@ -88,58 +89,91 @@ class SmOptionalSubjectAssignController extends Controller
             return redirect()->back();
         }
     }
+    /**
+     * Put a chosen set of students into one subject block.
+     *
+     * The screen edits exactly one block - this subject, for this class and section, in
+     * this academic year - and everything here is scoped to it. What it replaced deleted
+     * by subject alone across the whole year, so assigning one section emptied every
+     * other section of that subject, and took with it the registrations students had made
+     * for themselves. It also wrote no assign_subject_id, which left the rows invisible
+     * to attendance, exams and marks, all of which reach students through the block.
+     */
     public function assignOptionalSubjectStore(Request $request)
     {
         try {
-            $old = SmOptionalSubjectAssign::where('subject_id', '=', $request->subject_id)
-                ->where('school_id', Auth::user()->school_id)
-                ->where('academic_id', getAcademicId())
-                ->first();
-            if (!is_null($old)) {
-                SmOptionalSubjectAssign::where('subject_id', '=', $request->subject_id)
-                    ->where('school_id', Auth::user()->school_id)
-                    ->where('academic_id', getAcademicId())
-                    ->delete();
-            }
-            if ($request->student_id != "") {
-                foreach ($request->student_id as $student) {
-                    $student_info = StudentRecord::where('id', $student)->first();
-                    $optional_subject = SmOptionalSubjectAssign::where('record_id', '=', $student)
-                                        ->where('session_id', '=', $student_info->studentDetail->session_id)
-                                        ->first();
- 
-                    if ($optional_subject != '') {
-                        $optional_subject = SmOptionalSubjectAssign::find($optional_subject->id);
-                        $optional_subject->subject_id = $request->subject_id;
-                        $optional_subject->updated_by = Auth::user()->id;
-                        $optional_subject->academic_id = getAcademicId();
-                        $optional_subject->save();
-                    } else {
-                        $optional_subject = new SmOptionalSubjectAssign();
-                        $optional_subject->student_id = $student_info->studentDetail->id;
-                        $optional_subject->record_id = $student;
-                        $optional_subject->subject_id = $request->subject_id;
-                        $optional_subject->session_id = $student_info->session_id;
-                        $optional_subject->created_by = Auth::user()->id;
-                        $optional_subject->school_id = Auth::user()->school_id;
-                        $optional_subject->academic_id = getAcademicId();
-                        $optional_subject->save();
-                    }
-                }
+            $schoolId = Auth::user()->school_id;
 
-            }else{
+            $block = SmAssignSubject::where('class_id', $request->class_id)
+                ->where('section_id', $request->section_id)
+                ->where('subject_id', $request->subject_id)
+                ->where('academic_id', getAcademicId())
+                ->where('school_id', $schoolId)
+                ->first();
+
+            // No block means no teacher, no schedule and nothing for attendance to hang
+            // off - a row written here would simply never be seen again.
+            if (!$block) {
+                Toastr::error('Assign this subject to the class and section first.', 'Failed');
+                return redirect('optional-subject');
+            }
+
+            $submitted = collect($request->student_id ?? [])
+                ->filter()
+                ->map(fn ($id) => (int) $id);
+
+            if ($submitted->isEmpty()) {
                 Toastr::warning('No Student Select', 'Warning');
                 return redirect('optional-subject');
             }
+
+            $existing = SmOptionalSubjectAssign::where('assign_subject_id', $block->id)
+                ->where('school_id', $schoolId)
+                ->get();
+
+            /* Unticking a student takes them out of this block. A row that has already
+               been graded is left alone: that is a result, not an enrolment choice, and
+               the prerequisite gate reads it for the rest of the student's stay. */
+            $remove = $existing->filter(function ($row) use ($submitted) {
+                return !$submitted->contains((int) $row->record_id) && $row->is_pass === null;
+            });
+
+            if ($remove->isNotEmpty()) {
+                SmOptionalSubjectAssign::whereIn('id', $remove->pluck('id'))->delete();
+            }
+
+            $alreadyIn = $existing->pluck('record_id')->filter()->map(fn ($id) => (int) $id);
+
+            foreach ($submitted->diff($alreadyIn) as $recordId) {
+                $record = StudentRecord::where('id', $recordId)
+                    ->where('school_id', $schoolId)
+                    ->first();
+
+                if (!$record) {
+                    continue;
+                }
+
+                $optional_subject = new SmOptionalSubjectAssign();
+                $optional_subject->student_id = $record->student_id;
+                $optional_subject->record_id = $record->id;
+                $optional_subject->subject_id = $block->subject_id;
+                $optional_subject->assign_subject_id = $block->id;
+                $optional_subject->session_id = $record->session_id;
+                $optional_subject->created_by = Auth::user()->id;
+                $optional_subject->school_id = $schoolId;
+                $optional_subject->academic_id = getAcademicId();
+                $optional_subject->active_status = 1;
+                $optional_subject->save();
+            }
+
             Toastr::success('Operation successful', 'Success');
             return redirect('optional-subject');
-
         } catch (\Throwable $th) {
+            Log::error('assignOptionalSubjectStore: ' . $th->getMessage());
             Toastr::error('Operation Failed', 'Failed');
             return redirect('optional-subject');
         }
     }
-
     public function optionalSetup(Request $request)
     {
 

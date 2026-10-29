@@ -17,6 +17,7 @@ use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
 use Modules\University\Repositories\Interfaces\UnCommonRepositoryInterface;
 use App\Http\Requests\Admin\StudentInfo\StudentAttendanceReportSearchRequest;
+use Illuminate\Support\Facades\Log;
 
 class SmStudentAttendanceReportController extends Controller
 {
@@ -40,6 +41,7 @@ class SmStudentAttendanceReportController extends Controller
 
             return view('backEnd.studentInformation.student_attendance_report', compact('classes'));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -70,10 +72,16 @@ class SmStudentAttendanceReportController extends Controller
             } else {
                 $classes = SmClass::get();
             }
-            $students = StudentRecord::where('class_id', $request->class)
-            ->where('section_id', $request->section)
-            ->where('academic_id', getAcademicId())
-            ->where('school_id', Auth::user()->school_id)->get()->sortBy('roll_no');
+            // Same split as the attendance screen: an advisory section for basic
+            // education, enrollment in this section's blocks for college.
+            if (isBasicEd()) {
+                $students = StudentRecord::where('class_id', $request->class)
+                ->where('section_id', $request->section)
+                ->where('academic_id', getAcademicId())
+                ->where('school_id', Auth::user()->school_id)->get()->sortBy('roll_no');
+            } else {
+                $students = sectionStudents($request->class, $request->section);
+            }
            
             if (moduleStatusCheck('University')) {
                 $data['un_semester_label_id'] = $request->un_semester_label_id;
@@ -89,6 +97,9 @@ class SmStudentAttendanceReportController extends Controller
                 ->where('attendance_date', 'like', $request->year . '-' . $request->month . '%')
                 ->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)
                 ->where('student_record_id', $record->id)
+                ->when(!isBasicEd(), function ($q) use ($request) {
+                    $q->where('section_id', $request->section);
+                })
                 ->get();
                 if (count($attendance) != 0) {
                     $attendances[] = $attendance;
@@ -97,6 +108,7 @@ class SmStudentAttendanceReportController extends Controller
 
             return view('backEnd.studentInformation.student_attendance_report', compact('classes', 'attendances', 'students', 'days', 'year', 'month', 'current_day', 'class_id', 'section_id', 'class', 'section'))->with($data);
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -110,13 +122,17 @@ class SmStudentAttendanceReportController extends Controller
             $current_day = date('d');
             $days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
             $active_students = SmStudent::where('active_status', 1)->where('school_id', Auth::user()->school_id)->pluck('id')->toArray();
-            $students = DB::table('student_records')
-            ->where('class_id', $class_id)
-            ->where('section_id', $section_id)
-            ->where('academic_id', getAcademicId())
-            ->whereIn('student_id', $active_students)
-            ->where('school_id', Auth::user()->school_id)
-            ->get();
+            if (isBasicEd()) {
+                $students = DB::table('student_records')
+                ->where('class_id', $class_id)
+                ->where('section_id', $section_id)
+                ->where('academic_id', getAcademicId())
+                ->whereIn('student_id', $active_students)
+                ->where('school_id', Auth::user()->school_id)
+                ->get();
+            } else {
+                $students = sectionStudents($class_id, $section_id);
+            }
 
             $attendances = [];
             foreach ($students as $record) {
@@ -125,6 +141,9 @@ class SmStudentAttendanceReportController extends Controller
                 ->where('school_id', Auth::user()->school_id)
                 ->where('academic_id', getAcademicId())
                 ->where('student_record_id', $record->id)
+                ->when(!isBasicEd(), function ($q) use ($section_id) {
+                    $q->where('section_id', $section_id);
+                })
                 ->get();
 
                 if ($attendance) {
@@ -210,6 +229,7 @@ class SmStudentAttendanceReportController extends Controller
             
             return view('backEnd.studentInformation.student_attendance_print', compact('attendances', 'days', 'year', 'month', 'current_day', 'semester_id'))->with($data);
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }

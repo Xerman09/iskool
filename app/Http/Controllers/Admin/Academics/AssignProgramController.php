@@ -18,6 +18,7 @@ use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
 use Modules\Fees\Entities\FmFeesInvoice;
 use Modules\Fees\Entities\FmFeesInvoiceChield;
+use Illuminate\Support\Facades\Log;
 
 class AssignProgramController extends Controller
 {
@@ -33,7 +34,7 @@ class AssignProgramController extends Controller
         try {
             $schoolId = auth()->user()->school_id;
 
-            $courses = Course::where('school_id', $schoolId)->get();
+            $courses = Course::selectable()->where('school_id', $schoolId)->get();
             $curriculumVersions = CurriculumVersion::where('school_id', $schoolId)->get();
             $students = SmStudent::where('school_id', $schoolId)->with('course')->orderBy('first_name')->get();
 
@@ -64,6 +65,9 @@ class AssignProgramController extends Controller
 
             $assignedStudents->each(function ($s) use ($registeredStudentIds) {
                 $s->hasRegisteredSubjects = $registeredStudentIds->contains($s->id);
+                // Enrolment belongs to a year. Read it off this year's record, so a
+                // student enrolled last year does not arrive already settled in the next.
+                $s->enrollmentStatusThisYear = enrollmentStatus($s);
                 $s->remainingBalance = null;
                 $s->paymentPlan = null;
                 $s->priorYearBalance = $this->priorYearBalanceFor($s);
@@ -75,16 +79,28 @@ class AssignProgramController extends Controller
                 }
             });
 
+            /* Which programs each curriculum version actually holds subjects for. A
+               version is school-wide, but a program only appears in the versions whose
+               curriculum was built for it - pairing a program with a version that never
+               covered it leaves the student with nothing to register, silently. */
+            $coursesByVersion = SmSubject::whereNotNull('course_id')
+                ->whereNotNull('curriculum_version_id')
+                ->get(['course_id', 'curriculum_version_id'])
+                ->groupBy('curriculum_version_id')
+                ->map(fn ($rows) => $rows->pluck('course_id')->unique()->values());
+
             $selectedStudentId = $request->student_id;
 
             return view('backEnd.academics.assign_program', compact(
                 'courses',
                 'curriculumVersions',
+                'coursesByVersion',
                 'students',
                 'assignedStudents',
                 'selectedStudentId'
             ));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -116,6 +132,18 @@ class AssignProgramController extends Controller
                 }
             }
 
+            /* The student keeps this version for the rest of their stay, so a pairing
+               that covers nothing is not a small mistake - they would open Subject
+               Registration every term and find it empty, with nothing to explain why. */
+            $hasCurriculum = SmSubject::where('course_id', $request->course_id)
+                ->where('curriculum_version_id', $request->curriculum_version_id)
+                ->exists();
+
+            if (!$hasCurriculum) {
+                Toastr::error('That program has no subjects in the chosen curriculum version. Build its curriculum first, or pick the version the program actually uses.', 'Failed');
+                return redirect()->back();
+            }
+
             $student->course_id = $request->course_id;
             $student->curriculum_version_id = $request->curriculum_version_id;
             if (!$student->class_id) {
@@ -130,10 +158,13 @@ class AssignProgramController extends Controller
             // finishing undergrad) starts a new enrollment from scratch - the
             // downpayment/invoicing gate shouldn't be skipped just because the
             // student was already 'enrolled' in their previous program.
-            if ($isShift || $student->enrollment_status === null) {
-                $student->enrollment_status = 'pending';
-            }
             $student->save();
+
+            $record = enrollmentRecord($student);
+            if ($record && ($isShift || $record->enrollment_status === null)) {
+                $record->enrollment_status = 'pending';
+                $record->save();
+            }
 
             if ($previousCourseId != $student->course_id || $previousCurriculumVersionId != $student->curriculum_version_id) {
                 StudentProgramHistory::create([
@@ -153,6 +184,7 @@ class AssignProgramController extends Controller
                 : 'Program assigned. The student can now register for subjects once the semester is open for enrollment.', 'Success');
             return redirect()->back();
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -230,6 +262,7 @@ class AssignProgramController extends Controller
 
             return redirect()->route('fees.fees-invoice-view', ['id' => $invoice->id, 'state' => 'view']);
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -267,6 +300,7 @@ class AssignProgramController extends Controller
                 ? view('backEnd.academics.balanceSummaryPrint', $data)
                 : view('backEnd.academics.balanceSummary', $data);
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -284,6 +318,7 @@ class AssignProgramController extends Controller
                 'ledgerRouteParams' => ['student' => $student->id],
             ]));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -311,6 +346,7 @@ class AssignProgramController extends Controller
 
             return response()->json(['message' => 'Operation Success']);
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             return response()->json(['error' => 'Operation Failed']);
         }
     }
@@ -335,6 +371,7 @@ class AssignProgramController extends Controller
 
             return response()->json(['message' => 'Operation Success']);
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             return response()->json(['error' => 'Operation Failed']);
         }
     }

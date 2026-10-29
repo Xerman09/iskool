@@ -19,7 +19,7 @@ class CourseController extends Controller
     public function index(Request $request)
     {
         try {
-            $courses = Course::where('school_id', auth()->user()->school_id)->orderBy('id', 'DESC')->get();
+            $courses = Course::selectable()->where('school_id', auth()->user()->school_id)->orderBy('id', 'DESC')->get();
             return view('backEnd.academics.course', compact('courses'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -53,7 +53,7 @@ class CourseController extends Controller
     {
         try {
             $course = Course::where('school_id', auth()->user()->school_id)->findOrFail($id);
-            $courses = Course::where('school_id', auth()->user()->school_id)->orderBy('id', 'DESC')->get();
+            $courses = Course::selectable()->where('school_id', auth()->user()->school_id)->orderBy('id', 'DESC')->get();
             return view('backEnd.academics.course', compact('course', 'courses'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

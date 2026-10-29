@@ -69,6 +69,11 @@
                     {{ Form::open(['class' => 'form-horizontal', 'files' => true, 'route' => 'assign-subject', 'method' => 'POST', 'enctype' => 'multipart/form-data', 'id' => 'search_student']) }}
                         <div class="row">
                             <input type="hidden" name="url" id="url" value="{{URL::to('/')}}">
+                            {{-- Basic education has no programs, so the stand-in row is posted instead of
+                                 being offered as a choice, and the remaining criteria split the row evenly. --}}
+                            @if(isBasicEd())
+                            <input type="hidden" name="course_id" value="{{ optional(basicEdProgram())->id }}">
+                            @else
                             <div class="col-lg-6 mt-30-md">
                                 <select class="primary_select form-control{{ @$errors->has('course_id') ? ' is-invalid' : '' }}" name="course_id" required>
                                     <option value="">@lang('academics.program') *</option>
@@ -80,6 +85,7 @@
                                 <span class="text-danger invalid-select" role="alert">{{ @$errors->first('course_id') }}</span>
                                 @endif
                             </div>
+                            @endif
                             <div class="col-lg-6 mt-30-md">
                                 <select class="primary_select form-control{{ @$errors->has('class') ? ' is-invalid' : '' }}" id="select_class" name="class" required>
                                     <option data-display="@lang('common.select_class')*" value="">@lang('common.select_class') *</option>
@@ -106,7 +112,7 @@
                             </div>
                             <div class="col-lg-4 mt-15">
                                 <select class="primary_select form-control{{ @$errors->has('semester_id') ? ' is-invalid' : '' }}" name="semester_id" required>
-                                    <option value="">@lang('academics.semester') *</option>
+                                    <option value="">{{ termLabel() }} *</option>
                                     @foreach($semesters as $semester)
                                     <option value="{{$semester->id}}" {{@$semester_id == $semester->id ? 'selected' : ''}}>{{$semester->semester_name}}</option>
                                     @endforeach

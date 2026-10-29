@@ -60,9 +60,17 @@
                                 </h3>
                             </div>
                             <div class="add-visitor">
+                                <input type="hidden" name="url" id="url" value="{{URL::to('/')}}">
+
+                                {{-- Basic education has no programs - the year level identifies the learner -
+                                     so the stand-in row is posted instead of being offered as a choice. The
+                                     term stays: a school runs quarterly or periodical terms inside the
+                                     school year, entered by the school itself. Only its label differs. --}}
+                                @if(isBasicEd())
+                                <input type="hidden" name="course" value="{{ optional(basicEdProgram())->id }}">
+                                @else
                                 <div class="row">
                                     <div class="col-lg-12">
-                                        <input type="hidden" name="url" id="url" value="{{URL::to('/')}}">
                                         <label class="primary_input_label" for="">
                                             {{ __('academics.program') }}
                                                 <span class="text-danger"> *</span>
@@ -80,15 +88,16 @@
                                         @endif
                                     </div>
                                 </div>
+                                @endif
 
                                 <div class="row mt-15">
                                     <div class="col-lg-12">
                                         <label class="primary_input_label" for="">
-                                            {{ __('academics.semester') }}
+                                            {{ termLabel() }}
                                                 <span class="text-danger"> *</span>
                                         </label>
                                         <select class="primary_select form-control {{ @$errors->has('semester') ? ' is-invalid' : '' }}" id="select_semester" name="semester">
-                                            <option data-display="@lang('academics.semester') *" value="">@lang('academics.semester') *</option>
+                                            <option data-display="{{ termLabel() }} *" value="">{{ termLabel() }} *</option>
                                             @foreach($semesters as $semester)
                                             <option value="{{ @$semester->id}}" {{isset($assign_class_teacher) && @$semester->id == @$assign_class_teacher->semester_id ? 'selected':''}}>{{ @$semester->semester_name}}</option>
                                             @endforeach

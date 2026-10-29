@@ -174,6 +174,7 @@ class SidebarManagerController extends Controller
 
         $request->validate([
             'name' => ['required', 'string', 'max:191'],
+            'icon' => ['nullable', 'string', 'max:100'],
             'section_id' => ['required', 'exists:permissions,id'],
             'role_ids' => ['sometimes', 'array'],
             'role_ids.*' => ['exists:roles,id'],
@@ -202,6 +203,8 @@ class SidebarManagerController extends Controller
 
         $permission = Permission::create(array_merge([
             'name' => $request->name,
+            // Left null when nothing is picked; the sidebar falls back to a generic mark.
+            'icon' => $request->icon ?: null,
             'route' => $route,
             'parent_route' => $section->route,
             'sidebar_menu' => $section->route,

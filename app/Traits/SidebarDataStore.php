@@ -315,4 +315,39 @@ trait SidebarDataStore
         }
 
     }
+
+    /**
+     * The menus that only mean something on a tertiary deployment.
+     *
+     * Basic education has no programs - the year level identifies the learner - so
+     * there is nothing to define on Program, nothing to assign on Assign Program, and
+     * no per-program layout or completion to track.
+     *
+     * Curriculum Builder and Semester deliberately stay. The curriculum is what a
+     * grade level follows, and basic education does run terms inside the school year -
+     * quarterly or periodical ones the school enters itself. Only the label differs
+     * there, which termLabel() handles.
+     *
+     * Unlike deActiveForSaas() this restores as well as hides, because School Type is
+     * a toggle a deployer can switch back - flipping to College / University has to
+     * bring these menus back with it.
+     */
+    function deActiveForSchoolType()
+    {
+        $tertiaryOnly = ['program', 'assign-program', 'curriculum-layout', 'subject-completion'];
+
+        $visible = isBasicEd() ? 0 : 1;
+
+        $changed = Permission::whereIn('route', $tertiaryOnly)
+            ->where('status', '!=', $visible)
+            ->update(['is_menu' => $visible, 'menu_status' => $visible, 'status' => $visible]);
+
+        // sidebar_menus() is a rememberForever cache keyed per role, so flipping
+        // menu_status in the table alone would not change a single rendered menu.
+        // Only bust it on the request that actually flipped something, otherwise
+        // every page load would rebuild every role's sidebar.
+        if ($changed) {
+            forgetAllSidebarCaches();
+        }
+    }
 }

@@ -50,7 +50,12 @@ class Sidebar extends Model
             })->when(sidebarRoleId() == 3, function($q){
                 $q->where('is_parent', 1);
             })->when(!in_array(sidebarRoleId(), [2,3]) , function($q){
-                $q->where('is_admin', 1)->orWhere('is_teacher', 1);
+                /* Grouped: ungrouped this reads as (menu_status = 1 AND is_admin = 1)
+                   OR is_teacher = 1, so any entry flagged for teachers rendered for
+                   everyone regardless of whether its menu was switched off at all. */
+                $q->where(function($q){
+                    $q->where('is_admin', 1)->orWhere('is_teacher', 1);
+                });
             });
         })
         ->whereNull('user_id')->where('role_id', sidebarRoleId())->where('active_status', 1)->orderBy('position', 'ASC');

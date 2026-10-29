@@ -15,6 +15,7 @@ use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class SubjectCompletionController extends Controller
 {
@@ -33,6 +34,7 @@ class SubjectCompletionController extends Controller
 
             return view('backEnd.academics.subject_completion', compact('classes', 'courses', 'curriculumVersions', 'semesters'));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -95,6 +97,7 @@ class SubjectCompletionController extends Controller
                 'class_id', 'section_id', 'course_id', 'curriculum_version_id', 'semester_id', 'subjects'
             ));
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
@@ -116,6 +119,7 @@ class SubjectCompletionController extends Controller
             Toastr::success('Operation successful', 'Success');
             return redirect()->back();
         } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }

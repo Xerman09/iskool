@@ -48,7 +48,7 @@
             <div class="col-lg-8">
                 <div class="main-title">
                     <h4 class="mb-20">
-                        @if($student->enrollment_status == 'enrolled')
+                        @if(enrollmentStatus($student) == 'enrolled')
                             @lang('academics.schedule_for_semester')
                         @else
                             @lang('academics.enrolling_for_semester')

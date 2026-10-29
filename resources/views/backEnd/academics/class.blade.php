@@ -179,8 +179,13 @@
                                                 <td valign="top">{{@$class->class_name}}</td>
                                                 <td> 
                                                     @if(@$class->groupclassSections)
-                                                        @foreach ($class->groupclassSections as $section)
-                                                         <a href="{{route('sorting_student_list_section',[$class->id,$section->sectionName->id])}}">{{@$section->sectionName->section_name}}-({{total_no_records($class->id, $section->sectionName->id)}})</a> 
+                                                        {{-- A class-section row can point at a section belonging to an earlier
+                                                             academic year, which SmSection's scope filters out. The relation
+                                                             uses withDefault(), so that yields an empty model whose id is null
+                                                             and route() then throws on the missing parameter. Test the id, not
+                                                             the object, and skip those rather than fail the whole screen. --}}
+                                                        @foreach ($class->groupclassSections->filter(function($cs){ return optional($cs->sectionName)->id; }) as $section)
+                                                         <a href="{{route('sorting_student_list_section',[$class->id,$section->sectionName->id])}}">{{@$section->sectionName->section_name}}-({{total_no_records($class->id, $section->sectionName->id)}})</a>
                                                          {{ !$loop->last ? ', ':'' }}
                                                         @endforeach
                                                     @endif

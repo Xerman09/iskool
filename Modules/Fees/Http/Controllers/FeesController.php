@@ -876,8 +876,9 @@ class FeesController extends Controller
             // markStudentEnrolledIfPending()), so this is the one screen where that
             // choice actually needs to be obvious.
             $invoiceStudent = SmStudent::find($invoiceInfo->student_id);
+            $invoiceRecord = $invoiceInfo->record_id ? StudentRecord::find($invoiceInfo->record_id) : null;
             $isPendingEnrollment = $invoiceInfo->type === 'fees'
-                && optional($invoiceStudent)->enrollment_status === 'pending';
+                && optional($invoiceRecord)->enrollment_status === 'pending';
 
             // Surfaced as a heads-up notice with a "review" action that opens this
             // student's orders directly in the same studentOrdersModal popup used
