@@ -204,6 +204,12 @@ class SmStudentAjaxController extends Controller
                     ->when($request->filled('semester_id'), function ($q) use ($request) {
                         $q->where('semester_id', $request->semester_id);
                     })
+                    /* And to one curriculum version: a cohort keeps the version it was admitted
+                       under, so two of them run side by side carrying a subject of the same name
+                       for the same year level and term. */
+                    ->when($request->filled('curriculum_version_id'), function ($q) use ($request) {
+                        $q->where('curriculum_version_id', $request->curriculum_version_id);
+                    })
                     ->get(['id', 'subject_name']);
             }
 

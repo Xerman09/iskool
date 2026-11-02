@@ -60,7 +60,11 @@ class SmExamRoutineController extends Controller
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
             }
-            return view('backEnd.examination.exam_schedule', compact('classes', 'exam_types'));
+            $courses = \App\Course::selectable()->where('school_id', Auth::user()->school_id)->get();
+            $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+
+            return view('backEnd.examination.exam_schedule', compact('classes', 'exam_types', 'courses', 'curriculumVersions', 'semesters'));
         } catch (\Exception $e) {
 
             Toastr::error('Operation Failed', 'Failed');
@@ -82,7 +86,11 @@ class SmExamRoutineController extends Controller
             $subjects = SmSubject::get();
             $exams = SmExam::get();
             $exam_types = SmExamType::get();
-            return view('backEnd.examination.exam_schedule_create', compact('classes', 'exams', 'exam_types'));
+            $courses = \App\Course::selectable()->where('school_id', Auth::user()->school_id)->get();
+            $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
+            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+
+            return view('backEnd.examination.exam_schedule_create', compact('classes', 'exams', 'exam_types', 'courses', 'curriculumVersions', 'semesters'));
         } catch (\Exception $e) {
 
             Toastr::error('Operation Failed', 'Failed');
@@ -239,11 +247,30 @@ class SmExamRoutineController extends Controller
                     'examName',
                 ))->with($data);
             } else {
+                /* A year level is shared by every program and holds both terms' subjects, and
+                   a cohort keeps the curriculum version it was admitted under - so one section
+                   carries subjects from several programs, terms and versions at once. Left
+                   unfiltered the schedule listed all of them together, with two versions of a
+                   subject under the same name. Each filter is optional: left blank, nothing
+                   narrows, which is what a basic-education deployment wants. */
+                $narrowToCriteria = function ($query) use ($request) {
+                    return $query->when(
+                        $request->filled('course_id') || $request->filled('curriculum_version_id') || $request->filled('semester_id'),
+                        function ($q) use ($request) {
+                            $q->whereHas('subject', function ($q2) use ($request) {
+                                $q2->when($request->filled('course_id'), fn ($q3) => $q3->where('course_id', $request->course_id))
+                                    ->when($request->filled('curriculum_version_id'), fn ($q3) => $q3->where('curriculum_version_id', $request->curriculum_version_id))
+                                    ->when($request->filled('semester_id'), fn ($q3) => $q3->where('semester_id', $request->semester_id));
+                            });
+                        }
+                    );
+                };
+
                 $assign_subjects = SmAssignSubject::query();
                 if (!empty($request->section)) {
                     $assign_subjects->where('section_id', $request->section);
                 }
-                $assign_subjects =  $assign_subjects->where('class_id', $request->class)
+                $assign_subjects = $narrowToCriteria($assign_subjects)->where('class_id', $request->class)
                     ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
@@ -258,7 +285,7 @@ class SmExamRoutineController extends Controller
                 if (!empty($request->section)) {
                     $assign_subjects->where('section_id', $request->section);
                 }
-                $assign_subjects =  $assign_subjects->where('class_id', $request->class)
+                $assign_subjects = $narrowToCriteria($assign_subjects)->where('class_id', $request->class)
                     ->where('academic_id', getAcademicId())
                     ->where('school_id', Auth::user()->school_id)
                     ->get();
@@ -294,7 +321,15 @@ class SmExamRoutineController extends Controller
                 $search_current_class   = SmClass::find($request->class);
                 $search_current_section = SmSection::find($request->section);
 
-                return view('backEnd.examination.exam_schedule_new', compact('classes', 'exams', 'exam_schedules', 'assign_subjects', 'class_id', 'section_id', 'exam_id', 'exam_types', 'exam_type_id', 'examName', 'search_current_class', 'search_current_section'));
+                /* Carried back so the criteria panel still shows what was searched. */
+                $course_id = $request->course_id;
+                $curriculum_version_id = $request->curriculum_version_id;
+                $semester_id = $request->semester_id;
+                $courses = \App\Course::selectable()->where('school_id', Auth::user()->school_id)->get();
+                $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
+                $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+
+                return view('backEnd.examination.exam_schedule_new', compact('classes', 'exams', 'exam_schedules', 'assign_subjects', 'class_id', 'section_id', 'exam_id', 'exam_types', 'exam_type_id', 'examName', 'search_current_class', 'search_current_section', 'courses', 'curriculumVersions', 'semesters', 'course_id', 'curriculum_version_id', 'semester_id'));
             }
         } catch (\Exception $e) {;
             Toastr::error('Operation Failed', 'Failed');

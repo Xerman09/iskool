@@ -57,6 +57,26 @@
                                             @endif
                                         </div>
                                     </div>
+                                    {{-- Narrow the subject list before the class loads it: one year level
+                                         carries subjects from every program and curriculum version at once. --}}
+                                    <div class="row mt-25">
+                                        <div class="col-lg-6">
+                                            <select class="primary_select form-control" id="exam_course" name="course_id">
+                                                <option data-display="@lang('fees.all')" value="">@lang('academics.program') — @lang('fees.all')</option>
+                                                @foreach (@$courses ?? [] as $course)
+                                                    <option value="{{ $course->id }}">{{ $course->course_name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-6">
+                                            <select class="primary_select form-control" id="exam_curriculum_version" name="curriculum_version_id">
+                                                <option data-display="@lang('fees.all')" value="">@lang('academics.curriculum_version') — @lang('fees.all')</option>
+                                                @foreach (@$curriculumVersions ?? [] as $cv)
+                                                    <option value="{{ $cv->id }}">{{ $cv->version_label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
                                     <div class="row mt-25">
                                         <div class="col-lg-12">
                                             <select class="primary_select form-control {{ $errors->has('class_ids') ? ' is-invalid' : '' }}" id="exam_class" name="class_ids">

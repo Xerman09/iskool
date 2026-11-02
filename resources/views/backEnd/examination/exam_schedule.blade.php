@@ -120,6 +120,43 @@
                                         </span>
                                     @endif
                                 </div>
+                                {{-- A year level is shared by every program and holds both terms'
+                                     subjects, and a cohort keeps the curriculum version it was
+                                     admitted under - so one section carries subjects from several
+                                     at once. Each filter is optional. --}}
+                                <div class="col-lg-4 mt-30-md">
+                                    <label class="primary_input_label" for="">@lang('academics.program')</label>
+                                    <select class="primary_select form-control" name="course_id">
+                                        <option data-display="@lang('fees.all')" value="">@lang('fees.all')</option>
+                                        @foreach (@$courses ?? [] as $course)
+                                            <option value="{{ $course->id }}"
+                                                {{ isset($course_id) && $course_id == $course->id ? 'selected' : '' }}>
+                                                {{ $course->course_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-lg-4 mt-30-md">
+                                    <label class="primary_input_label" for="">@lang('academics.curriculum_version')</label>
+                                    <select class="primary_select form-control" name="curriculum_version_id">
+                                        <option data-display="@lang('fees.all')" value="">@lang('fees.all')</option>
+                                        @foreach (@$curriculumVersions ?? [] as $cv)
+                                            <option value="{{ $cv->id }}"
+                                                {{ isset($curriculum_version_id) && $curriculum_version_id == $cv->id ? 'selected' : '' }}>
+                                                {{ $cv->version_label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-lg-4 mt-30-md">
+                                    <label class="primary_input_label" for="">@lang('academics.semester')</label>
+                                    <select class="primary_select form-control" name="semester_id">
+                                        <option data-display="@lang('fees.all')" value="">@lang('fees.all')</option>
+                                        @foreach (@$semesters ?? [] as $semester)
+                                            <option value="{{ $semester->id }}"
+                                                {{ isset($semester_id) && $semester_id ? ($semester_id == $semester->id ? 'selected' : '') : ($semester->is_active ? 'selected' : '') }}>
+                                                {{ $semester->semester_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             @endif
 
                             <div class="col-lg-12 mt-20 text-right">

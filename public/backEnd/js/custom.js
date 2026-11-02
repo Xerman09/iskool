@@ -256,15 +256,24 @@
     // subject from class
 
     $(document).ready(function() {
+        $(document).on("change", "#exam_setup_course, #exam_setup_curriculum_version, #exam_setup_semester", function() {
+            $("#classSelectStudentHomeWork").trigger("change");
+        });
+
         $("#classSelectStudentHomeWork").on("change", function() {
             var url = $("#url").val();
             var i = 0;
             var globalType = $("#globalType").val();
             console.log(globalType);
 
+            /* These three exist only on the exam setup screen; everywhere else they are
+               empty, so nothing narrows and the other screens are unchanged. */
             var formData = {
                 id: $(this).val(),
-                globalType: globalType
+                globalType: globalType,
+                course_id: $("#exam_setup_course").val() || "",
+                curriculum_version_id: $("#exam_setup_curriculum_version").val() || "",
+                semester_id: $("#exam_setup_semester").val() || ""
             };
             console.log(formData);
             // get section for student
@@ -5702,11 +5711,17 @@
 
     (function() {
         $(document).ready(function() {
+            $(document).on("change", "#exam_course, #exam_curriculum_version", function() {
+                $("#exam_class").trigger("change");
+            });
+
             $("#exam_class").on("change", function() {
                 var globalType = $("#globalType").val();
                 var formData = {
                     id: $(this).val(),
                     globalType : globalType,
+                    course_id: $("#exam_course").val() || "",
+                    curriculum_version_id: $("#exam_curriculum_version").val() || "",
                 };
 
                 var url = $("#url").val();

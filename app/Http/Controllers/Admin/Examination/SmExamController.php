@@ -135,7 +135,10 @@ class SmExamController extends Controller
             $rooms = SmClassRoom::where('active_status', 1)
             ->where('school_id',Auth::user()->school_id)
             ->get();
-            return view('backEnd.examination.exam', compact('exams', 'classes', 'subjects', 'exams_types', 'sections', 'selected_exam_type_id','teachers','rooms'));
+            $courses = \App\Course::selectable()->where('school_id', Auth::user()->school_id)->get();
+            $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
+
+            return view('backEnd.examination.exam', compact('exams', 'classes', 'subjects', 'exams_types', 'sections', 'selected_exam_type_id','teachers','rooms','courses','curriculumVersions'));
         } catch (\Exception $e) {
            
             Toastr::error('Operation Failed', 'Failed');
@@ -729,7 +732,17 @@ class SmExamController extends Controller
                     $assinged_subjects[] = SmSubject::withoutGlobalScope(GlobalAcademicScope::class)->withoutGlobalScope(StatusAcademicSchoolScope::class)->find($key);
                 }
             }else{
+                /* A year level is shared by every program, and a cohort keeps the curriculum
+                   version it was admitted under, so one class holds subjects from several of
+                   both. Each filter is optional - left blank nothing narrows, which is what a
+                   basic-education deployment wants. */
                 $subjects = SmAssignSubject::where('class_id', $request->id)
+                ->when($request->filled('course_id') || $request->filled('curriculum_version_id'), function ($q) use ($request) {
+                    $q->whereHas('subject', function ($q2) use ($request) {
+                        $q2->when($request->filled('course_id'), fn ($q3) => $q3->where('course_id', $request->course_id))
+                            ->when($request->filled('curriculum_version_id'), fn ($q3) => $q3->where('curriculum_version_id', $request->curriculum_version_id));
+                    });
+                })
                 ->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
@@ -806,7 +819,13 @@ class SmExamController extends Controller
         }elseif($input['code'] == "multi"){
             $view = "backEnd.examination.exam_setup.multi_exam_setup";
         }
-        $html = view($view,compact('exams_types','classes','teachers','rooms'))->render();
+        /* Both setup partials are rendered here, through their own ajax call - so the
+           lists the criteria need are built here as well, not only in exam_setup(). */
+        $courses = \App\Course::selectable()->where('school_id', Auth::user()->school_id)->get();
+        $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
+        $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+
+        $html = view($view,compact('exams_types','classes','teachers','rooms','courses','curriculumVersions','semesters'))->render();
 
         return response()->json([
             'status' => true,
