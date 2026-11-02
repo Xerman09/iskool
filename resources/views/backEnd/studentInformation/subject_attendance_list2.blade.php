@@ -88,7 +88,9 @@
                             </div>
                         @else
                             <div class="col-lg-3 mt-30-md">
-                                <select class="primary_select form-control {{ $errors->has('class') ? ' is-invalid' : '' }}" id="select_class" name="class">
+                                {{-- class_id, not class: subject-attendance-search validates class_id,
+                                     so a re-search from this page used to fail on "class is required". --}}
+                                <select class="primary_select form-control {{ $errors->has('class') ? ' is-invalid' : '' }}" id="select_class" name="class_id">
                                     <option data-display="@lang('common.select_class')*" value="">@lang('common.select_class') *</option>
                                     @foreach($classes as $class)
                                     <option value="{{$class->id}}"  {{isset($class_id)? ($class_id == $class->id? 'selected':''):''}}>{{$class->class_name}}</option>
@@ -101,7 +103,7 @@
                                 @endif
                             </div> 
                             <div class="col-lg-3 mt-30-md" id="select_section_div">
-                                <select class="primary_select form-control{{ $errors->has('section') ? ' is-invalid' : '' }} select_section" id="select_section" name="section">
+                                <select class="primary_select form-control{{ $errors->has('section') ? ' is-invalid' : '' }} select_section" id="select_section" name="section_id">
                                     <option data-display="@lang('common.select_section') *" value="">@lang('common.select_section') *</option>
                                 </select>
                                 @if ($errors->has('section'))
@@ -110,8 +112,29 @@
                                 </span>
                                 @endif
                             </div> 
+                            {{-- Carried back so the next search keeps the narrowing it was made with. --}}
+                            <div class="col-lg-3 mt-30-md">
+                                <select class="primary_select form-control" name="course_id">
+                                    <option data-display="@lang('academics.program')" value="">@lang('academics.program')</option>
+                                    @isset($courses)
+                                        @foreach($courses as $course)
+                                            <option value="{{$course->id}}" {{isset($input['course_id']) && $input['course_id'] == $course->id ? 'selected':''}}>{{$course->course_name}}</option>
+                                        @endforeach
+                                    @endisset
+                                </select>
+                            </div>
+                            <div class="col-lg-3 mt-30-md">
+                                <select class="primary_select form-control" name="semester_id">
+                                    <option data-display="@lang('academics.semester')" value="">@lang('academics.semester')</option>
+                                    @isset($semesters)
+                                        @foreach($semesters as $semester)
+                                            <option value="{{$semester->id}}" {{isset($input['semester_id']) && $input['semester_id'] == $semester->id ? 'selected':''}}>{{$semester->semester_name}}</option>
+                                        @endforeach
+                                    @endisset
+                                </select>
+                            </div>
                             <div class="col-lg-3 mt-30-md" id="select_subject_div">
-                                <select class="primary_select form-control{{ $errors->has('subject') ? ' is-invalid' : '' }} select_subject" id="select_subject" name="subject">
+                                <select class="primary_select form-control{{ $errors->has('subject') ? ' is-invalid' : '' }} select_subject" id="select_subject" name="subject_id">
                                     <option data-display="Select subject *" value="">Select subject *</option>
                                 </select>
                                 @if ($errors->has('subject'))

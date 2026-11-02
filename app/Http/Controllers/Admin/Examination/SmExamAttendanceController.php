@@ -52,8 +52,10 @@ class SmExamAttendanceController extends Controller
                 $classes = SmClass::get();
             }
             $subjects = SmSubject::get();
-            $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
-            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+            /* The helpers, not a raw query: they hide the __BASIC_ED__ sentinel program and
+               the retired semesters that every other criteria panel already leaves out. */
+            $courses = courses();
+            $semesters = semesters();
             return view('backEnd.examination.exam_attendance_create', compact('exams', 'classes', 'subjects', 'courses', 'semesters'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
@@ -214,8 +216,8 @@ class SmExamAttendanceController extends Controller
                 $search_info['subject_name'] =  SmSubject::find($request->subject)->subject_name;
 
                 /* Carried back so the criteria panel still shows what was searched. */
-                $courses = \App\Course::where('school_id', Auth::user()->school_id)->get();
-            $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+                $courses = courses();
+                $semesters = semesters();
                 $course_id = $request->course_id;
                 $semester_id = $request->semester_id;
 

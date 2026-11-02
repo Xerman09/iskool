@@ -398,7 +398,14 @@ $semester_id = $selected && isset($selected['semester_id']) ? $selected['semeste
             var i = 0;
             $.ajax({
                 type: "GET",
-                data: {class: class_id, section: section_id},
+                data: {
+                    class: class_id,
+                    section: section_id,
+                    // Blank on the screens that show neither select, which the endpoint
+                    // treats as "no narrowing" and answers exactly as it always did.
+                    course_id: $("#common_select_program").val(),
+                    semester_id: $("#common_select_semester").val(),
+                },
                 dataType: "json",
                 url: url + "/" + "ajaxSelectSubject",
 
@@ -417,10 +424,16 @@ $semester_id = $selected && isset($selected['semester_id']) ? $selected['semeste
 
                     if (data[0].length) {
                         $.each(data[0], function (i, subject) {
+                            // The program code rides along with the name: two programs
+                            // sharing a subject name would otherwise be identical lines.
+                            var label = subject.course_code ?
+                                subject.subject_name + " [" + subject.course_code + "]" :
+                                subject.subject_name;
+
                             $("#common_select_subject").append(
                                 $("<option>", {
                                     value: subject.id,
-                                    text: subject.subject_name,
+                                    text: label,
                                 })
                             );
                         });
@@ -440,6 +453,22 @@ $semester_id = $selected && isset($selected['semester_id']) ? $selected['semeste
                 }
             });
         }
+
+        // Narrowing the subject list is the whole job of these two on a per-subject screen,
+        // so a change to either has to refetch it. A list left standing is how a mark lands
+        // against the wrong program's subject.
+        $("#common_select_program, #common_select_semester").on("change", function () {
+            if ($("#common_select_subject").length === 0) {
+                return;
+            }
+
+            var class_id = $("#common_select_class").val();
+            var section_id = $("#common_select_section").val();
+
+            if (class_id && section_id) {
+                getSubject(class_id, section_id);
+            }
+        });
     });
 </script>
 @endpush

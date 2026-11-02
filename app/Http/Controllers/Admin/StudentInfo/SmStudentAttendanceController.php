@@ -94,6 +94,11 @@ class SmStudentAttendanceController extends Controller
             } else {
                 $students = sectionStudents($request->class_id, $request->section_id);
 
+                /* Here, unlike subject-wise attendance, program and semester do filter the
+                   roll: a daily section roll has no subject to read them off, so the student's
+                   own course_id and semester_id are all there is. The cost is that a student
+                   carrying a back subject counts under one term only - leave Semester blank to
+                   see the whole section. */
                 if ($request->filled('course_id') || $request->filled('semester_id')) {
                     $students = $students->filter(function ($record) use ($request) {
                         $student = $record->studentDetail;

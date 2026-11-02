@@ -60,10 +60,29 @@ class SmSubjectAttendanceController extends Controller
             $input['subject'] = $request->subject_id;
             $input['section'] = $request->section_id;
 
+            $input['course_id'] = $request->course_id;
+            $input['semester_id'] = $request->semester_id;
+
             $classes = SmClass::get();
             $sections = SmClassSection::with('sectionName')->where('class_id', $input['class'])->get();
+
+            /* The result page redraws the criteria, so the subject dropdown there has to be
+               narrowed the same way the search was, or the next search silently widens. */
             $subjects = SmAssignSubject::with('subject')->where('class_id', $input['class'])->where('section_id', $input['section'])
+                ->when($request->filled('course_id'), function ($q) use ($request) {
+                    $q->whereHas('subject', function ($q2) use ($request) {
+                        $q2->where('course_id', $request->course_id);
+                    });
+                })
+                ->when($request->filled('semester_id'), function ($q) use ($request) {
+                    $q->whereHas('subject', function ($q2) use ($request) {
+                        $q2->where('semester_id', $request->semester_id);
+                    });
+                })
                 ->get();
+
+            $courses = courses();
+            $semesters = semesters();
 
             if(moduleStatusCheck('University') == false){
                 request()->merge([
@@ -79,21 +98,11 @@ class SmSubjectAttendanceController extends Controller
                block they attend. */
             $students = blockStudents($input['class'], $input['section'], $input['subject']);
 
-            if ($request->filled('course_id') || $request->filled('semester_id')) {
-                $students = $students->filter(function ($record) use ($request) {
-                    $student = $record->studentDetail;
-                    if (!$student) {
-                        return false;
-                    }
-                    if ($request->filled('course_id') && $student->course_id != $request->course_id) {
-                        return false;
-                    }
-                    if ($request->filled('semester_id') && $student->semester_id != $request->semester_id) {
-                        return false;
-                    }
-                    return true;
-                })->values();
-            }
+            /* Program and semester narrow the subject dropdown, not this roll. The subject
+               already carries both, so the chosen subject has settled them; filtering the
+               students again by their own course_id and semester_id would drop exactly the
+               irregular student - one carrying a back subject from another term - who is the
+               reason attendance is kept per subject at all. */
 
             $students->load('studentDetail', 'studentDetail.DateSubjectWiseAttendances');
 
@@ -124,9 +133,9 @@ class SmSubjectAttendanceController extends Controller
             $search_info['date'] = $input['attendance_date'];
 
             if (generalSetting()->attendance_layout == 1) {
-                return view('backEnd.studentInformation.subject_attendance_list', compact('classes', 'subjects', 'sections', 'students', 'attendance_type', 'search_info', 'input'))->with($data);
+                return view('backEnd.studentInformation.subject_attendance_list', compact('classes', 'subjects', 'sections', 'students', 'attendance_type', 'search_info', 'input', 'courses', 'semesters'))->with($data);
             } else {
-                return view('backEnd.studentInformation.subject_attendance_list2', compact('classes', 'subjects', 'sections', 'students', 'attendance_type', 'search_info', 'input'))->with($data);
+                return view('backEnd.studentInformation.subject_attendance_list2', compact('classes', 'subjects', 'sections', 'students', 'attendance_type', 'search_info', 'input', 'courses', 'semesters'))->with($data);
             }
         } catch (\Exception $e) {;
             Toastr::error('Operation Failed', 'Failed');

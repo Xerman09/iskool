@@ -20,6 +20,7 @@ use App\SmFeesAssignDiscount;
 use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Modules\University\Entities\UnAssignSubject;
 use Modules\University\Entities\UnFeesInstallmentAssign;
@@ -259,28 +260,50 @@ class SmAcademicsController extends Controller
     public function ajaxSelectSubject(Request $request)
     {
         try {
-            $staff_info = SmStaff::where('user_id', Auth::user()->id)->first();
-            // return $staff_info;
+            $assigned = SmAssignSubject::where('class_id', '=', $request->class)
+                ->where('section_id', $request->section);
+
             if (teacherAccess()) {
-                $subject_all = SmAssignSubject::where('class_id', '=', $request->class)
-                    ->where('section_id', $request->section)
-                    ->where('teacher_id', $staff_info->id)
-                    ->distinct('subject_id')
-                    ->get();
-            } else {
-                $subject_all = SmAssignSubject::where('class_id', '=', $request->class)
-                    ->where('section_id', $request->section)
-                    ->distinct('subject_id')
-                    ->get();
+                $staff_info = SmStaff::where('user_id', Auth::user()->id)->first();
+                $assigned->where('teacher_id', $staff_info->id);
             }
-            $students = [];
-            foreach ($subject_all as $allSubject) {
-                $students[] = SmSubject::where('id', $allSubject->subject_id)->first(['id','subject_name','subject_type']);
-            }
-            return response()->json([$students]);
+
+            /* distinct('subject_id') compiles to "select distinct *", which de-duplicates
+               whole rows and so removes nothing: assign rows differ by id. Pluck the ids and
+               unique them instead. */
+            $subject_ids = $assigned->pluck('subject_id')->unique();
+
+            /* Program and semester are optional here. The screens that offer them use them to
+               narrow this list; the rest send nothing and get what they always got. */
+            $subjects = SmSubject::with('course')
+                ->whereIn('id', $subject_ids)
+                ->when($request->filled('course_id'), function ($q) use ($request) {
+                    $q->where('course_id', $request->course_id);
+                })
+                ->when($request->filled('semester_id'), function ($q) use ($request) {
+                    $q->where('semester_id', $request->semester_id);
+                })
+                ->orderBy('subject_name')
+                ->get();
+
+            /* The program code rides along with the name: a subject row belongs to exactly one
+               program, but two programs sharing a subject name - every GE subject, eventually -
+               would otherwise be two identical lines in the dropdown. */
+            $subjects = $subjects->map(function ($subject) {
+                $course_code = optional($subject->course)->course_code;
+
+                return [
+                    'id' => $subject->id,
+                    'subject_name' => $subject->subject_name,
+                    'subject_type' => $subject->subject_type,
+                    'course_code' => $course_code === '__BASIC_ED__' ? null : $course_code,
+                ];
+            })->values();
+
+            return response()->json([$subjects]);
         } catch (\Exception $e) {
-            Toastr::error('Operation Failed', 'Failed');
-            return redirect()->back();
+            Log::error('ajaxSelectSubject failed: ' . $e->getMessage());
+            return response()->json([[]]);
         }
     }
 
