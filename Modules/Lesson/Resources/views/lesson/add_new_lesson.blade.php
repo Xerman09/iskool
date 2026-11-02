@@ -93,6 +93,44 @@
                                                 @endif
                                             </div>
                                         </div>
+                                        {{-- Program and Semester narrow the subject dropdown below. Optional: left
+                                             blank, every subject the teacher holds in this year level is offered. --}}
+                                        <div class="row mt-15">
+                                            <div class="col-lg-12">
+                                                <label class="primary_input_label" for="">
+                                                    {{ __('academics.program') }}
+                                                </label>
+                                                <select class="primary_select form-control"
+                                                        id="select_lesson_program" name="course_id">
+                                                    <option data-display="@lang('academics.program')" value="">
+                                                        @lang('academics.program')
+                                                    </option>
+                                                    @foreach ($courses as $course)
+                                                        <option value="{{ $course->id }}"
+                                                                {{ old('course_id') == $course->id ? 'selected' : '' }}>
+                                                            {{ $course->course_name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-15">
+                                            <div class="col-lg-12">
+                                                <label class="primary_input_label" for="">
+                                                    {{ __('academics.semester') }}
+                                                </label>
+                                                <select class="primary_select form-control"
+                                                        id="select_lesson_semester" name="semester_id">
+                                                    <option data-display="@lang('academics.semester')" value="">
+                                                        @lang('academics.semester')
+                                                    </option>
+                                                    @foreach ($semesters as $semester)
+                                                        <option value="{{ $semester->id }}"
+                                                                {{ old('semester_id') == $semester->id ? 'selected' : '' }}>
+                                                            {{ $semester->semester_name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
                                         <div class="row mt-15">
                                             <div class="col-lg-12" id="select_subject_div">
                                                 <label class="primary_input_label" for="">

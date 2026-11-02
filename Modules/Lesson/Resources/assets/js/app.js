@@ -2,14 +2,23 @@
 
 
     $(document).ready(function() {
-        $("#select_class_lesson").on("change", function() {
+        // The subject list is narrowed by year level, and optionally by program and semester.
+        // Any of the three changing reloads it: a stale list is how a lesson ends up saved
+        // against the wrong program.
+        function loadLessonSubjects() {
             var url = $("#url").val();
 
             var i = 0;
             var formData = {
-                class_id: $(this).val(),
-
+                class_id: $("#select_class_lesson").val(),
+                course_id: $("#select_lesson_program").val(),
+                semester_id: $("#select_lesson_semester").val(),
             };
+
+            if (!formData.class_id) {
+                return;
+            }
+
             $.ajax({
                 type: "GET",
                 data: formData,
@@ -24,38 +33,38 @@
                 success: function(data) {
 
                     $.each(data, function(i, item) {
-                        if (item.length) {
-                            $("#select_subject").find("option").not(":first").remove();
-                            $("#select_subject_div ul").find("li").not(":first").remove();
+                        $("#select_subject").find("option").not(":first").remove();
+                        $("#select_subject_div ul").find("li").not(":first").remove();
 
+                        if (item.length) {
                             $.each(item, function(i, subject) {
-                                $("#select_subject").append(
-                                    $("<option>", {
-                                        value: subject.id,
-                                        text: subject.subject_name,
-                                    })
-                                );
+                                // The program code rides along with the name. Two programs
+                                // sharing a subject name are otherwise identical lines with
+                                // nothing to tell them apart.
+                                var label = subject.course_code ?
+                                    subject.subject_name + " [" + subject.course_code + "]" :
+                                    subject.subject_name;
 
                                 var type = subject.subject_type == "T" ? "Theory" : "Practical";
 
+                                $("#select_subject").append(
+                                    $("<option>", {
+                                        value: subject.id,
+                                        text: label,
+                                    })
+                                );
+
                                 $("#select_subject_div ul").append(
-                                    "<li data-value='" +
-                                    subject.id +
-                                    "' class='option'>" +
-                                    subject.subject_name +
-                                    " (" +
-                                    type +
-                                    ")" +
-                                    "</li>"
+                                    $("<li>", {
+                                        "class": "option",
+                                        "data-value": subject.id,
+                                        text: label + " (" + type + ")",
+                                    })
                                 );
 
                             });
                         } else {
                             $("#select_subject_div .current").html("SELECT SUBJECT *");
-                            $("#select_subject").find("option").not(":first").remove();
-                            $("#select_subject_div ul").find("li").not(":first").remove();
-
-
                         }
 
                     });
@@ -69,7 +78,11 @@
                     }
                 }
             });
-        });
+        }
+
+        $("#select_class_lesson").on("change", loadLessonSubjects);
+        $("#select_lesson_program").on("change", loadLessonSubjects);
+        $("#select_lesson_semester").on("change", loadLessonSubjects);
     });
     //section for lesson plan
     $(document).ready(function() {

@@ -2,6 +2,7 @@
 
 namespace Modules\Lesson\Http\Controllers;
 use DataTables;
+use App\Course;
 use App\SmClass;
 use App\SmStaff;
 use App\SmSection;
@@ -64,6 +65,18 @@ class SmLessonController extends Controller
 
         DB::beginTransaction();
         try {
+            /* The subject carries its own program, so a submitted program that disagrees with
+               it means the form was posted against a subject list it no longer matches. Saving
+               anyway would file the lesson under the wrong program without a word. */
+            if ($request->filled('course_id')) {
+                $subject = SmSubject::find($request->subject);
+                if ($subject && $subject->course_id && $subject->course_id != $request->course_id) {
+                    DB::rollBack();
+                    Toastr::error('That subject does not belong to the selected program', 'Failed');
+                    return redirect()->back();
+                }
+            }
+
             $sections = SmAssignSubject::where('class_id', $request->class)
                 ->where('subject_id', $request->subject)
                 ->get();
@@ -299,6 +312,22 @@ class SmLessonController extends Controller
                 ->groupBy('sm_classes.id')
                 ->get();
         }
+
+        /* Program and Semester narrow the subject dropdown, which is otherwise a flat list
+           mixing every program a teacher holds a subject in. A teacher is offered only the
+           programs they actually teach in, the same way classes are already narrowed. */
+        if (!teacherAccess()) {
+            $data['courses'] = courses();
+        } else {
+            $course_ids = SmSubject::whereIn('id', $subjects->pluck('subject_id'))
+                ->pluck('course_id')->filter()->unique();
+            $data['courses'] = Course::selectable()
+                ->whereIn('id', $course_ids)
+                ->where('school_id', Auth::user()->school_id)
+                ->get();
+        }
+        $data['semesters'] = semesters();
+
         return $data;
     }
 

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Modules\Lesson\Entities\SmLesson;;
 use Illuminate\Contracts\Support\Renderable;
 use Modules\Lesson\Entities\SmLessonTopicDetail;
@@ -92,27 +93,49 @@ class AjaxController extends Controller
     }
     public function getSubjectLesson(Request $request){
         try {
-           
-            $staff_info = SmStaff::where('user_id', Auth::user()->id)->first();
-            // return $staff_info;
+            $assigned = SmAssignSubject::where('class_id', '=', $request->class_id);
+
             if (teacherAccess()) {
-                $subject_all = SmAssignSubject::where('class_id', '=', $request->class_id)->where('teacher_id', $staff_info->id)->distinct('subject_id')->get();
-
-            } else {
-                $subject_all = SmAssignSubject::where('class_id', '=', $request->class_id)->distinct('subject_id')->get();
-
+                $staff_info = SmStaff::where('user_id', Auth::user()->id)->first();
+                $assigned->where('teacher_id', $staff_info->id);
             }
-    
-            $students = [];
-            foreach ($subject_all as $allSubject) {
-                $students[] = SmSubject::find($allSubject->subject_id);
-            }
-            return response()->json([$students]);
+
+            /* distinct('subject_id') compiles to "select distinct *", which de-duplicates
+               whole rows and so removes nothing: assign rows differ by id and section_id.
+               A teacher holding one subject in two sections saw it listed twice. */
+            $subject_ids = $assigned->pluck('subject_id')->unique();
+
+            $subjects = SmSubject::with('course')
+                ->whereIn('id', $subject_ids)
+                ->when($request->filled('course_id'), function ($q) use ($request) {
+                    $q->where('course_id', $request->course_id);
+                })
+                ->when($request->filled('semester_id'), function ($q) use ($request) {
+                    $q->where('semester_id', $request->semester_id);
+                })
+                ->orderBy('subject_name')
+                ->get();
+
+            /* The program travels with every option. A subject row belongs to exactly one
+               program, but the dropdown showed only the name, so two programs sharing a
+               subject name - every GE subject, eventually - were two identical lines with
+               nothing to choose between them. */
+            $subjects = $subjects->map(function ($subject) {
+                $course_code = optional($subject->course)->course_code;
+
+                return [
+                    'id' => $subject->id,
+                    'subject_name' => $subject->subject_name,
+                    'subject_type' => $subject->subject_type,
+                    'course_code' => $course_code === '__BASIC_ED__' ? null : $course_code,
+                ];
+            })->values();
+
+            return response()->json([$subjects]);
         } catch (\Exception $e) {
-            Toastr::error('Operation Failed', 'Failed');
-            return redirect()->back();
+            Log::error('getSubjectLesson failed: ' . $e->getMessage());
+            return response()->json([[]]);
         }
-        
     }
   
 }
