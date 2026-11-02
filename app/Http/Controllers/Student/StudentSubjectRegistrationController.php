@@ -209,7 +209,7 @@ class StudentSubjectRegistrationController extends Controller
                 ->unique()
                 ->values();
 
-            DB::transaction(function () use ($editableSubjectIds, $selectedBlocks, $student, $schoolId, $record, $paidStudentIds) {
+            DB::transaction(function () use ($editableSubjectIds, $selectedBlocks, $student, $schoolId, $record, $paidStudentIds, $activeSemester) {
                 // Only this year's rows. The delete is how a resubmission replaces an earlier
                 // one, but unscoped it reached back through every year the student has studied
                 // and removed those registrations too - including the is_pass marks that
@@ -254,6 +254,16 @@ class StudentSubjectRegistrationController extends Controller
                 if ($record && $record->enrollment_status !== 'enrolled') {
                     $record->enrollment_status = 'pending';
                     $record->save();
+                }
+
+                /* Which term the student is in. Nothing else in the system ever wrote this,
+                   so it stayed null for everyone - which quietly emptied the Semester filter
+                   on attendance (it compares against this column) and left every enrolment
+                   invoice without a term, since EnrollmentInvoicing reads it too. Registering
+                   is the moment the answer is known. */
+                if ($student->semester_id != $activeSemester->id) {
+                    $student->semester_id = $activeSemester->id;
+                    $student->save();
                 }
             });
 
