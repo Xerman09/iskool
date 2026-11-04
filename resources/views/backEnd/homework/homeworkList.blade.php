@@ -47,6 +47,9 @@
                             </div>
                         @else
                             <div class="row">
+                                {{-- Basic education has no programs, so that criterion is skipped there;
+                                     it does run terms, so the next one stays. --}}
+                                @if(!isBasicEd())
                                 <div class="col-lg-4">
                                     <div class="primary_input">
                                         <label class="primary_input_label" for="">{{ __('academics.program') }}</label>
@@ -60,12 +63,13 @@
                                         </select>
                                     </div>
                                 </div>
+                                @endif
 
                                 <div class="col-lg-4">
                                     <div class="primary_input">
-                                        <label class="primary_input_label" for="">{{ __('academics.semester') }}</label>
+                                        <label class="primary_input_label" for="">{{ termLabel() }}</label>
                                         <select class="primary_select form-control" name="semester_id" id="select_exam_semester">
-                                            <option data-display="@lang('academics.semester')" value="">@lang('academics.semester')</option>
+                                            <option data-display="{{ termLabel() }}" value="">{{ termLabel() }}</option>
                                             @foreach (@$semesters ?? [] as $semester)
                                                 <option value="{{ $semester->id }}"
                                                     {{ isset($semester_id) && $semester_id ? ($semester_id == $semester->id ? 'selected' : '') : ($semester->is_active ? 'selected' : '') }}>

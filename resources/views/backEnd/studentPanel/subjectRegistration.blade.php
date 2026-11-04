@@ -125,14 +125,14 @@
                                     <td>{{ optional($block->section)->section_name }}</td>
                                     <td>{{ optional($block->teacher)->full_name }}</td>
                                     <td>
-                                        @forelse($block->scheduleSlots as $slot)
-                                        <div>
-                                            <strong>{{optional($slot->weekend)->name}}</strong>
-                                            {{ date('g:i A', strtotime($slot->start_time)) }}&ndash;{{ date('g:i A', strtotime($slot->end_time)) }}
-                                        </div>
-                                        @empty
-                                        <span class="text-muted">@lang('academics.not_yet_scheduled')</span>
-                                        @endforelse
+                                        {{-- The same cell the Curriculum Layout uses, so a schedule
+                                             reads the same wherever it is met. Section and teacher
+                                             are left out: this row is one block, and both already
+                                             have a column. --}}
+                                        @include('backEnd.academics.partials.subjectScheduleCell', [
+                                            'slots' => $block->scheduleSlots,
+                                            'showContext' => false,
+                                        ])
                                     </td>
                                     <td>{{ $block->slotsLeft === null ? __('academics.unlimited') : $block->slotsLeft }}</td>
                                 </tr>

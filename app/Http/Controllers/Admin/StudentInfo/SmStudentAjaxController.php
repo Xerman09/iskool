@@ -210,7 +210,21 @@ class SmStudentAjaxController extends Controller
                     ->when($request->filled('curriculum_version_id'), function ($q) use ($request) {
                         $q->where('curriculum_version_id', $request->curriculum_version_id);
                     })
-                    ->get(['id', 'subject_name']);
+                    ->with('course')
+                    ->get(['id', 'subject_name', 'course_id']);
+
+                /* The program code rides along with the name, so an unfiltered list is still
+                   readable: two programs sharing a subject name would otherwise be two
+                   identical lines. */
+                $subjects = $subjects->map(function ($subject) {
+                    $course_code = optional($subject->course)->course_code;
+
+                    return [
+                        'id' => $subject->id,
+                        'subject_name' => $subject->subject_name,
+                        'course_code' => $course_code === '__BASIC_ED__' ? null : $course_code,
+                    ];
+                })->values();
             }
 
 

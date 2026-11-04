@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Fees\Http\Controllers\AjaxController;
 use Modules\Fees\Http\Controllers\FeesController;
+use Modules\Fees\Http\Controllers\FeesOverrideController;
 use Modules\Fees\Http\Controllers\FeesReportController;
 use Modules\Fees\Http\Controllers\StudentFeesController;
 
@@ -33,7 +34,14 @@ Route::group(['middleware' => ['subdomain']], function () {
         Route::post('fees-payment-store', [FeesController::class, 'feesPaymentStore'])->name('fees.fees-payment-store')->middleware('userRolePermission:fees.add-fees-payment');
         Route::get('single-payment-view/{id}/{type}', [FeesController::class, 'singlePaymentView'])->name('fees.single-payment-view');
         Route::get('add-fees-payment/{id}', [FeesController::class, 'addFeesPayment'])->name('fees.add-fees-payment')->middleware('userRolePermission:fees.add-fees-payment');
-        Route::get('delete-single-fees-transcation/{id}', [FeesController::class, 'deleteSingleFeesTranscation'])->name('fees.delete-single-fees-transcation');
+        /* Correcting a wrongly-recorded payment. POST, not GET: the old route was a
+           plain link, so anything that follows links - a prefetch, a crawler, a
+           mistaken double-click - could remove a receipt. Super admin only, enforced
+           inside FeesOverrideController, because role 1 is let past
+           userRolePermission by design and a permission row would gate every role
+           except the one this has to be restricted to. */
+        Route::post('void-payment/{id}', [FeesOverrideController::class, 'voidPayment'])->name('fees.void-payment');
+        Route::post('override-invoice-status', [FeesOverrideController::class, 'updateInvoiceStatus'])->name('fees.override-invoice-status');
         Route::get('fees-invoice-datatable', [FeesController::class, 'feesInvoiceDatatable'])->name('fees.fees-invoice-datatable');
 
         //Transaction History - every approved payment across both students and

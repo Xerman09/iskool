@@ -1,5 +1,14 @@
 let csrf_token = $('meta[name="csrf-token"]').attr('content');
 
+/* The extra roles each save is carried to, beyond the one being arranged. Empty
+   unless the person has picked some, so the default stays what it always was:
+   this layout and no other. */
+function applyRoles() {
+    return $('#applyRolesGroup .apply_role:checked').map(function () {
+        return $(this).val();
+    }).get();
+}
+
 function initSortable() {
     $('#itemDiv').sortable({
         scroll: true,
@@ -7,7 +16,7 @@ function initSortable() {
         cursor: "move", containment: "parent", update: function (event, ui) {
             let ids = $(this).sortable('toArray', {attribute: 'data-id'});
             let data = {
-                ids: ids, _token: csrf_token
+                ids: ids, _token: csrf_token, apply_roles: applyRoles()
             };
             $.post($('#section_sort_url').val(), data, function (response) {
                 reloadAfterChange(response)
@@ -26,6 +35,15 @@ function initSortable() {
 }
 
 function reloadAfterChange(response) {
+    /* An endpoint that returns nothing leaves this holding undefined, and the three
+       lines below would then empty the panels - the arrangement looks lost, which is
+       what "it does not save" turned out to mean. Say so instead of wiping the screen. */
+    if (!response || !response.menus) {
+        hidePreloader();
+        toastr.error(window.jsLang('Operation failed'));
+        return;
+    }
+
     toastr.success(window.jsLang('Operation successful'));
     $('#menu_idv').html(response.menus);
     $('#available_menu_div').html(response.available_list);
@@ -33,66 +51,87 @@ function reloadAfterChange(response) {
     $("#previewMenu").metisMenu();
     hidePreloader();
     initSortable();
+    initNestable();
+}
+
+/* Drag-and-drop for the layout itself.
+ *
+ * Set up once, and once more after each redraw. It used to be bound inside a
+ * mouseover handler on body, so every movement of the pointer re-initialised
+ * nestable on every list - thousands of times a minute, each one adding another
+ * callback, so a single drag fired the save several times over and the later
+ * answers raced the earlier ones. */
+function initNestable() {
+    var $lists = $('.menu-list');
+
+    if (!$lists.length || typeof $lists.nestable !== 'function') {
+        return;
+    }
+
+    $lists.nestable({
+        maxDepth: 2,
+        callback: function (l, e) {
+            if ($('#demoMode').val()) {
+                toastr.warning('For the demo version, you cannot change this', 'Warning');
+                return false;
+            }
+
+            saveMenuOrder(l);
+        }
+    });
+}
+
+/* Sends the arrangement. Pulled out of the nestable callback so a failure here can
+   be reported: it used to sit inside an empty catch, so anything thrown while
+   building the payload left the drag looking accepted and nothing written. */
+function saveMenuOrder(l) {
+    var order = null;
+
+    try {
+        var serialised = l.nestable('serialize');
+        if (typeof serialised === 'object' && serialised !== null) {
+            order = JSON.stringify(serialised);
+        }
+    } catch (err) {
+        hidePreloader();
+        toastr.error(window.jsLang('Operation failed'));
+        return;
+    }
+
+    var ids = [];
+    var unusedIds = [];
+
+    $('.used_menu').find('li').each(function () {
+        ids.push($(this).data('id'));
+    });
+    $('#available_menu_div').find('li').each(function () {
+        unusedIds.push($(this).data('id'));
+    });
+
+    showPreloader();
+
+    $.post($('#order_change_url').val(), {
+        order: order,
+        _token: csrf_token,
+        ids: ids,
+        unused_ids: unusedIds,
+        /* Read off the list being dragged, not off `this` - inside the nestable
+           callback `this` is not the element, so this always came through empty. */
+        un_used: l.data('type') || null,
+        menu_status: 1,
+        section: l.data('section') || 1,
+        apply_roles: applyRoles()
+    }).done(function (response) {
+        reloadAfterChange(response);
+    }).fail(function (xhr) {
+        hidePreloader();
+        toastr.error((xhr.responseJSON && xhr.responseJSON.msg) || window.jsLang('Operation failed'));
+    });
 }
 
 
 $(document).ready(function () {
-
-    let url = $('#order_change_url').val();
-    $(document).on('mouseover', 'body', function () {
-        let demoMode = $('#demoMode').val();
-
-        if (demoMode) {
-            return false;
-        }
-
-        $('.menu-list').nestable({
-            maxDepth: 2,
-            // expandBtnHTML: '<button class="primary-btn radius_30px mr-10 fix-gr-bg" data-action="expand"></button>',
-            // collapseBtnHTML: '<button class="primary-btn radius_30px mr-10 fix-gr-bg" data-action="collapse"></button>',
-            callback: function (l, e) {
-
-
-                try {
-                    let order = null;
-                    // let order = JSON.stringify($('.menu-list').nestable('serialize'));
-                    let order_value = l.nestable('serialize') ?? null;
-                    if (typeof order_value === 'object') {
-                        order = JSON.stringify(order_value);
-                    }
-                    let listItem = $(".used_menu").find('li');
-                    let unusedItem = $("#available_menu_div").find('li');
-                    let un_used = $(this).data('type')?? null;
-                    let ids = [];
-                    let unused_ids = [];
-                    $.each(listItem, function (index) {
-                        ids.push($(this).data('id'));
-                    });
-                    $.each(unusedItem, function (index) {
-                        unused_ids.push($(this).data('id'));
-                    });
-                    let data = {
-                        'order': order,
-                        '_token': csrf_token,
-                        'ids': ids,
-                        'unused_ids': unused_ids,
-                        'un_used': un_used,
-                        'menu_status': 1,
-                        'section': l.data('section') ?? 1
-                    }
-                    showPreloader()
-                    $.post(url, data, function (response) {                        
-                        reloadAfterChange(response)
-
-                    });
-                } catch (err) {
-
-                }
-
-
-            }
-        });
-    });
+    initNestable();
 });
 
 function checkDemo() {
@@ -125,16 +164,21 @@ $(document).ready(function () {
 
 
     $(document).on('click', '.remove_menu', function () {
-        var $item = $(this).closest(".dd-item");
-        let id = $item.data('id');
-        $item.remove();
+        /* The row is no longer taken out of the page before the server has agreed.
+           It used to be removed on the spot, so a refusal - a menu that still holds
+           items - left the entry gone from the screen and still there in the
+           sidebar. The panels are redrawn from the answer instead. */
+        let id = $(this).closest('.dd-item').data('id');
         let data = {
             id: id,
             _token: csrf_token
         }
         showPreloader()
-        $.post($('#menu_remove_url').val(), data, function (response) {
+        $.post($('#menu_remove_url').val(), data).done(function (response) {
             reloadAfterChange(response)
+        }).fail(function (xhr) {
+            hidePreloader();
+            toastr.error((xhr.responseJSON && xhr.responseJSON.msg) || window.jsLang('Operation failed'));
         });
 
     });
@@ -232,6 +276,28 @@ $(document).ready(function () {
         showPreloader();
         $.post($('#section_delete_url').val(), data, function (response) {
             reloadAfterChange(response)
+        });
+    });
+
+    /* Deletes a self-made menu from the Available list for good. Unlike .remove_menu,
+       which only makes an entry unused, there is nothing to undo this - hence the
+       confirmation. The server refuses anything it did not create itself and says why,
+       so a refusal is shown rather than swallowed. */
+    $(document).on('click', '.delete_menu', function () {
+        if (!confirm($('#menu_delete_permanent_confirm').val())) {
+            return false;
+        }
+
+        let id = $(this).data('id');
+        let data = {
+            id: id, _token: csrf_token
+        }
+        showPreloader();
+        $.post($('#menu_delete_permanent_url').val(), data, function (response) {
+            reloadAfterChange(response)
+        }).fail(function (xhr) {
+            hidePreloader();
+            toastr.error((xhr.responseJSON && xhr.responseJSON.msg) || window.jsLang('Operation failed'));
         });
     });
 

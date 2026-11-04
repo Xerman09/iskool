@@ -256,7 +256,7 @@
     // subject from class
 
     $(document).ready(function() {
-        $(document).on("change", "#exam_setup_course, #exam_setup_curriculum_version, #exam_setup_semester", function() {
+        $(document).on("change", "#exam_setup_course, #exam_setup_curriculum_version, #exam_setup_semester, #select_exam_program, #select_exam_semester", function() {
             $("#classSelectStudentHomeWork").trigger("change");
         });
 
@@ -264,18 +264,17 @@
             var url = $("#url").val();
             var i = 0;
             var globalType = $("#globalType").val();
-            console.log(globalType);
 
-            /* These three exist only on the exam setup screen; everywhere else they are
-               empty, so nothing narrows and the other screens are unchanged. */
+            /* Two naming conventions reach this handler: exam setup uses exam_setup_*, while
+               the homework and marks screens use select_exam_*. A screen carrying neither
+               sends blanks, which narrow nothing and leave it as it was. */
             var formData = {
                 id: $(this).val(),
                 globalType: globalType,
-                course_id: $("#exam_setup_course").val() || "",
+                course_id: $("#exam_setup_course").val() || $("#select_exam_program").val() || "",
                 curriculum_version_id: $("#exam_setup_curriculum_version").val() || "",
-                semester_id: $("#exam_setup_semester").val() || ""
+                semester_id: $("#exam_setup_semester").val() || $("#select_exam_semester").val() || ""
             };
-            console.log(formData);
             // get section for student
             $.ajax({
                 type: "GET",
@@ -296,18 +295,22 @@
                             $("#subjectSelecttHomeworkDiv ul").find("li").not(":first").remove();
 
                             $.each(item, function(i, subject) {
+                                var label = subject.course_code ?
+                                    subject.subject_name + " [" + subject.course_code + "]" :
+                                    subject.subject_name;
+
                                 $("#subjectSelect").append(
                                     $("<option>", {
                                         value: subject.id,
-                                        text: subject.subject_name,
+                                        text: label,
                                     })
                                 );
                                 $("#subjectSelecttHomeworkDiv ul").append(
-                                    "<li data-value='" +
-                                    subject.id +
-                                    "' class='option'>" +
-                                    subject.subject_name +
-                                    "</li>"
+                                    $("<li>", {
+                                        "class": "option",
+                                        "data-value": subject.id,
+                                        text: label,
+                                    })
                                 );
                             });
                         } else {
@@ -1462,18 +1465,22 @@
                             $("#select_class_subject_div ul").find("li").not(":first").remove();
 
                             $.each(item, function(i, subject) {
+                                var label = subject.course_code ?
+                                    subject.subject_name + " [" + subject.course_code + "]" :
+                                    subject.subject_name;
+
                                 $("#select_class_subject").append(
                                     $("<option>", {
                                         value: subject.id,
-                                        text: subject.subject_name,
+                                        text: label,
                                     })
                                 );
                                 $("#select_class_subject_div ul").append(
-                                    "<li data-value='" +
-                                    subject.id +
-                                    "' class='option'>" +
-                                    subject.subject_name +
-                                    "</li>"
+                                    $("<li>", {
+                                        "class": "option",
+                                        "data-value": subject.id,
+                                        text: label,
+                                    })
                                 );
                             });
                         } else {
@@ -5711,7 +5718,7 @@
 
     (function() {
         $(document).ready(function() {
-            $(document).on("change", "#exam_course, #exam_curriculum_version", function() {
+            $(document).on("change", "#exam_course, #exam_curriculum_version, #exam_semester", function() {
                 $("#exam_class").trigger("change");
             });
 
@@ -5722,6 +5729,7 @@
                     globalType : globalType,
                     course_id: $("#exam_course").val() || "",
                     curriculum_version_id: $("#exam_curriculum_version").val() || "",
+                    semester_id: $("#exam_semester").val() || "",
                 };
 
                 var url = $("#url").val();

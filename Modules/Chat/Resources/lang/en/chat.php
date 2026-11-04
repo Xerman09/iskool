@@ -58,5 +58,11 @@ return [
     'new_message' => 'New Message',
     'you_have_a_new_chat_message' => 'You have a new chat message',
     'student_can_add_member'=>'Student Can Add Member',
-    'no_user_found' => 'No user found'
+    'no_user_found' => 'No user found',
+
+    // Shown in place of the conversation pane when none is open.
+    'no_conversations_title' => 'No conversations yet',
+    'no_conversations_hint' => 'Class group chats appear here once you are enrolled in subjects for the term that is running. You can also search for someone by name to start a chat.',
+    'pick_conversation_title' => 'Pick a conversation',
+    'pick_conversation_hint' => 'Choose a person or a class group from the list on the left to open it here.',
 ];

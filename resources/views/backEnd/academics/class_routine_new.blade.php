@@ -516,7 +516,7 @@
                             <option data-display="@lang('academics.select_room')" value="">@lang('academics.select_room')</option>
                             @foreach ($rooms as $room)
                                 
-                                <option value="{{ @$room->id }}">{{ @$room->room_no }}</option>
+                                <option value="{{ @$room->id }}">{{ @$room->label }}</option>
                                 
                             @endforeach
                         </select>

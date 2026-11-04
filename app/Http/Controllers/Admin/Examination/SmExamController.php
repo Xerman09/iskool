@@ -97,8 +97,14 @@ class SmExamController extends Controller
             
             $subjects =  SmSubject::get();
             $sections = SmSection::get();
+            /* A teacher sets up their own exams, so there is nothing for them to choose: the
+               dropdown listed every teacher in the school and let one file an exam under a
+               colleague's name. Narrowed to themselves, the form pins it. */
             $teachers = SmStaff::where('role_id', 4)->where('active_status', 1)
             ->where('school_id', Auth::user()->school_id)
+            ->when(teacherAccess(), function ($q) {
+                $q->where('user_id', Auth::id());
+            })
             ->get(['id', 'user_id', 'full_name']);
             $rooms = SmClassRoom::where('active_status', 1)
             ->where('school_id',Auth::user()->school_id)
@@ -129,16 +135,26 @@ class SmExamController extends Controller
             $sections = SmSection::get();
             $selected_exam_type_id = $id;
                 
+            /* A teacher sets up their own exams, so there is nothing for them to choose: the
+               dropdown listed every teacher in the school and let one file an exam under a
+               colleague's name. Narrowed to themselves, the form pins it. */
             $teachers = SmStaff::where('role_id', 4)->where('active_status', 1)
             ->where('school_id', Auth::user()->school_id)
+            ->when(teacherAccess(), function ($q) {
+                $q->where('user_id', Auth::id());
+            })
             ->get(['id', 'user_id', 'full_name']);
             $rooms = SmClassRoom::where('active_status', 1)
             ->where('school_id',Auth::user()->school_id)
             ->get();
-            $courses = \App\Course::selectable()->where('school_id', Auth::user()->school_id)->get();
+            /* $semesters was never passed from here, only from examView(), so the term
+               dropdown came up empty on the first paint and filled in only once the ajax
+               re-rendered the partial. */
+            $courses = courses();
             $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
+            $semesters = semesters();
 
-            return view('backEnd.examination.exam', compact('exams', 'classes', 'subjects', 'exams_types', 'sections', 'selected_exam_type_id','teachers','rooms','courses','curriculumVersions'));
+            return view('backEnd.examination.exam', compact('exams', 'classes', 'subjects', 'exams_types', 'sections', 'selected_exam_type_id','teachers','rooms','courses','curriculumVersions','semesters'));
         } catch (\Exception $e) {
            
             Toastr::error('Operation Failed', 'Failed');
@@ -732,15 +748,16 @@ class SmExamController extends Controller
                     $assinged_subjects[] = SmSubject::withoutGlobalScope(GlobalAcademicScope::class)->withoutGlobalScope(StatusAcademicSchoolScope::class)->find($key);
                 }
             }else{
-                /* A year level is shared by every program, and a cohort keeps the curriculum
-                   version it was admitted under, so one class holds subjects from several of
-                   both. Each filter is optional - left blank nothing narrows, which is what a
-                   basic-education deployment wants. */
+                /* A year level is shared by every program, holds both terms' subjects, and a
+                   cohort keeps the curriculum version it was admitted under, so one class
+                   holds subjects from several of all three. Each filter is optional - left
+                   blank nothing narrows, which is what a basic-education deployment wants. */
                 $subjects = SmAssignSubject::where('class_id', $request->id)
-                ->when($request->filled('course_id') || $request->filled('curriculum_version_id'), function ($q) use ($request) {
+                ->when($request->filled('course_id') || $request->filled('curriculum_version_id') || $request->filled('semester_id'), function ($q) use ($request) {
                     $q->whereHas('subject', function ($q2) use ($request) {
                         $q2->when($request->filled('course_id'), fn ($q3) => $q3->where('course_id', $request->course_id))
-                            ->when($request->filled('curriculum_version_id'), fn ($q3) => $q3->where('curriculum_version_id', $request->curriculum_version_id));
+                            ->when($request->filled('curriculum_version_id'), fn ($q3) => $q3->where('curriculum_version_id', $request->curriculum_version_id))
+                            ->when($request->filled('semester_id'), fn ($q3) => $q3->where('semester_id', $request->semester_id));
                     });
                 })
                 ->where('academic_id', getAcademicId())
@@ -760,7 +777,20 @@ class SmExamController extends Controller
                     if (!$subjectModel) {
                         continue;
                     }
-                    if ($subjectModel->semester_id && $activeSemesterId && $subjectModel->semester_id != $activeSemesterId) {
+                    /* These are checkboxes, not a dropdown, so the label is the only thing
+                       telling two same-named subjects apart. Each tag is dropped once the
+                       matching filter is set, because then it says the same thing on every
+                       row. */
+                    if (!$request->filled('course_id')) {
+                        $courseCode = optional($subjectModel->course)->course_code;
+                        if ($courseCode && $courseCode !== '__BASIC_ED__') {
+                            $subjectModel->subject_name = "{$subjectModel->subject_name} [{$courseCode}]";
+                        }
+                    }
+
+                    if (!$request->filled('semester_id')
+                        && $subjectModel->semester_id && $activeSemesterId
+                        && $subjectModel->semester_id != $activeSemesterId) {
                         $semesterName = optional($subjectModel->semester)->semester_name;
                         if ($semesterName) {
                             $subjectModel->subject_name = "{$subjectModel->subject_name} ({$semesterName})";
@@ -808,8 +838,12 @@ class SmExamController extends Controller
         } else {
             $classes = SmClass::get();
         }
+        /* Same as the other entry points: a teacher is offered only themselves. */
         $teachers = SmStaff::where('role_id', 4)->where('active_status', 1)
         ->where('school_id', Auth::user()->school_id)
+        ->when(teacherAccess(), function ($q) {
+            $q->where('user_id', Auth::id());
+        })
         ->get(['id', 'user_id', 'full_name']);
         $rooms = SmClassRoom::where('active_status', 1)
         ->where('school_id',Auth::user()->school_id)
@@ -820,10 +854,12 @@ class SmExamController extends Controller
             $view = "backEnd.examination.exam_setup.multi_exam_setup";
         }
         /* Both setup partials are rendered here, through their own ajax call - so the
-           lists the criteria need are built here as well, not only in exam_setup(). */
-        $courses = \App\Course::selectable()->where('school_id', Auth::user()->school_id)->get();
+           lists the criteria need are built here as well, not only in exam_setup().
+           The helpers, not a raw query: semesters() leaves out the retired terms that
+           every other criteria panel already hides. */
+        $courses = courses();
         $curriculumVersions = \App\CurriculumVersion::where('school_id', Auth::user()->school_id)->get();
-        $semesters = \App\Semester::where('school_id', Auth::user()->school_id)->get();
+        $semesters = semesters();
 
         $html = view($view,compact('exams_types','classes','teachers','rooms','courses','curriculumVersions','semesters'))->render();
 

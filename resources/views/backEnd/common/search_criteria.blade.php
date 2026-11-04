@@ -112,7 +112,11 @@ $semester_id = $selected && isset($selected['semester_id']) ? $selected['semeste
     @endif
 </div>
 @endif
-@if (in_array('program', $visiable))
+{{-- Basic education has no programs - the year level identifies the learner - so a screen
+     that lists 'program' in $visiable simply does not get it there. Terms are a different
+     matter: basic education runs quarters, so the criterion below stays and only its label
+     changes, which is what termLabel() is for. --}}
+@if (in_array('program', $visiable) && !isBasicEd())
 <div class="{{ $div . ' ' . $mt }}" id="common_select_program_div">
     <label class="primary_input_label" for="">{{ __('academics.program') }}
         <span class="text-danger">{{ in_array('program', $required) ? '*' : '' }}</span>
@@ -133,13 +137,13 @@ $semester_id = $selected && isset($selected['semester_id']) ? $selected['semeste
 @endif
 @if (in_array('semester', $visiable))
 <div class="{{ $div . ' ' . $mt }}" id="common_select_semester_div">
-    <label class="primary_input_label" for="">{{ __('academics.semester') }}
+    <label class="primary_input_label" for="">{{ termLabel() }}
         <span class="text-danger">{{ in_array('semester', $required) ? '*' : '' }}</span>
     </label>
     <select class="primary_select form-control{{ $errors->has('semester_id') ? ' is-invalid' : '' }}" name="semester_id"
         id="common_select_semester">
-        <option data-display="@lang('academics.semester') {{ in_array('semester', $required) ? '*' : '' }}" value="">
-            {{ __('academics.semester') }} {{ in_array('semester', $required) ? '*' : '' }}</option>
+        <option data-display="{{ termLabel() }} {{ in_array('semester', $required) ? '*' : '' }}" value="">
+            {{ termLabel() }} {{ in_array('semester', $required) ? '*' : '' }}</option>
         @isset($semesters)
         @foreach ($semesters as $semester)
         <option value="{{ $semester->id }}" {{ isset($semester_id) ? ($semester_id == $semester->id ? 'selected' : '') : '' }}>

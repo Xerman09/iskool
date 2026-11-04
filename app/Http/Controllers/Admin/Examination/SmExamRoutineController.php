@@ -728,6 +728,11 @@ class SmExamRoutineController extends Controller
         if (db_engine() == "mysql") {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
         }
+
+        /* Gathered rather than raised one at a time: a save writes a whole exam
+           schedule, and a toast per row would bury the one that matters. */
+        $capacityWarnings = [];
+
         try {
             if (moduleStatusCheck('University')) {
                 $exam_type_id = $request->exam_type_id;
@@ -852,6 +857,21 @@ class SmExamRoutineController extends Controller
                     $exam_routine->academic_id = getAcademicId();
                     $exam_routine->save();
 
+                    /* An exam seats the same people the subject does, and this screen
+                       had no capacity check at all - the class routine's, broken as it
+                       was, at least existed. Said rather than refused, for the same
+                       reason: a room too small is a fact about the building, and an
+                       exam that cannot be scheduled anywhere helps nobody. */
+                    $tooSmall = roomCapacityShortfall(
+                        $exam_routine->room_id,
+                        $exam_routine->class_id,
+                        $exam_routine->section_id,
+                        $exam_routine->subject_id
+                    );
+                    if ($tooSmall) {
+                        $capacityWarnings[] = $tooSmall;
+                    }
+
                     $data['class_id'] = $exam_routine->class_id;
                     $data['section_id'] = $exam_routine->section_id;
                     $data['subject'] = $exam_routine->subject->subject_name;
@@ -861,6 +881,15 @@ class SmExamRoutineController extends Controller
                 }
 
                 Toastr::success('Exam routine has been assigned successfully', 'Success');
+
+                foreach ($capacityWarnings as $warning) {
+                    Toastr::warning(
+                        $warning['subject'] . ': ' . $warning['room'] . ' seats ' . $warning['capacity']
+                            . ', but ' . $warning['students'] . ' students are registered in this block.',
+                        'Room too small'
+                    );
+                }
+
                 return redirect('exam-routine-view/' . $class_id . '/' . $section_id . '/' . $exam_term_id);
             }
         } catch (\Exception $e) {

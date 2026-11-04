@@ -68,13 +68,19 @@ class SmClassRoutineUpdate extends Model
         return $this->belongsTo('App\SmClass', 'class_id', 'id')->withOutGlobalScope(StatusAcademicSchoolScope::class);
     }
 
+    /* Rooms are scoped to the active year so the dropdowns stop repeating, but a routine
+       saved earlier can hold a room row from another year - the dropdown used to offer
+       them all. Resolving a stored room_id ignores the year, or the booked room would
+       show as blank. */
     public function classRoom()
     {
-        return $this->belongsTo('App\SmClassRoom', 'room_id', 'id')->withDefault();
+        return $this->belongsTo('App\SmClassRoom', 'room_id', 'id')->withDefault()
+            ->withoutGlobalScope(StatusAcademicSchoolScope::class);
     }
     public function classRoomApi()
     {
-        return $this->belongsTo('App\SmClassRoom', 'room_id', 'id')->withDefault()->withOutGlobalScope(ActiveStatusSchoolScope::class);
+        return $this->belongsTo('App\SmClassRoom', 'room_id', 'id')->withDefault()
+            ->withoutGlobalScope(StatusAcademicSchoolScope::class);
     }
 
     public function teacherDetail()

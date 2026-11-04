@@ -58,9 +58,23 @@
                                         </div>
                                     </div>
                                     {{-- Narrow the subject list before the class loads it: one year level
-                                         carries subjects from every program and curriculum version at once. --}}
+                                         carries subjects from every program, term and curriculum version
+                                         at once. Single exam setup has carried all three; this one was
+                                         missing the term, so a year level's two semesters arrived as one
+                                         long list of checkboxes. Basic education has no programs, so that
+                                         one is skipped there and the other two split the row. --}}
+                                    @php
+                                        /* Curriculum version is only worth asking once a second one
+                                           exists; with one it is a dropdown holding a single answer.
+                                           Whatever survives both tests splits the row evenly, so no
+                                           gap is left where a hidden field used to sit. */
+                                        $showProgram = !isBasicEd();
+                                        $showVersion = count(@$curriculumVersions ?? []) > 1;
+                                        $criteriaWidth = 'col-lg-' . (int) (12 / (1 + (int) $showProgram + (int) $showVersion));
+                                    @endphp
                                     <div class="row mt-25">
-                                        <div class="col-lg-6">
+                                        @if($showProgram)
+                                        <div class="{{ $criteriaWidth }}">
                                             <select class="primary_select form-control" id="exam_course" name="course_id">
                                                 <option data-display="@lang('fees.all')" value="">@lang('academics.program') — @lang('fees.all')</option>
                                                 @foreach (@$courses ?? [] as $course)
@@ -68,11 +82,22 @@
                                                 @endforeach
                                             </select>
                                         </div>
-                                        <div class="col-lg-6">
+                                        @endif
+                                        @if($showVersion)
+                                        <div class="{{ $criteriaWidth }}">
                                             <select class="primary_select form-control" id="exam_curriculum_version" name="curriculum_version_id">
                                                 <option data-display="@lang('fees.all')" value="">@lang('academics.curriculum_version') — @lang('fees.all')</option>
-                                                @foreach (@$curriculumVersions ?? [] as $cv)
+                                                @foreach ($curriculumVersions as $cv)
                                                     <option value="{{ $cv->id }}">{{ $cv->version_label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        @endif
+                                        <div class="{{ $criteriaWidth }}">
+                                            <select class="primary_select form-control" id="exam_semester" name="semester_id">
+                                                <option data-display="@lang('fees.all')" value="">{{ termLabel() }} — @lang('fees.all')</option>
+                                                @foreach (@$semesters ?? [] as $semester)
+                                                    <option value="{{ $semester->id }}">{{ $semester->semester_name }}</option>
                                                 @endforeach
                                             </select>
                                         </div>

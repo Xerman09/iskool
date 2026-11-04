@@ -7,7 +7,6 @@ use App\SmClass;
 use App\SmStaff;
 use App\SmSubject;
 use App\SmSection;
-use App\SmStudent;
 use App\SmWeekend;
 use App\SmClassRoom;
 use App\SmClassTime;
@@ -150,7 +149,15 @@ class SmClassRoutineNewController extends Controller
 
             // remove code unnecessary -abunayem
 
-            $rooms = SmClassRoom::where('active_status', 1) /* ->where('capacity','>=',$stds) */
+            /* Every room is offered, and the one that is too small is said so at save
+               time instead - see roomTooSmall(). Hiding them was the old idea, and it
+               never worked: the count behind it asked sm_students for the current
+               academic year, but that column holds the year a student was admitted,
+               so it matched nobody and `capacity >= 0` hid nothing. Made to work, it
+               would have been worse than useless - a school whose largest room seats
+               40 and whose block holds 45 would have found the dropdown empty and no
+               way to put the class anywhere at all. */
+            $rooms = SmClassRoom::where('active_status', 1)
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
 
@@ -190,9 +197,7 @@ class SmClassRoutineNewController extends Controller
             foreach ($assinged_rooms as $value) {
                 $assinged_room[] = $value->room_id;
             }
-            $stds = SmStudent::where('class_id', $class_id)->where('section_id', $section_id)
-                ->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->count();
-            $rooms = SmClassRoom::where('active_status', 1)->where('capacity', '>=', $stds)
+                        $rooms = SmClassRoom::where('active_status', 1)
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
             $subjects = SmAssignSubject::where('class_id', $class_id)
@@ -228,9 +233,7 @@ class SmClassRoutineNewController extends Controller
             foreach ($assinged_rooms as $value) {
                 $assinged_room[] = $value->room_id;
             }
-            $stds = SmStudent::where('class_id', $class_id)->where('section_id', $section_id)
-                ->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->count();
-            $rooms = SmClassRoom::where('active_status', 1)->where('capacity', '>=', $stds)
+                        $rooms = SmClassRoom::where('active_status', 1)
                 ->where('school_id', Auth::user()->school_id)
                 ->get();
             $teacher_detail = SmStaff::select('id', 'full_name')->where('id', $teacher_id)->first();
@@ -276,9 +279,7 @@ class SmClassRoutineNewController extends Controller
            // ->distinct(['class_id', 'section_id', 'subject_id'])
             ->get();
 
-        $stds = SmStudent::where('class_id', $class_id)->where('section_id', $section_id)
-            ->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->count();
-        $rooms = SmClassRoom::where('active_status', 1)->where('capacity', '>=', $stds)
+                $rooms = SmClassRoom::where('active_status', 1)
             ->where('school_id', Auth::user()->school_id)
             ->get();
         $teachers = SmStaff::where('role_id', 4)->where('school_id', Auth::user()->school_id)->get(['id', 'full_name', 'user_id']);
@@ -305,6 +306,11 @@ class SmClassRoutineNewController extends Controller
                 ->where('section_id', $request->section_id)->where('academic_id', getAcademicId())
                 ->where('school_id', Auth::user()->school_id)
                 ->delete();
+
+            /* Gathered rather than raised one at a time: a save writes a whole day,
+               and a toast per row would bury the one that matters. */
+            $capacityWarnings = [];
+
             foreach ($request->routine as $key => $routine_data) {
                 if ((!gbv($routine_data, 'is_break') && !gv($routine_data, 'subject')) || !gv($routine_data, 'start_time') || !gv($routine_data, 'end_time')) {
                     continue;
@@ -368,6 +374,21 @@ class SmClassRoutineNewController extends Controller
                         }
                     }
 
+                    /* Said, not enforced. A clash is a contradiction - two classes
+                       cannot have the same room at the same hour - but a room that is
+                       too small is a fact about the building, and refusing the save
+                       would leave an oversized block with nowhere to go. The routine
+                       is written and the shortfall named. */
+                    $tooSmall = roomCapacityShortfall(
+                        $roomId,
+                        $request->class_id,
+                        $request->section_id,
+                        gv($routine_data, 'subject')
+                    );
+                    if ($tooSmall) {
+                        $capacityWarnings[] = $tooSmall;
+                    }
+
 
 
                     $class_routine = new SmClassRoutineUpdate();
@@ -388,6 +409,15 @@ class SmClassRoutineNewController extends Controller
 
             Session::put('session_day_id', $request->day);
             Toastr::success('Class routine has been updated successfully', 'Success');
+
+            foreach ($capacityWarnings as $warning) {
+                Toastr::warning(
+                    $warning['subject'] . ': ' . $warning['room'] . ' seats ' . $warning['capacity']
+                        . ', but ' . $warning['students'] . ' students are registered in this block.',
+                    'Room too small'
+                );
+            }
+
             return redirect()->back();
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');

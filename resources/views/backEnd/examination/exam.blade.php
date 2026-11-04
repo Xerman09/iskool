@@ -239,16 +239,26 @@
                                         {{ __('common.teacher') }}
                                         <span class="text-danger"> *</span>
                                     </label>
+                                    {{-- A teacher sets up their own exams, so the choice is made for
+                                         them. The list is narrowed to themselves server side as well,
+                                         so a posted id cannot name a colleague. --}}
+                                    @if (teacherAccess())
+                                        @php $me = $teachers->first(); @endphp
+                                        <input type="hidden" name="teacher_id" value="{{ @$me->id }}">
+                                        <input type="text" class="primary_input_field form-control" readonly
+                                            value="{{ @$me->full_name }}">
+                                    @else
                                     <select
                                         class="primary_select form-control {{ $errors->has('teacher_id') ? ' is-invalid' : '' }}"
                                         id="" name="teacher_id">
                                         <option data-display="@lang('common.select_teacher') *" value="">
                                             @lang('common.select_teacher')
-                                            *</option> {{ $teachers }}
+                                            *</option>
                                         @foreach ($teachers as $teacher)
                                         <option value="{{ @$teacher->id }}">{{ @$teacher->full_name }}</option>
                                         @endforeach
                                     </select>
+                                    @endif
                                     @if ($errors->has('teacher_id'))
                                     <span class="text-danger invalid-select" role="alert">
                                         {{ $errors->first('teacher_id') }}
@@ -350,7 +360,7 @@
                                         @foreach ($rooms as $room)
                                         <option value="{{ @$room->id }}"
                                             {{ isset($routine) ? ($routine->room_id == $room->id ? 'selected' : '') : '' }}>
-                                            {{ @$room->room_no }}</option>
+                                            {{ @$room->label }}</option>
                                         @endforeach
                                     </select>
                                     <span class="text-danger" id="room_error"></span>

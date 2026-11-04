@@ -104,7 +104,7 @@
                             <option data-display="@lang('common.select_room') *" value="">@lang('common.select_room') *</option>
                             @foreach($rooms as $room)
                                 @if(!in_array($room->id, $assinged_room))
-                                <option value="{{ @$room->id}}" {{isset($room_id)? ($room_id == $room->id?'selected':''):''}}>{{ @$room->room_no}}</option>
+                                <option value="{{ @$room->id}}" {{isset($room_id)? ($room_id == $room->id?'selected':''):''}}>{{ @$room->label}}</option>
                                 @endif
                             @endforeach
                         </select>

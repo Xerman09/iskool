@@ -81,6 +81,31 @@
             </a>
         </div>
 
+        {{-- payment_status is a summary of the lines, written when a payment lands. Anything
+             that moved the lines by another route left it saying something no longer true, and
+             it is read as a gate elsewhere (see AjaxController@changeMethod). Recompute is the
+             honest repair; the three fixed values are for an invoice whose history is already
+             wrong and has to be stated rather than derived. Super admin only. --}}
+        @if(auth()->user()->role_id == 1)
+        <div class="max_1200 text-right mt-10">
+            {{ Form::open(['route' => 'fees.override-invoice-status', 'method' => 'POST', 'class' => 'd-inline']) }}
+                <input type="hidden" name="invoice_id" value="{{ $invoiceInfo->id }}">
+                <span class="text-muted mr-2">
+                    @lang('fees.payment_status'): <strong>{{ $invoiceInfo->payment_status ?: '-' }}</strong>
+                </span>
+                <select name="payment_status" class="form-control d-inline-block" style="width:auto;">
+                    <option value="recompute">@lang('fees::feesModule.recompute_from_lines')</option>
+                    <option value="paid">@lang('fees.paid')</option>
+                    <option value="partial">@lang('fees.partial')</option>
+                    <option value="unpaid">@lang('fees.unpaid')</option>
+                </select>
+                <button type="submit" class="primary-btn small fix-gr-bg border-0">
+                    @lang('fees::feesModule.apply_status')
+                </button>
+            {{ Form::close() }}
+        </div>
+        @endif
+
         @if(!empty($pendingItemOrders) && $pendingItemOrders->count() > 0 && userPermission('item-order-approval'))
         @include('backEnd.academics.partials.studentOrdersModalAssets')
         <div class="max_1200 mb-30">

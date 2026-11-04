@@ -68,6 +68,27 @@
                                         :asset_type="{{ json_encode('/public') }}"
                                 ></chat-component>
                             @endif
+                        @else
+                            {{-- chat_main_wrapper is a 5fr/7fr grid. With no conversation open
+                                 nothing at all was put in the second column, so the page was a
+                                 narrow box beside an empty white field with the footer pulled up
+                                 under it - which reads as broken rather than as empty. This fills
+                                 the column and says which of the two it is. --}}
+                            <div class="chat_flow_list white-box d-flex flex-column align-items-center justify-content-center text-center"
+                                style="min-height: 420px;">
+                                <span class="ti-comments" style="font-size: 44px; color: #c7cce0;"></span>
+                                @if (count($users) == 0 && count($groups) == 0)
+                                    <h4 class="mt-20 mb-10">@lang('chat::chat.no_conversations_title')</h4>
+                                    <p class="text-muted mb-0" style="max-width: 420px;">
+                                        @lang('chat::chat.no_conversations_hint')
+                                    </p>
+                                @else
+                                    <h4 class="mt-20 mb-10">@lang('chat::chat.pick_conversation_title')</h4>
+                                    <p class="text-muted mb-0" style="max-width: 420px;">
+                                        @lang('chat::chat.pick_conversation_hint')
+                                    </p>
+                                @endif
+                            </div>
                         @endif
                     </div>
                 </div>

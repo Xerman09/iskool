@@ -292,9 +292,48 @@ class StudentRecord extends Model
         return SmExam::with('examType')->where('class_id', $this->class_id)->where('section_id', $this->section_id)->where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->where('active_status', 1)->get();
     }
 
+    /**
+     * The blocks this student actually sits in.
+     *
+     * A block (SmAssignSubject) is one section of one subject, and registration
+     * records the exact block chosen per subject - so in a college a student's
+     * subjects are their blocks, and those blocks belong to whichever sections
+     * happened to be open, not to one section of their own. The section on the
+     * record is advisory and is null for every record in this school, which is
+     * why reading subjects off it returned nothing at all for a student who had
+     * just paid and enrolled.
+     *
+     * Falls back to the class-and-section pair when there is no registration to
+     * read: basic education has no block registration (the grade level decides
+     * the load), and that is the model it has always used.
+     *
+     * Scoped to the academic year, because registering happens once a term.
+     */
+    public function getEnrolledBlocksAttribute()
+    {
+        $blockIds = \App\SmOptionalSubjectAssign::where('student_id', $this->student_id)
+            ->where('academic_id', getAcademicId())
+            ->where('school_id', Auth::user()->school_id)
+            ->pluck('assign_subject_id')
+            ->filter();
+
+        if ($blockIds->isEmpty()) {
+            return SmAssignSubject::where('class_id', $this->class_id)
+                ->where('section_id', $this->section_id)
+                ->where('academic_id', $this->academic_id)
+                ->where('school_id', Auth::user()->school_id)
+                ->get();
+        }
+
+        return SmAssignSubject::whereIn('id', $blockIds)
+            ->where('academic_id', getAcademicId())
+            ->where('school_id', Auth::user()->school_id)
+            ->get();
+    }
+
     public function getAssignSubjectAttribute()
     {
-        return SmAssignSubject::where('class_id', $this->class_id)->where('section_id', $this->section_id)->where('academic_id', $this->academic_id)->where('school_id', Auth::user()->school_id)->get();
+        return $this->enrolled_blocks;
     }
 
     public function getUnAssignSubjectAttribute()
@@ -354,10 +393,21 @@ class StudentRecord extends Model
                 ->get();
         }
     }
+    /**
+     * The teachers this student actually has - one row per block they sit in, by
+     * way of enrolled_blocks, for the same reason the subject list goes that way.
+     *
+     * The old distinct('teacher_id') did nothing: Eloquent renders it as
+     * "select distinct *", which de-duplicates whole rows and so removes nothing.
+     * A teacher taking two of the student's subjects was listed twice. Narrowed
+     * here on the loaded rows instead, which is where the duplication actually is.
+     */
     public function getStudentTeacherAttribute()
     {
-        return SmAssignSubject::with('teacher', 'subject')->where('class_id', $this->class_id)
-            ->where('section_id', $this->section_id)->distinct('teacher_id')->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
+        return $this->enrolled_blocks
+            ->load('teacher', 'subject')
+            ->unique('teacher_id')
+            ->values();
     }
     public function getStudentVirtualClassAttribute()
     {

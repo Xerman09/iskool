@@ -45,6 +45,18 @@ class MenuManageController extends Controller
         $data['unused_menus'] = SidebarManagerController::unUsedMenu();         
         $data['sidebar_menus'] = sidebar_menus();
         $data['permission_sections'] = Permission::whereNull('user_id')->pluck('id')->toArray();
+
+        /* The menus that can be dropped into a section - leaves, not sections and not
+           the per-user copies. Sorted by what they are actually called, since the
+           `name` column is frequently not it. */
+        $data['placeable_menus'] = Permission::whereNull('user_id')
+            ->where('is_menu', 1)
+            ->where('type', 2)
+            ->where('permission_section', 0)
+            ->get()
+            ->each(fn ($permission) => $permission->display_label = menuLabel($permission))
+            ->sortBy('display_label', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
       
         return view('menumanage::index', $data);
     }

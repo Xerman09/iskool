@@ -110,6 +110,7 @@
                                 <thead>
                                     <tr>
                                         <th>@lang('common.sl')</th>
+                                        <th>@lang('fees.invoice_number')</th>
                                         <th id="invoiceAudienceColumnHeader">@lang('common.student')</th>
                                         <th>@lang('academics.program')</th>
                                         <th>@lang('accounts.amount')</th>
@@ -313,6 +314,12 @@
                     name: 'id'
                 },
                 {
+                    // The real stored column, so Quick Search can match against it -
+                    // see the filter() in feesInvoiceDatatable().
+                    data: 'invoice_no',
+                    name: 'invoice_id'
+                },
+                {
                     data: 'student_name',
                     name: 'student_name'
                 },
@@ -352,11 +359,12 @@
                     data: 'action',
                     name: 'action'
                 },
-                {
-                    data: 'full_name',
-                    name: 'studentInfo.full_name',
-                    visible: false
-                },
+                // A hidden 'full_name' column used to sit here. The endpoint never
+                // returned that key, so DataTables asked for a parameter that was
+                // never sent and the column count ran one ahead of the headers.
+                // Searching by name does not need it: feesInvoiceDatatable()
+                // overrides the global search and reaches the name through the
+                // relation itself.
             ],
             bLengthChange: false,
             bDestroy: true,

@@ -112,7 +112,10 @@
                                 </span>
                                 @endif
                             </div> 
-                            {{-- Carried back so the next search keeps the narrowing it was made with. --}}
+                            {{-- Carried back so the next search keeps the narrowing it was made with.
+                                 Basic education has no programs, so that one criterion is skipped
+                                 there; it does run terms, so the other stays and only its label changes. --}}
+                            @if(!isBasicEd())
                             <div class="col-lg-3 mt-30-md">
                                 <select class="primary_select form-control" name="course_id">
                                     <option data-display="@lang('academics.program')" value="">@lang('academics.program')</option>
@@ -123,9 +126,10 @@
                                     @endisset
                                 </select>
                             </div>
+                            @endif
                             <div class="col-lg-3 mt-30-md">
                                 <select class="primary_select form-control" name="semester_id">
-                                    <option data-display="@lang('academics.semester')" value="">@lang('academics.semester')</option>
+                                    <option data-display="{{ termLabel() }}" value="">{{ termLabel() }}</option>
                                     @isset($semesters)
                                         @foreach($semesters as $semester)
                                             <option value="{{$semester->id}}" {{isset($input['semester_id']) && $input['semester_id'] == $semester->id ? 'selected':''}}>{{$semester->semester_name}}</option>

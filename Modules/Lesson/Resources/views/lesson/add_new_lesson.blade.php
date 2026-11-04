@@ -94,7 +94,10 @@
                                             </div>
                                         </div>
                                         {{-- Program and Semester narrow the subject dropdown below. Optional: left
-                                             blank, every subject the teacher holds in this year level is offered. --}}
+                                             blank, every subject the teacher holds in this year level is offered.
+                                             Basic education has no programs, so that one criterion is skipped
+                                             there; it does run terms, so the other stays. --}}
+                                        @if(!isBasicEd())
                                         <div class="row mt-15">
                                             <div class="col-lg-12">
                                                 <label class="primary_input_label" for="">
@@ -105,29 +108,34 @@
                                                     <option data-display="@lang('academics.program')" value="">
                                                         @lang('academics.program')
                                                     </option>
+                                                    @isset($courses)
                                                     @foreach ($courses as $course)
                                                         <option value="{{ $course->id }}"
                                                                 {{ old('course_id') == $course->id ? 'selected' : '' }}>
                                                             {{ $course->course_name }}</option>
                                                     @endforeach
+                                                    @endisset
                                                 </select>
                                             </div>
                                         </div>
+                                        @endif
                                         <div class="row mt-15">
                                             <div class="col-lg-12">
                                                 <label class="primary_input_label" for="">
-                                                    {{ __('academics.semester') }}
+                                                    {{ termLabel() }}
                                                 </label>
                                                 <select class="primary_select form-control"
                                                         id="select_lesson_semester" name="semester_id">
-                                                    <option data-display="@lang('academics.semester')" value="">
-                                                        @lang('academics.semester')
+                                                    <option data-display="{{ termLabel() }}" value="">
+                                                        {{ termLabel() }}
                                                     </option>
+                                                    @isset($semesters)
                                                     @foreach ($semesters as $semester)
                                                         <option value="{{ $semester->id }}"
                                                                 {{ old('semester_id') == $semester->id ? 'selected' : '' }}>
                                                             {{ $semester->semester_name }}</option>
                                                     @endforeach
+                                                    @endisset
                                                 </select>
                                             </div>
                                         </div>

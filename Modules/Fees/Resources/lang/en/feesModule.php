@@ -72,5 +72,16 @@ return  [
         'waiver_report'=> 'Waiver Report',
         'group_fees_generate_seperate_invoice'=> 'Group Fees Generate Seperate Invoice',
         'max_10_characters' => 'Max 10 characters',
-        'total_service_charge' => 'Total Service Charge'
+        'total_service_charge' => 'Total Service Charge',
+
+        // Super admin's corrections to a wrongly-recorded payment.
+        'void_payment' => 'Void this payment',
+        'void_payment_confirm' => 'Remove this payment from the books? The invoice balance, the income records and the bank balance are all reversed, and the student may go back to pending enrollment.',
+        'payment_voided' => 'Payment of :amount removed from invoice :invoice. It now reads :status.',
+        'enrollment_reopened' => 'The student has gone back to pending enrollment, because the down payment is no longer covered.',
+        'payment_not_found' => 'That payment could not be found.',
+        'invoice_not_found' => 'That invoice could not be found.',
+        'recompute_from_lines' => 'Recompute from lines',
+        'apply_status' => 'Apply',
+        'invoice_status_updated' => 'Invoice status changed from :from to :to.',
  ];

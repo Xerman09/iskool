@@ -49,8 +49,13 @@ class SmCommunicateController extends Controller
                 $q->where('school_id', Auth::user()->school_id)->orWhere('type', 'System');
             })->get();
             $classes = SmClass::get();
+            /* A year level is shared by every program and holds both terms at once, so a
+               class plus a section was the narrowest audience available - and it reached
+               every program sitting in that section. */
+            $courses = courses();
+            $semesters = semesters();
 
-            return view('backEnd.communicate.sendEmailSms', compact('roles', 'classes'));
+            return view('backEnd.communicate.sendEmailSms', compact('roles', 'classes', 'courses', 'semesters'));
         } catch (Exception $e) {
 
             Toastr::error('Operation Failed', 'Failed');
@@ -281,11 +286,7 @@ class SmCommunicateController extends Controller
                             $to_mobile = [];
                             foreach ($request->message_to_student_parent as $message) {
                                 foreach ($selectedSections as $key => $value) {
-                                    $student_ids = StudentRecord::where('class_id', $class_id)
-                                        ->where('section_id', $value)
-                                        ->where('academic_id', getAcademicId())
-                                        ->where('school_id', auth()->user()->school_id)
-                                        ->pluck('student_id')->unique();
+                                    $student_ids = $this->sectionStudentIds($class_id, $value, $request);
                                     if ($message == 2) {
                                         $students = SmStudent::select('email', 'full_name', 'mobile')
                                             ->whereIn('id', $student_ids)
@@ -334,11 +335,7 @@ class SmCommunicateController extends Controller
 
                             foreach ($request->message_to_student_parent as $message) {
                                 foreach ($selectedSections as $key => $value) {
-                                    $student_ids = StudentRecord::where('class_id', $class_id)
-                                        ->where('section_id', $value)
-                                        ->where('academic_id', getAcademicId())
-                                        ->where('school_id', auth()->user()->school_id)
-                                        ->pluck('student_id')->unique();
+                                    $student_ids = $this->sectionStudentIds($class_id, $value, $request);
                                     if ($message == 2) {
                                         $students = SmStudent::select('email', 'full_name', 'mobile')
                                             ->whereIn('id', $student_ids)
@@ -395,10 +392,43 @@ class SmCommunicateController extends Controller
                 }
             }
         } catch (Exception $e) {
-            dd($e);
+            /* dd() was left here: any failure dumped a full stack trace, with the message
+               body and query bindings, to whoever pressed Send. */
+            Log::error('sendEmailSms failed: ' . $e->getMessage());
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
         }
+    }
+
+    /**
+     * The students in one section of one class, narrowed by program and term when the
+     * sender picked them.
+     *
+     * A tertiary year level is shared by every program and holds both terms at once, so a
+     * class plus a section was the narrowest audience the screen could express - and it
+     * reached every program sitting in that section. Both filters are optional; with
+     * neither set this returns exactly what the inline query here returned before.
+     */
+    private function sectionStudentIds($class_id, $section_id, Request $request)
+    {
+        $student_ids = StudentRecord::where('class_id', $class_id)
+            ->where('section_id', $section_id)
+            ->where('academic_id', getAcademicId())
+            ->where('school_id', auth()->user()->school_id)
+            ->pluck('student_id')->unique();
+
+        if (!$request->filled('course_id') && !$request->filled('semester_id')) {
+            return $student_ids;
+        }
+
+        return SmStudent::whereIn('id', $student_ids)
+            ->when($request->filled('course_id'), function ($q) use ($request) {
+                $q->where('course_id', $request->course_id);
+            })
+            ->when($request->filled('semester_id'), function ($q) use ($request) {
+                $q->where('semester_id', $request->semester_id);
+            })
+            ->pluck('id');
     }
 
     public function studStaffByRole(Request $request)

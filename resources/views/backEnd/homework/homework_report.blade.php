@@ -94,6 +94,41 @@
                                     @endif
                                 </div>
                             </div>
+                            {{-- Program and term narrow the subject dropdown below. Basic education has no
+                                 programs, so that one is skipped there; it does run terms, so the other
+                                 stays and only its label changes. --}}
+                            @if(!isBasicEd())
+                            <div class="col-lg-3">
+                                <div class="primary_input">
+                                    <label class="primary_input_label" for="">@lang('academics.program')</label>
+                                    <select class="primary_select form-control" name="course_id" id="select_exam_program">
+                                        <option data-display="@lang('academics.program')" value="">@lang('academics.program')</option>
+                                        @isset($courses)
+                                            @foreach ($courses as $course)
+                                                <option value="{{ $course->id }}"
+                                                    {{ isset($course_id) && $course_id == $course->id ? 'selected' : '' }}>
+                                                    {{ $course->course_name }}</option>
+                                            @endforeach
+                                        @endisset
+                                    </select>
+                                </div>
+                            </div>
+                            @endif
+                            <div class="col-lg-3">
+                                <div class="primary_input">
+                                    <label class="primary_input_label" for="">{{ termLabel() }}</label>
+                                    <select class="primary_select form-control" name="semester_id" id="select_exam_semester">
+                                        <option data-display="{{ termLabel() }}" value="">{{ termLabel() }}</option>
+                                        @isset($semesters)
+                                            @foreach ($semesters as $semester)
+                                                <option value="{{ $semester->id }}"
+                                                    {{ isset($semester_id) && $semester_id == $semester->id ? 'selected' : '' }}>
+                                                    {{ $semester->semester_name }}</option>
+                                            @endforeach
+                                        @endisset
+                                    </select>
+                                </div>
+                            </div>
                             <div class="col-lg-3">
                                 <div class="primary_input" id="select_class_subject_div">
                                     <label class="primary_input_label" for="">
@@ -105,11 +140,17 @@
                                         name="subject_id" id="select_class_subject">
                                         <option data-display="@lang('common.select_subjects') *" value="">@lang('homework.subject')
                                         </option>
-                                        @isset($smClass)
-                                            @foreach ($smClass->subjects as $item)
+                                        {{-- $subjects, not $smClass->subjects: that relation drops the academic
+                                             scope and answers with every year the class has ever run. --}}
+                                        @isset($subjects)
+                                            @foreach ($subjects as $item)
+                                                @php
+                                                    $program = optional($item->subject->course)->course_code;
+                                                    $program = $program === '__BASIC_ED__' ? null : $program;
+                                                @endphp
                                                 <option value="{{ $item->subject_id }}"
                                                     {{ isset($subject_id) ? ($subject_id == $item->subject_id ? 'selected' : '') : '' }}>
-                                                    {{ $item->subject->subject_name }}</option>
+                                                    {{ $item->subject->subject_name }}{{ $program ? ' [' . $program . ']' : '' }}</option>
                                             @endforeach
                                         @endisset
                                     </select>
@@ -135,8 +176,8 @@
                                         name="section_id" id="m_select_subject_section">
                                         <option data-display="@lang('common.select_section') *" value="">@lang('common.section')
                                         </option>
-                                        @isset($smClass)
-                                            @foreach ($subjects as $item)
+                                        @isset($sections)
+                                            @foreach ($sections as $item)
                                                 <option value="{{ $item->section_id }}"
                                                     {{ isset($section_id) ? ($section_id == $item->section_id ? 'selected' : '') : '' }}>
                                                     {{ $item->section->section_name }}</option>

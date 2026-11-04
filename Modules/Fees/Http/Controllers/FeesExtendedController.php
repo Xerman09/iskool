@@ -348,4 +348,70 @@ class FeesExtendedController extends Controller
             $record->save();
         }
     }
+
+    /**
+     * Send a student back to "pending" once the money that enrolled them is no
+     * longer there - the mirror of markStudentEnrolledIfPending(), and the only
+     * thing that undoes it.
+     *
+     * Voiding a payment is how a wrongly-posted collection gets corrected (see
+     * FeesOverrideController), and a student left 'enrolled' on a payment that no
+     * longer exists is holding a seat nobody paid for: the subject-registration
+     * seat count reads enrolment and receipts, not intentions.
+     *
+     * The test is the same three-way settled check, negated - so a student whose
+     * down payment is zero, or who has progress against a payment plan, is never
+     * dislodged by the voiding of some other collection.
+     *
+     * @return bool whether the standing was actually reopened
+     */
+    public function markStudentPendingIfUnderpaid($studentId)
+    {
+        if (!$studentId) {
+            return false;
+        }
+
+        $student = SmStudent::find($studentId);
+
+        if (!$student || (!isBasicEd() && !$student->course_id)) {
+            return false;
+        }
+
+        $record = StudentRecord::where('school_id', $student->school_id)
+            ->where('student_id', $student->id)
+            ->where('academic_id', getAcademicId())
+            ->where('is_promote', 0)
+            ->first();
+
+        // This year's standing only, and only someone the money had actually
+        // enrolled - there is nothing to reopen otherwise.
+        if (!$record || $record->enrollment_status !== 'enrolled') {
+            return false;
+        }
+
+        $enrollmentInvoice = FmFeesInvoice::where('school_id', $student->school_id)
+            ->where('record_id', $record->id)
+            ->where('type', 'fees')
+            ->first();
+
+        if (!$enrollmentInvoice) {
+            return false;
+        }
+
+        $downPayment = $this->balanceBreakdownFor($student)['downPayment'];
+
+        $isSettled = $downPayment <= 0
+            || $this->tuitionPaidOn($enrollmentInvoice) >= $downPayment - 0.01
+            || $this->hasPaymentPlanProgress($enrollmentInvoice);
+
+        if ($isSettled) {
+            return false;
+        }
+
+        $record->enrollment_status = 'pending';
+        $record->enrolled_at = null;
+        $record->save();
+
+        return true;
+    }
 }

@@ -93,7 +93,7 @@
                     <option data-display="@lang('common.select_room')" value="">@lang('common.select_room')</option>
                     @foreach($rooms as $room)
                       
-                        <option value="{{ @$room->id}}" {{isset($routine)? ($routine->room_id == $room->id?'selected':''):''}}>{{ @$room->room_no}}</option>
+                        <option value="{{ @$room->id}}" {{isset($routine)? ($routine->room_id == $room->id?'selected':''):''}}>{{ @$room->label}}</option>
                       
                     @endforeach
                 </select>

@@ -44,6 +44,8 @@ return [
     'all_notices' => 'All Notices',
     'add_notice' => 'Add Notice',
     'message_to' => 'Message To',
+    'narrow_the_audience' => 'Narrow The Audience',
+    'narrow_the_audience_hint' => 'Optional. Tick as many as apply. Anything left untouched does not narrow the notice, so leaving all of them blank sends it to everyone in the roles above.',
     'is_published_web_site' => 'Is Published Web Site',
     'save_content' => 'Save Content',
     'administrator_notices' => 'Administrator Notices',

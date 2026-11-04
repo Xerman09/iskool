@@ -4,6 +4,7 @@ namespace App;
 
 use App\SmExamType;
 use App\Scopes\AcademicSchoolScope;
+use App\Scopes\StatusAcademicSchoolScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -50,9 +51,13 @@ class SmExamSchedule extends Model
     {
         return $this->belongsTo('Modules\University\Entities\UnSemesterLabel', 'un_semester_label_id', 'id')->withDefault();
     }
+    /* Rooms are scoped to the active year so the dropdowns stop repeating; a schedule saved
+       earlier can hold a room row from another year, and withDefault keeps a view that
+       reads ->classRoom->room_no from falling over when the row is gone for good. */
     public function classRoom()
     {
-        return $this->belongsTo('App\SmClassRoom', 'room_id', 'id');
+        return $this->belongsTo('App\SmClassRoom', 'room_id', 'id')->withDefault()
+            ->withoutGlobalScope(StatusAcademicSchoolScope::class);
     }
 
     public function subject()

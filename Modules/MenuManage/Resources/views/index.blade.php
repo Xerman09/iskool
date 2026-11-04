@@ -25,8 +25,38 @@
                     </select>
                 {!! Form::close() !!}
 
-                <a href="{{ route('menumanage.reset-with-section') }}"
-                class="primary-btn radius_30px  fix-gr-bg">{{ __('menumanage::menuManage.Reset to  with Section') }}</a>
+                {{-- Carries each drag to other roles as well as the one being arranged.
+                     Nothing ticked to begin with: left alone, nothing reaches a layout
+                     other than the one on screen. A role is only touched where it
+                     already has the menu being moved - this rearranges, it does not
+                     hand out menus a role was never given.
+
+                     Checkboxes in the row itself, not a dropdown. The multi-select
+                     widget opened a panel taller than the header it sat in, so it
+                     covered the Live Preview beside it and cut every role name off at
+                     six letters. Nine boxes fit on the line and wrap when they do not. --}}
+                <div class="d-flex flex-wrap align-items-center ml-20" id="applyRolesGroup">
+                    <span class="mr-10 text-muted" style="white-space: nowrap;">
+                        {{ __('menumanage::menuManage.also_apply_to') }}
+                    </span>
+                    @foreach (@$manager_roles ?? [] as $applyRole)
+                        @if (!isset($manager_role_id) || $manager_role_id != $applyRole->id)
+                            <label class="apply_role_box mb-0 mr-10" title="{{ $applyRole->name }}">
+                                <input type="checkbox" class="apply_role" value="{{ $applyRole->id }}">
+                                <span>{{ $applyRole->name }}</span>
+                            </label>
+                        @endif
+                    @endforeach
+                </div>
+
+                {{-- A form, and a question first. This was a plain link that deleted the
+                     whole layout for the role and rebuilt the default over it. --}}
+                {!! Form::open(['route' => 'menumanage.reset-with-section', 'method' => 'POST', 'class' => 'd-inline mb-0',
+                    'onsubmit' => "return confirm('" . __('menumanage::menuManage.reset_confirm') . "');"]) !!}
+                    <button type="submit" class="primary-btn radius_30px fix-gr-bg border-0">
+                        {{ __('menumanage::menuManage.Reset to  with Section') }}
+                    </button>
+                {!! Form::close() !!}
             </div>
            
         </div>
@@ -108,7 +138,10 @@
                                              new menu sits among the others instead of standing out. Typing a
                                              class by hand still works for anything not already in use. --}}
                                         <div class="primary_input mb-20">
-                                            <label class="primary_input_label" for="create_menu_icon">{{ __('common.Icon') }}</label>
+                                            {{-- common.icon, lower case: there is no common.Icon, so the
+                                                 label printed the key itself and the stylesheet upper-cased
+                                                 it into "COMMON.ICON". --}}
+                                            <label class="primary_input_label" for="create_menu_icon">{{ __('common.icon') }}</label>
                                             <input class="primary_input_field" type="text" name="icon" id="create_menu_icon"
                                                 autocomplete="off" maxlength="100" value="{{ old('icon') }}"
                                                 placeholder="flaticon-reading">
@@ -154,6 +187,49 @@
                                                 <span class="ti-check"></span> {{ __('common.save') }}</button>
                                         </div>
                                     {!! Form::close() !!}
+
+                                    {{-- Puts an existing menu into a section, for as many roles as are
+                                         ticked. The endpoint behind this has been here all along; the
+                                         form that drives it was missing, so there was no way to place a
+                                         menu for another role without opening the manager as that role
+                                         and dragging it. --}}
+                                    <hr class="mt-20 mb-20">
+                                    <h5 class="mb-15">{{ __('menumanage::menuManage.add_existing_menu') }}</h5>
+                                    <form id="addMenuForm">
+                                        <div class="primary_input mb-20">
+                                            <label class="primary_input_label" for="add_menu_permission">{{ __('menumanage::menuManage.which_menu') }}</label>
+                                            <select class="form-control" name="permission_id" id="add_menu_permission">
+                                                <option value="">{{ __('menumanage::menuManage.which_menu') }}</option>
+                                                @foreach (@$placeable_menus ?? [] as $placeable)
+                                                    <option value="{{ $placeable->id }}">{{ $placeable->display_label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="primary_input mb-20">
+                                            <label class="primary_input_label" for="add_menu_section">{{ __('menumanage::menuManage.add_menu_section') }}</label>
+                                            <select class="form-control" name="section_id" id="add_menu_section">
+                                                @foreach (@$sidebar_menus ?? [] as $addToSection)
+                                                    <option value="{{ $addToSection->permission_id }}">
+                                                        {{ menuLabel($addToSection->permissionInfo) ?: __('menumanage::menuManage.top_level') }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="primary_input mb-20">
+                                            <label class="primary_input_label" for="add_menu_roles">{{ __('menumanage::menuManage.create_for_roles') }}</label>
+                                            <select multiple class="multypol_check_select active position-relative"
+                                                name="role_ids[]" id="add_menu_roles" style="width:100%">
+                                                @foreach (@$manager_roles ?? [] as $addRole)
+                                                    <option value="{{ $addRole->id }}"
+                                                        {{ (isset($manager_role_id) && $manager_role_id == $addRole->id) ? 'selected' : '' }}>
+                                                        {{ $addRole->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-12 text-center">
+                                            <button type="submit" id="addMenuBtn" class="primary-btn fix-gr-bg">
+                                                <span class="ti-plus"></span> {{ __('menumanage::menuManage.add_to_menu') }}</button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -192,6 +268,11 @@
     <input type="hidden" id="section_delete_url" value="{{ route('sidebar-manager.delete-section') }}">
     <input type="hidden" id="menu_delete_url" value="{{ route('sidebar-manager.menu-store') }}">
     <input type="hidden" id="menu_remove_url" value="{{ route('sidebar-manager.menu-remove') }}">
+    {{-- Deletes a self-made menu outright, unlike menu_remove_url above which only makes an
+         entry unused. The confirmation travels as a value so the module's own translation is
+         the one shown. --}}
+    <input type="hidden" id="menu_delete_permanent_url" value="{{ route('sidebar-manager.menu-delete') }}">
+    <input type="hidden" id="menu_delete_permanent_confirm" value="{{ __('menumanage::menuManage.delete_menu_confirm') }}">
 
     <input type="hidden" id="section_sort_url" value="{{ route('sidebar-manager.sort-section') }}">
 
@@ -243,9 +324,12 @@
 
 @push('css')
 <style>
+    /* A grid, not wrapping flex. The glyphs are not all the same width, so flex laid
+       out a ragged lattice with gaps in it; fixed columns give every icon the same
+       cell wherever it sits. */
     .menu_icon_choices {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 36px);
         gap: 6px;
         margin-top: 10px;
         max-height: 150px;
@@ -254,19 +338,92 @@
         border: 1px solid #e4e8f0;
         border-radius: 4px;
     }
+
     .menu_icon_choice {
-        width: 34px;
-        height: 34px;
+        /* The glyph was sitting on the button's text baseline with the browser's own
+           button padding under it, which pushed it out of the box. Centred in both
+           directions with the padding taken away, it stays inside. */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
         border: 1px solid transparent;
         border-radius: 4px;
         background: #f7f8fb;
         cursor: pointer;
-        line-height: 1;
-        font-size: 15px;
         color: #415094;
+        /* Last resort: a flaticon glyph that still draws larger than its cell is
+           clipped rather than allowed to cover its neighbours. */
+        overflow: hidden;
     }
+
+    .menu_icon_choice > span,
+    .menu_icon_choice > i {
+        display: block;
+        line-height: 1;
+    }
+
+    /* The glyph is drawn by a :before, and flaticon.css gives that pseudo-element
+       `margin-left: 20px` and a font-size of its own - which is what pushed every
+       icon out of its box, and why sizing the span changed nothing. menu.css does
+       reset the margin, but only at the same specificity as the rule it is fighting,
+       so it depends on load order. Stated here, under the picker, it does not. */
+    .menu_icon_choice > span::before,
+    .menu_icon_choice > span::after,
+    .menu_icon_choice > i::before,
+    .menu_icon_choice > i::after {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1;
+    }
+
     .menu_icon_choice:hover { border-color: #415094; }
     .menu_icon_choice.is_selected { border-color: #415094; background: #e8ecfb; }
+
+    /* One role per box, on the same line as the role being arranged. Nothing opens,
+       so nothing can overflow the header or cover the panel beside it. */
+    .apply_role_box {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 9px;
+        border: 1px solid #e4e8f0;
+        border-radius: 14px;
+        font-size: 13px;
+        font-weight: 400;
+        color: #707DB7;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background-color .15s ease, border-color .15s ease;
+    }
+
+    .apply_role_box:hover {
+        border-color: #415094;
+    }
+
+    .apply_role_box input {
+        margin: 0;
+        cursor: pointer;
+    }
+
+    /* Ticked roles read at a glance, so it is obvious a drag is about to reach
+       more than the layout on screen. */
+    .apply_role_box:has(input:checked) {
+        background: #e8ecfb;
+        border-color: #415094;
+        color: #415094;
+    }
+
+    /* The icons share .edit_icon's 46px line-height, but ti-trash carries different
+       metrics from ti-pencil-alt and ti-close and so drew a couple of pixels below
+       them. Nudged rather than re-laid-out, so the row the theme already positions
+       is left alone. */
+    .edit_icon .delete_menu {
+        position: relative;
+        top: -2px;
+    }
 </style>
 @endpush
 

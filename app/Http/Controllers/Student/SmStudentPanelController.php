@@ -832,14 +832,37 @@ class SmStudentPanelController extends Controller
                 ->where('school_id', $user->school_id)
                 ->get();
 
-            $totalSubjects = SmAssignSubject::whereIn('class_id', $class_ids)
-                ->whereIn('section_id', $section_ids)
+            /* A student's subjects are the blocks they registered into, not everything
+               taught to the section on their record: in a college the blocks belong to
+               whichever sections were open, and the record's own section is advisory -
+               null for every record in this school. Both the Subjects tile and the
+               Teachers tile below therefore read zero for a student who had just paid
+               and enrolled. Falls back to class and section where there is no
+               registration to read, which is how basic education works. */
+            $enrolledBlockIds = SmOptionalSubjectAssign::where('student_id', $student_detail->id)
                 ->where('academic_id', getAcademicId())
                 ->where('school_id', $user->school_id)
+                ->pluck('assign_subject_id')
+                ->filter();
+
+            $studentBlocks = SmAssignSubject::where('academic_id', getAcademicId())
+                ->where('school_id', $user->school_id)
+                ->when(
+                    $enrolledBlockIds->isNotEmpty(),
+                    fn ($q) => $q->whereIn('id', $enrolledBlockIds),
+                    fn ($q) => $q->whereIn('class_id', $class_ids)->whereIn('section_id', $section_ids)
+                )
                 ->get();
 
+            $totalSubjects = $studentBlocks;
+
+            /* Same rule as the noticeboard itself, so the dashboard count cannot promise a
+               notice the student will not find when they open it. */
             $totalNotices = SmNoticeBoard::where('active_status', 1)
-                ->where('inform_to', 'LIKE', '%2%')
+                ->where(function ($q) {
+                    $q->whereJsonContains('inform_to', '2')->orWhereJsonContains('inform_to', 2);
+                })
+                ->forStudent($user->student)
                 ->orderBy('id', 'DESC')
                 ->where('academic_id', getAcademicId())
                 ->where('school_id', $user->school_id)
@@ -865,13 +888,12 @@ class SmStudentPanelController extends Controller
                     ->get();
             }
 
-            $teachers = SmAssignSubject::select('teacher_id')
-                ->whereIn('class_id', $class_ids)
-                ->whereIn('section_id', $section_ids)
-                ->distinct('teacher_id')
-                ->where('academic_id', getAcademicId())
-                ->where('school_id', $user->school_id)
-                ->get();
+            /* Off the same blocks as the Subjects tile. The old distinct('teacher_id')
+               did nothing at all - Eloquent renders it as "select distinct *", which
+               de-duplicates whole rows and so removes none - meaning a teacher taking
+               two of the student's subjects was counted twice. Narrowed on the loaded
+               rows, where the duplication actually is. */
+            $teachers = $studentBlocks->pluck('teacher_id')->filter()->unique()->values();
 
             $issueBooks = SmBookIssue::where('member_id', $student_detail->user_id)
                 ->where('issue_status', 'I')
@@ -1646,7 +1668,14 @@ class SmStudentPanelController extends Controller
     {
         try {
             $data = [];
-            $allNotices = SmNoticeBoard::where('active_status', 1)->where('inform_to', 'LIKE', '%2%')
+            /* whereJsonContains, not LIKE '%2%': inform_to holds a JSON array of role ids,
+               and a substring match also hits any role whose id merely contains a 2 - 12, 20,
+               21 - which is every custom role an admin adds once the ids climb past nine. */
+            $allNotices = SmNoticeBoard::where('active_status', 1)
+                ->where(function ($q) {
+                    $q->whereJsonContains('inform_to', '2')->orWhereJsonContains('inform_to', 2);
+                })
+                ->forStudent(Auth::user()->student)
                 ->orderBy('id', 'DESC')
                 ->where('academic_id', getAcademicId())->where('school_id', Auth::user()->school_id)->get();
             if (ApiBaseMethod::checkUrl($request->fullUrl())) {

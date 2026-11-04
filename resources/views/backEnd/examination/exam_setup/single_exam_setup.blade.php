@@ -23,38 +23,54 @@
             'div'=>'col-lg-12','row'=>1,'mt'=>'mt-0' ,'subject'=>true, 
         ])
       @else 
+      {{-- Narrow the subject list before the class loads it: one year level carries subjects
+           from every program, term and curriculum version at once. One field per row with its
+           own label, the same shape as Class, Subject and Section below - three of them
+           squeezed across this card left every label cut to "Progr", "Curri", "Seme". --}}
+      @if(!isBasicEd())
+      <div class="row mt-25">
+          <div class="col-lg-12">
+              <label>@lang('academics.program')</label>
+              <select class="primary_select form-control" id="exam_setup_course" name="course_id">
+                  <option data-display="@lang('academics.program') — @lang('fees.all')" value="">@lang('academics.program') — @lang('fees.all')</option>
+                  @foreach (@$courses ?? [] as $course)
+                      <option value="{{ $course->id }}">{{ $course->course_name }}</option>
+                  @endforeach
+              </select>
+          </div>
+      </div>
+      @endif
+      {{-- Only worth asking once a second version exists. A cohort keeps the curriculum it
+           was admitted under, so two running side by side put the same subject name in the
+           same year level twice and this is the only thing telling them apart; with one
+           version it is a dropdown holding a single answer. It comes back by itself. --}}
+      @if (count(@$curriculumVersions ?? []) > 1)
+      <div class="row mt-25">
+          <div class="col-lg-12">
+              <label>@lang('academics.curriculum_version')</label>
+              <select class="primary_select form-control" id="exam_setup_curriculum_version" name="curriculum_version_id">
+                  <option data-display="@lang('academics.curriculum_version') — @lang('fees.all')" value="">@lang('academics.curriculum_version') — @lang('fees.all')</option>
+                  @foreach ($curriculumVersions as $cv)
+                      <option value="{{ $cv->id }}">{{ $cv->version_label }}</option>
+                  @endforeach
+              </select>
+          </div>
+      </div>
+      @endif
+      <div class="row mt-25">
+          <div class="col-lg-12">
+              <label>{{ termLabel() }}</label>
+              <select class="primary_select form-control" id="exam_setup_semester" name="semester_id">
+                  <option data-display="{{ termLabel() }} — @lang('fees.all')" value="">{{ termLabel() }} — @lang('fees.all')</option>
+                  @foreach (@$semesters ?? [] as $semester)
+                      <option value="{{ $semester->id }}">{{ $semester->semester_name }}</option>
+                  @endforeach
+              </select>
+          </div>
+      </div>
       <div class="row mt-25">
           <div class="col-lg-12">
             <label> @lang('common.class') <span class="text-danger"> *</span></label>
-              {{-- Narrow the subject list before the class loads it: one year level carries
-                   subjects from every program, term and curriculum version at once. --}}
-              <div class="row">
-                  <div class="col-lg-4">
-                      <select class="primary_select form-control" id="exam_setup_course" name="course_id">
-                          <option data-display="@lang('academics.program')" value="">@lang('academics.program') — @lang('fees.all')</option>
-                          @foreach (@$courses ?? [] as $course)
-                              <option value="{{ $course->id }}">{{ $course->course_name }}</option>
-                          @endforeach
-                      </select>
-                  </div>
-                  <div class="col-lg-4">
-                      <select class="primary_select form-control" id="exam_setup_curriculum_version" name="curriculum_version_id">
-                          <option data-display="@lang('academics.curriculum_version')" value="">@lang('academics.curriculum_version') — @lang('fees.all')</option>
-                          @foreach (@$curriculumVersions ?? [] as $cv)
-                              <option value="{{ $cv->id }}">{{ $cv->version_label }}</option>
-                          @endforeach
-                      </select>
-                  </div>
-                  <div class="col-lg-4">
-                      <select class="primary_select form-control" id="exam_setup_semester" name="semester_id">
-                          <option data-display="@lang('academics.semester')" value="">@lang('academics.semester') — @lang('fees.all')</option>
-                          @foreach (@$semesters ?? [] as $semester)
-                              <option value="{{ $semester->id }}">{{ $semester->semester_name }}</option>
-                          @endforeach
-                      </select>
-                  </div>
-              </div>
-
               <select class="primary_select form-control {{ $errors->has('class_id') ? ' is-invalid' : '' }}" id="classSelectStudentHomeWork" name="class_id">
                   <option data-display="@lang('common.select_class') *" value="">@lang('common.select_class') *</option>
                   @foreach($classes as $class)

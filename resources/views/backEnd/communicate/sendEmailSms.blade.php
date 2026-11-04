@@ -219,7 +219,37 @@
                                                                     </span>
                                                                 @endif
                                                             </div>
-    
+
+                                                            {{-- Narrows the recipients inside the sections picked below.
+                                                                 A year level is shared by every program and holds both
+                                                                 terms at once, so class plus section reached every program
+                                                                 sitting there. Left blank, nothing narrows. Basic education
+                                                                 has no programs, so that one is skipped. --}}
+                                                            @if(!isBasicEd())
+                                                            <div class="col-lg-12 mt-30">
+                                                                <label for="checkbox" class="mb-2">@lang('academics.program')</label>
+                                                                <select class="primary_select form-control" name="course_id">
+                                                                    <option data-display="@lang('fees.all')" value="">@lang('academics.program') — @lang('fees.all')</option>
+                                                                    @isset($courses)
+                                                                        @foreach ($courses as $course)
+                                                                            <option value="{{ $course->id }}">{{ $course->course_name }}</option>
+                                                                        @endforeach
+                                                                    @endisset
+                                                                </select>
+                                                            </div>
+                                                            @endif
+                                                            <div class="col-lg-12 mt-30">
+                                                                <label for="checkbox" class="mb-2">{{ termLabel() }}</label>
+                                                                <select class="primary_select form-control" name="semester_id">
+                                                                    <option data-display="@lang('fees.all')" value="">{{ termLabel() }} — @lang('fees.all')</option>
+                                                                    @isset($semesters)
+                                                                        @foreach ($semesters as $semester)
+                                                                            <option value="{{ $semester->id }}">{{ $semester->semester_name }}</option>
+                                                                        @endforeach
+                                                                    @endisset
+                                                                </select>
+                                                            </div>
+
                                                             <div class="col-lg-12 mt-30" id="selectSectionsDiv">
                                                                 <label for="checkbox"
                                                                     class="mb-2">@lang('common.section')</label>

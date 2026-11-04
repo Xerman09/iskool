@@ -92,7 +92,9 @@
                                     {{-- A year level is shared by every program and holds both terms'
                                          subjects, and a cohort keeps the curriculum version it was
                                          admitted under - so one section carries subjects from several
-                                         at once. Each filter is optional. --}}
+                                         at once. Each filter is optional. Basic education has no programs,
+                                         so that one is skipped there; terms and curriculum versions it has. --}}
+                                    @if(!isBasicEd())
                                     <div class="col-lg-4 mt-30-md">
                                         <label class="primary_input_label" for="">@lang('academics.program')</label>
                                         <select class="primary_select form-control" name="course_id">
@@ -104,6 +106,7 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    @endif
                                     <div class="col-lg-4 mt-30-md">
                                         <label class="primary_input_label" for="">@lang('academics.curriculum_version')</label>
                                         <select class="primary_select form-control" name="curriculum_version_id">
@@ -116,7 +119,7 @@
                                         </select>
                                     </div>
                                     <div class="col-lg-4 mt-30-md">
-                                        <label class="primary_input_label" for="">@lang('academics.semester')</label>
+                                        <label class="primary_input_label" for="">{{ termLabel() }}</label>
                                         <select class="primary_select form-control" name="semester_id">
                                             <option data-display="@lang('fees.all')" value="">@lang('fees.all')</option>
                                             @foreach (@$semesters ?? [] as $semester)

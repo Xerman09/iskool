@@ -299,6 +299,16 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('payment-plan-assign-edit/{id}', ['as' => 'payment-plan-assign-edit', 'uses' => 'Admin\Academics\PaymentPlanAssignController@edit'])->middleware('userRolePermission:payment-plan-assign');
         Route::post('payment-plan-assign-update', ['as' => 'payment-plan-assign-update', 'uses' => 'Admin\Academics\PaymentPlanAssignController@update'])->middleware('userRolePermission:payment-plan-assign');
 
+        // Everyone whose StudentRecord is still 'pending' this year, so reception stops
+        // hunting for them down the Assign Program table. Read-only: the Generate Invoice
+        // button on it posts to assign-program-generate-invoice above.
+        Route::get('pending-enrollees', ['as' => 'pending-enrollees', 'uses' => 'Admin\Academics\PendingEnrolleesController@index'])->middleware('userRolePermission:pending-enrollees');
+
+        // The registrar enrolling a student into blocks at the counter - same rules as the
+        // student's own student-subject-registration (routes/student.php), same trait.
+        Route::get('admin-subject-registration', ['as' => 'admin-subject-registration', 'uses' => 'Admin\Academics\AdminSubjectRegistrationController@index'])->middleware('userRolePermission:admin-subject-registration');
+        Route::post('admin-subject-registration-store', ['as' => 'admin-subject-registration-store', 'uses' => 'Admin\Academics\AdminSubjectRegistrationController@register'])->middleware('userRolePermission:admin-subject-registration');
+
         Route::get('item-order-approval', ['as' => 'item-order-approval', 'uses' => 'Admin\Academics\ItemOrderApprovalController@index'])->middleware('userRolePermission:item-order-approval');
         Route::post('item-order-approval-approve/{id}', ['as' => 'item-order-approval-approve', 'uses' => 'Admin\Academics\ItemOrderApprovalController@approve'])->middleware('userRolePermission:item-order-approval');
         Route::post('item-order-approval-reject/{id}', ['as' => 'item-order-approval-reject', 'uses' => 'Admin\Academics\ItemOrderApprovalController@reject'])->middleware('userRolePermission:item-order-approval');
@@ -1451,6 +1461,16 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
 
 
         // Tabulation Sheet Report
+        /* Student Report - how a school year's students stand this term: enrolled,
+           how they pay, how much has landed. The metric route backs the modal that
+           opens when a figure on it is clicked, and takes the same criteria so the
+           list behind a figure matches the figure. */
+        /* Not 'student-report': eskooly already serves that URI from
+           SmStudentReportController, and two GET routes on one path means the first
+           registered wins and this one is never reached. */
+        Route::get('student-standard-report', ['as' => 'student-standard-report', 'uses' => 'Admin\Report\StudentReportController@index'])->middleware('userRolePermission:student-standard-report');
+        Route::get('student-standard-report-metric', ['as' => 'student-standard-report-metric', 'uses' => 'Admin\Report\StudentReportController@metricList'])->middleware('userRolePermission:student-standard-report');
+
         Route::get('tabulation-sheet-report', ['as' => 'tabulation_sheet_report', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReport'])->middleware('userRolePermission:tabulation_sheet_report');
         Route::post('tabulation-sheet-report', ['as' => 'tabulation_sheet_report_search', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReportSearch']);
         Route::post('tabulation-sheet/print', 'Admin\Report\SmReportController@tabulationSheetReportPrint')->name('tabulation-sheet/print');

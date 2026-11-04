@@ -404,4 +404,19 @@ return[
     'changed_by' => 'Changed By',
     'date' => 'Date',
     'status' => 'Status',
+
+    // The queue of students whose enrollment invoice has still to be raised.
+    'pending_enrollees' => 'Pending Enrollees',
+    'pending_enrollees_hint' => 'Registration done, nothing billed yet. Generating the invoice is all that is left.',
+    'no_pending_enrollees' => 'No invoices are waiting to be generated.',
+    'pending_enrollees_count' => ':count waiting',
+    'awaiting_registration_note' => ':count student(s) have been assigned a program but have not registered subjects yet, so there is nothing to bill them for.',
+
+    // Registrar-side counterpart of the student's Enroll in Subjects screen.
+    'enroll_student_in_subjects' => 'Enroll Student in Subjects',
+    'select_student_to_enroll' => 'Select a student to enroll in subjects.',
+    'no_students_with_program' => 'No students have been assigned a program yet. Assign one first.',
+    'student_has_no_program' => 'That student has not been assigned a program and curriculum version yet.',
+    'subjects_registered_for' => 'Subjects registered for :student.',
+    'not_included_prerequisite' => 'Not included (prerequisite not yet passed): :subjects.',
 ];

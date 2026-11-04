@@ -9,6 +9,7 @@ use App\SmClass;
 use App\SmStaff;
 use App\SmParent;
 use App\SmStudent;
+use App\SmSubject;
 use App\SmHomework;
 use App\SmClassSection;
 use App\SmNotification;
@@ -105,7 +106,12 @@ class SmHomeworkController extends Controller
             } else {
                 $classes = SmClass::get();
             }
-            return view('backEnd.homework.addHomework', compact('classes'));
+            /* A year level is shared by every program and holds both semesters' subjects, so
+               the subject dropdown listed far more than the homework was about - and nothing
+               on screen said which program each subject belonged to. */
+            $courses = courses();
+            $semesters = semesters();
+            return view('backEnd.homework.addHomework', compact('classes', 'courses', 'semesters'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -115,6 +121,17 @@ class SmHomeworkController extends Controller
     public function saveHomeworkData(SmHomeworkRequest $request)
     {
         try {
+            /* The subject carries its own program, so a submitted program that disagrees with
+               it means the form was posted against a subject list it no longer matches. Saving
+               anyway would set the homework for the wrong program's subject in silence. */
+            if ($request->filled('course_id') && $request->filled('subject_id')) {
+                $subject = SmSubject::find($request->subject_id);
+                if ($subject && $subject->course_id && $subject->course_id != $request->course_id) {
+                    Toastr::error('That subject does not belong to the selected program', 'Failed');
+                    return redirect()->back()->withInput();
+                }
+            }
+
             $destination = 'public/uploads/homeworkcontent/';
             $sections = [];
             $upload_file = fileUpload($request->homework_file, $destination);
@@ -774,7 +791,9 @@ class SmHomeworkController extends Controller
             } else {
                 $classes = SmClass::get();
             }
-            return view('backEnd.homework.homework_report', compact('classes'));
+            $courses = courses();
+            $semesters = semesters();
+            return view('backEnd.homework.homework_report', compact('classes', 'courses', 'semesters'));
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -901,7 +920,45 @@ class SmHomeworkController extends Controller
                 } else {
                     $classes = SmClass::get();
                 }
-    
+
+                /* Subject and section are filled by ajax, so the criteria came back empty
+                   after a search and the report could not be narrowed twice. The view already
+                   reads all of these; nothing was ever passing them. */
+                $courses = courses();
+                $semesters = semesters();
+                $class_id = $request->class_id;
+                $subject_id = $request->subject_id;
+                $section_id = $request->section_id;
+                $course_id = $request->course_id;
+                $semester_id = $request->semester_id;
+
+                /* Queried off SmAssignSubject rather than SmClass::subjects(), which drops the
+                   academic scope and so answers with every year the class has ever run. Unique
+                   by subject: one assign row exists per section, and the dropdown wants the
+                   subject once. */
+                $subjects = SmAssignSubject::with('subject.course')
+                    ->where('class_id', $request->class_id)
+                    ->when($request->filled('course_id'), function ($q) use ($request) {
+                        $q->whereHas('subject', function ($q2) use ($request) {
+                            $q2->where('course_id', $request->course_id);
+                        });
+                    })
+                    ->when($request->filled('semester_id'), function ($q) use ($request) {
+                        $q->whereHas('subject', function ($q2) use ($request) {
+                            $q2->where('semester_id', $request->semester_id);
+                        });
+                    })
+                    ->get()
+                    ->unique('subject_id')
+                    ->values();
+
+                $sections = SmAssignSubject::with('section')
+                    ->where('class_id', $request->class_id)
+                    ->where('subject_id', $request->subject_id)
+                    ->get()
+                    ->unique('section_id')
+                    ->values();
+
                 $homeworks = SmHomework::where('class_id', $request->class_id)
                     ->when($request->subject_id, function ($query) use ($request) {
                         $query->where('subject_id', $request->subject_id);
@@ -942,9 +999,11 @@ class SmHomeworkController extends Controller
                     }
                 }
     
-                return view('backEnd.homework.homework_report', compact('classes', 'data'));
+                return view('backEnd.homework.homework_report', compact('classes', 'data', 'courses', 'semesters', 'subjects', 'sections', 'class_id', 'subject_id', 'section_id', 'course_id', 'semester_id'));
             } catch (\Exception $e) {
-                dd($e);
+                /* dd() was left here: any failure dumped a full stack trace, with query
+                   bindings, straight to whoever ran the report. */
+                Log::error('homeworkReportSearch failed: ' . $e->getMessage());
                 Toastr::error('Operation Failed', 'Failed');
                 return redirect()->back();
             }

@@ -427,4 +427,21 @@
     'rename_menu' => 'Rename menu',
     'rename_menu_default' => 'Default:',
     'rename_menu_hint' => 'Applies to everyone in the school. Leave it empty to go back to the default name.',
+
+    // Deleting a menu this manager created, from the Available list.
+    'delete_menu' => 'Delete this menu',
+    'delete_menu_confirm' => 'Delete this menu for good? It was created here, so it belongs to the school - it goes from every role, not just this one. This cannot be undone.',
+    'menu_not_found' => 'That menu could not be found.',
+    'only_custom_menu_deletable' => 'Only a menu created here can be deleted. This one came with the system or with a module, and a screen depends on it - leaving it unused is how it stays hidden.',
+    'empty_menu_before_delete' => 'This menu still holds :count entry(s). Move them out first, then delete it.',
+    'menu_still_in_use' => 'This menu is still in use in :count role layout(s). Remove it from those first - it can only be deleted once no role is using it.',
+
+    // Applying one arrangement to more than one role.
+    'also_apply_to' => 'Also apply to',
+    'add_existing_menu' => 'Add an existing menu',
+    'which_menu' => 'Which menu',
+    'add_to_menu' => 'Add to menu',
+    'applied_to_roles' => 'Saved for :count role layout(s).',
+    'reset_confirm' => 'Reset this role\'s whole sidebar back to the default? Everything you have arranged for it will be lost. This cannot be undone.',
+    'empty_menu_before_remove' => 'This menu still holds :count item(s). Move them out first - removing the menu will not remove what is inside it.',
 );

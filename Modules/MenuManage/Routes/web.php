@@ -17,8 +17,13 @@ Route::group(['middleware' => ['subdomain']], function () {
 
             Route::get('/', 'MenuManageController@index')->name('index')->middleware('userRolePermission:menumanage.index');
             Route::post('menu-store', 'MenuManageController@store')->name('store.menu')->middleware('userRolePermission:menumanage.index');
-            Route::get('reset-with-section', 'SidebarManagerController@resetMenu')->name('reset-with-section')->middleware('userRolePermission:menumanage.index');
-            Route::get('/reset-default', 'SidebarManagerController@resetWithDefault')->name('reset-with-default')->middleware('userRolePermission:menumanage.index');
+            /* POST, not GET. Both of these delete a role's entire layout and build the
+               default back over it - which is exactly what "I arranged the sidebar and
+               it came back unset" turned out to be. As links they were one stray click,
+               one middle-click or one browser prefetch away from wiping an arrangement,
+               with nothing asked first. */
+            Route::post('reset-with-section', 'SidebarManagerController@resetMenu')->name('reset-with-section')->middleware('userRolePermission:menumanage.index');
+            Route::post('reset-default', 'SidebarManagerController@resetWithDefault')->name('reset-with-default')->middleware('userRolePermission:menumanage.index');
 
         });
     });
@@ -47,6 +52,10 @@ Route::prefix('sidebar-manager')->middleware(['auth', 'subdomain', 'userRolePerm
     Route::post('/section/sort-section', 'SidebarManagerController@sortSection')->name('sidebar-manager.sort-section');
     Route::post('/section/delete-section', 'SidebarManagerController@deleteSection')->name('sidebar-manager.delete-section');
     Route::post('/section/remove-menu', 'SidebarManagerController@removeMenu')->name('sidebar-manager.menu-remove');
+    /* Removes a self-made menu for good, from the Available list. remove-menu above only
+       makes an entry unused; this deletes the permission behind it, and only ever one the
+       manager created itself. */
+    Route::post('/section/delete-menu', 'SidebarManagerController@deleteMenu')->name('sidebar-manager.menu-delete');
 
 
 

@@ -157,8 +157,24 @@
                                                 @endif
                                             </div>
                                         </div>
+
                                     </div>
                                 </div>
+
+                                {{-- Narrows the student audience inside the roles ticked above.
+                                     Left blank, the notice reaches everyone in those roles, which
+                                     is how a notice behaved before these existed. Basic education
+                                     has no programs, so that one is skipped there.
+
+                                     Full width rather than beside the dates: three lists of
+                                     checkboxes do not fit in a column five twelfths wide, and the
+                                     programme names are long. --}}
+                                @include('backEnd.communicate.partials.noticeAudience', [
+                                    'selectedCourses' => old('course_ids', []),
+                                    'selectedClasses' => old('class_ids', []),
+                                    'selectedSections' => old('section_ids', []),
+                                    'selectedSemester' => old('semester_id'),
+                                ])
                             </div>
                             <div class="row mt-40">
                                 <div class="col-lg-12 text-center">

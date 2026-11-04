@@ -302,8 +302,20 @@ class HomeController extends Controller
 
             $notices = SmNoticeBoard::query();
             $notices->where('active_status', 1)->where('academic_id', getAcademicId())->where('school_id', $school_id) ;
+            /* whereJsonContains, not LIKE: inform_to is a JSON array of role ids, and a
+               substring match on role 2 also hits 12, 20 and 21 - every custom role an admin
+               adds once the ids climb past nine. */
             $notices->when(auth()->user()->role_id != 1, function ($query) {
-                $query->where('inform_to', 'LIKE', '%'.auth()->user()->role_id.'%');
+                $roleId = (string) auth()->user()->role_id;
+                $query->where(function ($q) use ($roleId) {
+                    $q->whereJsonContains('inform_to', $roleId)
+                        ->orWhereJsonContains('inform_to', (int) $roleId);
+                });
+            });
+            /* A notice aimed at one program or term is only for the students it names; every
+               other role sees the whole list, since the cut below role is about students. */
+            $notices->when(auth()->user()->role_id == 2, function ($query) {
+                $query->forStudent(auth()->user()->student);
             });
             $notices = $notices->get();
 

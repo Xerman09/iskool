@@ -64,16 +64,22 @@
                                 title="@lang('common.view')">
                                 <span class="ti-eye"></span>
                             </a>
-                            @if (
-                                $feesTranscation->payment_method == 'Cash' ||
-                                    $feesTranscation->payment_method == 'Cheque' ||
-                                    $feesTranscation->payment_method == 'Bank' ||
-                                    $feesTranscation->payment_method == 'Wallet')
-                                <a class="primary-btn icon-only fix-gr-bg" type="button"
-                                    href="{{ route('fees.delete-single-fees-transcation', $feesTranscation->id) }}"
-                                    data-tooltip="tooltip" title="@lang('common.delete')">
-                                    <span class="ti-trash"></span>
-                                </a>
+                            {{-- Voiding is super admin's alone: deleting a receipt is deleting
+                                 the evidence of one, so it cannot be the same person who takes
+                                 the money. The method whitelist stays - PayPal, Stripe and
+                                 Paystack are real money sitting in a merchant account, and
+                                 removing our record of one refunds nobody. --}}
+                            @if (auth()->user()->role_id == 1 &&
+                                in_array($feesTranscation->payment_method, ['Cash', 'Cheque', 'Bank', 'Wallet']))
+                                <form action="{{ route('fees.void-payment', $feesTranscation->id) }}" method="POST"
+                                    class="d-inline"
+                                    onsubmit="return confirm('@lang('fees::feesModule.void_payment_confirm')');">
+                                    @csrf
+                                    <button type="submit" class="primary-btn icon-only fix-gr-bg border-0"
+                                        data-tooltip="tooltip" title="@lang('fees::feesModule.void_payment')">
+                                        <span class="ti-trash"></span>
+                                    </button>
+                                </form>
                             @endif
                         </td>
                     </tr>

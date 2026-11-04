@@ -135,16 +135,29 @@
                                     </span>
                                 @endif
                         </div>
-                        <div class="row mt-40">
-                            <div class="col-lg-12 text-center">
-                                <button class="primary-btn fix-gr-bg">
-                                    <span class="ti-check"></span>
-                                    @lang('communicate.update_content')
-                                </button>
-                            </div>
+                    </div>
+                    </div>
+
+                    {{-- Full width below the two columns, the same as the add screen:
+                         three lists of checkboxes do not fit beside the dates. --}}
+                    @include('backEnd.communicate.partials.noticeAudience', [
+                        'uid' => 'edit',
+                        'selectedCourses' => old('course_ids', @$noticeDataDetails->course_ids ?: []),
+                        'selectedClasses' => old('class_ids', @$noticeDataDetails->class_ids ?: []),
+                        'selectedSections' => old('section_ids', @$noticeDataDetails->section_ids ?: []),
+                        'selectedSemester' => old('semester_id', @$noticeDataDetails->semester_id),
+                    ])
+
+                    <div class="row mt-40">
+                        <div class="col-lg-12 text-center">
+                            <button class="primary-btn fix-gr-bg">
+                                <span class="ti-check"></span>
+                                @lang('communicate.update_content')
+                            </button>
                         </div>
                     </div>
                 </div>
+              </div>
             </div>
         </div>
         {{ Form::close() }}

@@ -24,6 +24,19 @@
                                                             {{ menuLabel($menu->permissionInfo) }}
                                                         </div>
                                                     </div>
+                                                    {{-- Only a menu made in this manager. Everything else sitting here
+                                                         ships with the system or arrives with a module and has a screen
+                                                         behind it; being unused is already how those stay hidden. See
+                                                         SidebarManagerController@deleteMenu. --}}
+                                                    @if (@$menu->permissionInfo->is_custom)
+                                                        <div class="float-right btn_div">
+                                                            <div class="edit_icon">
+                                                                <i class="ti-trash delete_menu"
+                                                                   data-id="{{ $menu->id }}"
+                                                                   title="{{ __('menumanage::menuManage.delete_menu') }}"></i>
+                                                            </div>
+                                                        </div>
+                                                    @endif
                                                 </div>
 
                                             </div>

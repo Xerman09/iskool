@@ -63,6 +63,16 @@
                                                                                    data-custom-name="{{ $menu->permissionInfo->custom_name }}"
                                                                                    data-default-name="{{ menuDefaultLabel($menu->permissionInfo) }}"></i>
                                                                                 <i class="ti-close remove_menu"></i>
+                                                                                {{-- A menu made in this manager, offered for deletion where it
+                                                                                     actually sits. Creation places it live in every eligible
+                                                                                     role at once, so it is never in the Available list unless
+                                                                                     somebody removes it from each of them first - which is why
+                                                                                     the trash there alone could never be reached. --}}
+                                                                                @if (@$menu->permissionInfo->is_custom)
+                                                                                    <i class="ti-trash delete_menu"
+                                                                                       data-id="{{ $menu->id }}"
+                                                                                       title="{{ __('menumanage::menuManage.delete_menu') }}"></i>
+                                                                                @endif
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -133,7 +143,15 @@
 
     @push('scripts')
         <script src="{{ asset('public/backEnd/js/jquery.nestable.min.js') }}"></script>
-        <script src="{{ asset('Modules/MenuManage/Resources/assets/js/sidebar.js') }}"></script>
+        {{-- Stamped with the file's own modification time, so a changed sidebar.js
+             reaches the browser instead of whatever it cached weeks ago. Without
+             this, a fix to the saving code sits on the server while every manager
+             still runs the old copy - and the bug looks unfixed. --}}
+        @php
+            $sidebarJs = 'Modules/MenuManage/Resources/assets/js/sidebar.js';
+            $sidebarJsVersion = @filemtime(base_path($sidebarJs)) ?: null;
+        @endphp
+        <script src="{{ asset($sidebarJs) }}{{ $sidebarJsVersion ? '?v=' . $sidebarJsVersion : '' }}"></script>
     @endpush
 
 

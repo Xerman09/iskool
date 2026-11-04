@@ -309,7 +309,14 @@ if (!function_exists('sidebar_menus')) {
     function sidebar_menus()
     {
         $user = auth()->user();
-        return $sidebars = Cache::rememberForever(sidebarCacheKey($user), function () use ($user) {
+
+        /* Ten minutes, not forever. The Sidebar Manager clears this key on every write, so
+           an edit still shows at once; the expiry is for the case no write can cover - a
+           deploy. A tree cached before an update to this query, or to the layout rows it
+           reads, was served unchanged afterwards for good, which is why a pulled fix looked
+           like it had not arrived. It now heals on its own rather than needing cache:clear,
+           and it covers any future invalidation path someone forgets to add. */
+        return $sidebars = Cache::remember(sidebarCacheKey($user), now()->addMinutes(10), function () use ($user) {
             return Sidebar::with(['subModule', 'permissionInfo'])
                 ->whereNull('parent')
                 ->whereHas('permissionInfo', function ($q) use ($user) {
@@ -627,5 +634,161 @@ if (!function_exists('sidebarManagerRoleId')) {
         }
 
         return auth()->check() ? (int) auth()->user()->role_id : 0;
+    }
+}
+
+if (!function_exists('dayAbbreviation')) {
+    /**
+     * The short weekday label a schedule is normally read in - the M of MWF.
+     *
+     * Keyed on the weekday's own name rather than the weekend table's `order`,
+     * because a school can move the start of its week from General Settings (see
+     * SmSystemSettingController), which rewrites every `order`: Monday sits at 1
+     * here but was seeded as 3. A day renamed past this list keeps its own first
+     * three letters instead of being guessed at.
+     */
+    function dayAbbreviation($name)
+    {
+        $abbreviations = [
+            'monday' => 'M',
+            'tuesday' => 'T',
+            'wednesday' => 'W',
+            'thursday' => 'Th',
+            'friday' => 'F',
+            'saturday' => 'S',
+            'sunday' => 'Su',
+        ];
+
+        $key = strtolower(trim((string) $name));
+
+        return $abbreviations[$key] ?? ucfirst(substr($key, 0, 3));
+    }
+}
+
+if (!function_exists('groupedScheduleSlots')) {
+    /**
+     * One line per arrangement, instead of one per weekday.
+     *
+     * A class routine stores a row per day, so a subject met MWF at eight by the
+     * same teacher in the same section arrived as three rows. Listing all three
+     * repeated the section and the teacher word for word and buried the one thing
+     * that differs between blocks, which is exactly what someone reading a
+     * curriculum is looking for. This is how the schedule already reads on Enroll
+     * in Subjects, where the row is the block and only the days stack inside it.
+     *
+     * Grouped on section, time and teacher, so two sections of one subject - or
+     * the same hour handed to a second teacher - still stand apart. Days are
+     * ordered by the weekend table's `order`, which honours a school whose week
+     * starts somewhere other than Monday; sorting by day id would read "FM" for a
+     * Monday-and-Friday pair, those ids beginning at Saturday.
+     */
+    function groupedScheduleSlots($slots)
+    {
+        return collect($slots)
+            ->groupBy(function ($slot) {
+                return implode('|', [
+                    $slot->section_id,
+                    $slot->start_time,
+                    $slot->end_time,
+                    $slot->teacher_id,
+                ]);
+            })
+            ->map(function ($group) {
+                $ordered = $group->sortBy(function ($slot) {
+                    return optional($slot->weekend)->order ?? PHP_INT_MAX;
+                });
+                $first = $ordered->first();
+
+                return [
+                    'days' => $ordered->map(function ($slot) {
+                        return dayAbbreviation(optional($slot->weekend)->name);
+                    })->unique()->implode(''),
+                    'start_time' => $first->start_time,
+                    'end_time' => $first->end_time,
+                    'section' => optional($first->section)->section_name,
+                    'teacher' => optional($first->teacherDetail)->full_name,
+                    /* Earliest hour first, then by the day it starts on, so the cell
+                       reads down the week the way a timetable does. Padded because
+                       these sort as text: "9" would otherwise land after "10". */
+                    'sort_key' => $first->start_time . '|' . str_pad(
+                        (string) (optional($first->weekend)->order ?? 99), 2, '0', STR_PAD_LEFT
+                    ),
+                ];
+            })
+            ->sortBy('sort_key')
+            ->values();
+    }
+}
+
+if (!function_exists('activeSemesterId')) {
+    /**
+     * The term the school is running right now.
+     *
+     * is_active marks it; active_status is a delete flag and every term carries it.
+     * Ordered so the answer is stable when more than one is left open by mistake -
+     * two is one too many, but a report that changes its mind between page loads is
+     * worse than one that picks the earliest and stays there.
+     *
+     * Falls back to the school on the row rather than the logged-in user, because
+     * this also runs from a backfill where nobody is logged in.
+     */
+    function activeSemesterId($schoolId = null)
+    {
+        $schoolId = $schoolId ?: (auth()->check() ? auth()->user()->school_id : null);
+
+        return \App\Semester::when($schoolId, fn ($q) => $q->where('school_id', $schoolId))
+            ->where('is_active', 1)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->value('id');
+    }
+}
+
+if (!function_exists('roomCapacityShortfall')) {
+    /**
+     * Whether a room seats fewer people than the block that would sit in it.
+     *
+     * The roll is the block's - blockStudents() reads the registrations for this
+     * exact class, section and subject, which is who actually turns up. The count
+     * this replaces asked sm_students for a class and section and then narrowed it
+     * by the current academic year against a column holding the year of admission:
+     * it returned zero for everyone, always, so the capacity filter built on it had
+     * never once hidden a room.
+     *
+     * Reported rather than enforced, which is why this returns a description and
+     * not a boolean. Two classes cannot share a room at one hour - that is a
+     * contradiction and is refused - but a room being too small is a fact about the
+     * building: refuse the save and a block of 45 in a school whose largest room
+     * seats 40 can be timetabled nowhere at all.
+     *
+     * A room with no capacity recorded is passed over. Nothing is known about it,
+     * so nothing is claimed.
+     *
+     * @return array{room: string, capacity: int, students: int, subject: string}|null
+     */
+    function roomCapacityShortfall($roomId, $classId, $sectionId, $subjectId)
+    {
+        if (!$roomId || !$subjectId || !$classId) {
+            return null;
+        }
+
+        $room = \App\SmClassRoom::where('school_id', auth()->user()->school_id)->find($roomId);
+
+        if (!$room || !$room->capacity) {
+            return null;
+        }
+
+        $seated = count(blockStudents($classId, $sectionId, $subjectId));
+
+        if ($seated <= $room->capacity) {
+            return null;
+        }
+
+        return [
+            'room' => $room->room_no,
+            'capacity' => (int) $room->capacity,
+            'students' => $seated,
+            'subject' => optional(\App\SmSubject::find($subjectId))->subject_name ?: 'Subject',
+        ];
     }
 }

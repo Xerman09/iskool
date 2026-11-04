@@ -1342,80 +1342,14 @@ class FeesController extends Controller
         }
     }
 
-    public function deleteSingleFeesTranscation($id)
-    {
-        try {
-            $total_amount = 0;
-            $transcation = FmFeesTransaction::find($id);
-            $allTranscations = FmFeesTransactionChield::where('fees_transaction_id', $transcation->id)->get();
-            foreach ($allTranscations as $key => $allTranscation) {
-                $total_amount += $allTranscation->paid_amount;
+    /* deleteSingleFeesTranscation() lived here. It is now
+       FeesOverrideController@voidPayment, which reverses the fine and the waiver as
+       well as the paid amount, recomputes the invoice's status, reconsiders the
+       student's enrolment, refunds a wallet payment to the student rather than to
+       the cashier who recorded it, and runs inside a transaction - and which only
+       super admin can reach. The copy in Http/Controllers/api/FeesController still
+       serves the mobile route. */
 
-                $transcationId = FmFeesTransaction::find($allTranscation->fees_transaction_id);
-               
-
-                $fesInvoiceId = FmFeesInvoiceChield::where('fees_invoice_id', $transcationId->fees_invoice_id)
-                    ->where('fees_type', $allTranscation->fees_type)
-                    ->first();
-
-                $storeFeesInvoiceChield = FmFeesInvoiceChield::find($fesInvoiceId->id);
-                $storeFeesInvoiceChield->due_amount = $storeFeesInvoiceChield->due_amount + $allTranscation->paid_amount;
-                $storeFeesInvoiceChield->paid_amount = $storeFeesInvoiceChield->paid_amount - $allTranscation->paid_amount;
-                $storeFeesInvoiceChield->update();
-                $fees_inv = FmFeesInvoice::find($transcationId->fees_invoice_id);
-                if( $fees_inv){
-                    $cache_key = 'have_due_fees_'.$transcationId->user_id ;
-                    Cache::rememberForever( $cache_key , function (){
-                        return true;
-                    });
-                }
-            }
-
-            if ($transcation->payment_method == "Wallet") {
-                $user = User::find($transcation->user_id);
-                $user->wallet_balance = $user->wallet_balance + $total_amount;
-                $user->update();
-
-                $addPayment = new WalletTransaction();
-                $addPayment->amount = $total_amount;
-                $addPayment->payment_method = $transcation->payment_method;
-                $addPayment->user_id = $user->id;
-                $addPayment->type = 'fees_refund';
-                $addPayment->status = 'approve';
-                $addPayment->note = 'Fees Payment';
-                $addPayment->school_id = Auth::user()->school_id;
-                $addPayment->academic_id = getAcademicId();
-                $addPayment->save();
-            } elseif ($transcation->payment_method == "Bank") {
-                // Reverse the bank balance this transaction credited - otherwise the bank
-                // account stays permanently inflated by this deleted payment's amount.
-                $bank = SmBankAccount::where('id', $transcation->bank_id)
-                    ->where('school_id', Auth::user()->school_id)
-                    ->first();
-                if ($bank) {
-                    $bank->current_balance = $bank->current_balance - $total_amount;
-                    $bank->update();
-                }
-                SmBankStatement::where('item_sell_id', $transcation->id)->delete();
-            }
-
-            SmAddIncome::where('fees_collection_id', $id)->delete();
-            $transcation->delete();
-
-            //Notification
-            $student = SmStudent::with('parents')->find($transcation->student_id);
-            sendNotification("Delete Fees Payment", null, 1, 1);
-            sendNotification("Delete Fees Payment", null, $student->user_id, 2);
-            sendNotification("Delete Fees Payment", null, $student->parents->user_id, 3);
-
-            Toastr::success('Delete Successful', 'Success');
-            return redirect()->route('fees.fees-invoice-list');
-
-        } catch (\Exception $e) {
-            Toastr::error('Operation Failed', 'Failed');
-            return redirect()->back();
-        }
-    }
 
     public function singlePaymentView($id, $type)
     {
@@ -1493,6 +1427,13 @@ class FeesController extends Controller
         if (isset($studentInvoices)){
             return Datatables::of($studentInvoices)
                     ->addIndexColumn()
+                    // The number printed on the invoice the person is holding. It was
+                    // stored all along but never shown, so reception could only find an
+                    // invoice by whose it was - no use when someone quotes a number off a
+                    // receipt.
+                    ->addColumn('invoice_no', function($row){
+                        return $row->invoice_id ?: '-';
+                    })
                     ->addColumn('student_name', function($row) use ($audience){
                         $name = $audience === 'staff' ? @$row->staffInfo->full_name : @$row->studentInfo->full_name;
                         $btn = '<a href="' . route('fees.fees-invoice-view', ['id' => $row->id, 'state' => 'view']) . '" target="_blank">' . $name . '</a>';
@@ -1562,9 +1503,10 @@ class FeesController extends Controller
                     ->rawColumns(['student_name', 'status', 'action', 'date'])
                     // Quick Search's default (yajra's global search) matches the
                     // term as a substring against every column, including hidden
-                    // ones - "a" matches almost every row. Reception only ever
-                    // means "find this person's invoice", so replace it with a
-                    // starts-with match against just the name.
+                    // ones - "a" matches almost every row. Reception means one of
+                    // two things by it: whose invoice this is, or the number
+                    // printed on the one in front of them. So: the name from its
+                    // start, or the invoice number anywhere inside.
                     ->filter(function ($query) use ($request, $audience) {
                         $term = $request->search['value'] ?? null;
                         if (!$term) {
@@ -1572,8 +1514,15 @@ class FeesController extends Controller
                         }
 
                         $relation = $audience === 'staff' ? 'staffInfo' : 'studentInfo';
-                        $query->whereHas($relation, function ($q) use ($term) {
-                            $q->where('full_name', 'like', $term . '%');
+                        $query->where(function ($q) use ($term, $relation) {
+                            $q->whereHas($relation, function ($q2) use ($term) {
+                                $q2->where('full_name', 'like', $term . '%');
+                            })
+                            /* Contained rather than starts-with, because an invoice
+                               number is built prefix-first (see feesInvoiceNumber())
+                               and the part anyone reads off a receipt is the tail:
+                               "26" has to find eSkoolyPro-2-Fir...--26. */
+                            ->orWhere('invoice_id', 'like', '%' . $term . '%');
                         });
                     }, true)
                     ->make(true);

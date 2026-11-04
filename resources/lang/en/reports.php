@@ -165,4 +165,46 @@ return [
     'break' => 'Break',
     'average_passing_mark' => 'Average Passing Mark',
 
+    /* Standard Student Report - the per-term standing of everyone in a school year.
+       Its own key rather than reports.student_report, which eskooly's older student
+       report already owns: both sit in the same sidebar section, and sharing the key
+       put two entries called "Student Report" one above the other. */
+    'standard_student_report' => 'Standard Student Report',
+    'school_year' => 'School Year',
+    'whole_year' => 'Whole year',
+    'all_programs' => 'All programs',
+    'student_summary' => 'Student Summary',
+    'enrollment_summary' => 'Enrollment Summary',
+    'payment_method_summary' => 'Payment Method',
+    'payment_status_summary' => 'Payment Status',
+    'all_students_breakdown' => 'ALL STUDENTS BREAKDOWN',
+    'click_to_view_students' => 'Click a figure to see the students behind it',
+    'no_students_found' => 'No students match these criteria.',
+    'students_counted' => ':count student(s)',
+    'reset' => 'Reset',
+
+    /* Column headings, kept short on purpose: the card titles they come from are
+       three words long, and eight of those ran the breakdown table past the edge
+       of its own card. */
+    'col_enrollment' => 'Enrollment',
+    'col_method' => 'Method',
+    'col_status' => 'Status',
+
+    'student_metric_total' => 'Total Students',
+    'student_metric_active' => 'Active',
+    'student_metric_inactive' => 'Inactive',
+    'student_metric_inactive_graduated' => 'Graduated',
+    'student_metric_inactive_lapsed' => 'Lapsed (2 terms)',
+    'student_metric_inactive_not_registered' => 'Not registered',
+    'student_metric_inactive_unsettled' => 'Unpaid, no plan',
+    'student_metric_enrolled' => 'Enrolled',
+    'student_metric_not_enrolled' => 'Not Enrolled',
+    'student_metric_cash' => 'Cash',
+    'student_metric_plan' => 'Payment Plan',
+    'student_metric_not_billed' => 'Not Billed Yet',
+    'student_metric_paid' => 'Paid',
+    'student_metric_partial' => 'Partial',
+    'student_metric_unpaid' => 'Unpaid',
+    'student_metric_no_invoice' => 'No Invoice',
+
 ];
