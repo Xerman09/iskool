@@ -21,7 +21,10 @@
              'total' => 'net', 'rows' => ['assessed', 'fine', 'waiver'],
              'hint' => __('reports.fees_assessment_hint')],
             ['title' => __('reports.fees_collection_summary'), 'accent' => '#1a9d6a', 'money' => true,
-             'total' => 'collected', 'rows' => ['collected', 'outstanding', 'wallet'],
+             /* Prior Years sits here rather than in Aging: the aging buckets split
+                this period's balance, while arrears are a different period
+                altogether and are never added into the totals above. */
+             'total' => 'collected', 'rows' => ['collected', 'outstanding', 'wallet', 'prior_balance'],
              'hint' => __('reports.fees_collection_hint', ['rate' => $summary['collection_rate']])],
             ['title' => __('reports.payment_status_summary'), 'accent' => '#e08b1e', 'money' => false,
              'total' => 'all', 'rows' => ['paid', 'partial', 'unpaid', 'no_invoice']],
@@ -426,6 +429,7 @@
                                             <th>@lang('reports.fees_metric_fine') ({{ $currency }})</th>
                                             <th>@lang('reports.fees_metric_collected') ({{ $currency }})</th>
                                             <th>@lang('reports.col_balance') ({{ $currency }})</th>
+                                            <th>@lang('reports.col_prior') ({{ $currency }})</th>
                                             <th>@lang('reports.col_overdue')</th>
                                             <th>@lang('reports.col_plan')</th>
                                             <th>@lang('reports.col_next_due')</th>
@@ -450,6 +454,12 @@
                                                 <td class="amount-cell">{{ number_format($row['paid'], 2) }}</td>
                                                 <td class="amount-cell {{ $row['balance'] > 0 ? 'amount-owing' : ($row['balance'] < 0 ? 'amount-credit' : '') }}">
                                                     {{ number_format($row['balance'], 2) }}
+                                                </td>
+                                                {{-- The whole point of the column: a student billed nothing
+                                                     this period still shows what they carried in, so a
+                                                     balance of zero cannot read as owing nothing. --}}
+                                                <td class="amount-cell {{ $row['prior_balance'] > 0 ? 'amount-owing' : ($row['prior_balance'] < 0 ? 'amount-credit' : '') }}">
+                                                    {{ $row['prior_balance'] != 0 ? number_format($row['prior_balance'], 2) : '-' }}
                                                 </td>
                                                 <td class="amount-cell">
                                                     {{ $row['overdue_days'] > 0 ? $row['overdue_days'] : '-' }}

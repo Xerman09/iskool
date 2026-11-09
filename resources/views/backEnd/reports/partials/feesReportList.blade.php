@@ -49,6 +49,7 @@
                         <th class="text-right">@lang('reports.fees_metric_fine')</th>
                         <th class="text-right">@lang('reports.fees_metric_collected')</th>
                         <th class="text-right">@lang('reports.col_balance')</th>
+                        <th class="text-right">@lang('reports.col_prior')</th>
                         <th class="text-right">@lang('reports.col_overdue')</th>
                         <th>@lang('reports.col_next_due')</th>
                         <th>@lang('reports.col_status')</th>
@@ -70,6 +71,7 @@
                             <td class="text-right">{{ number_format($row['fine'], 2) }}</td>
                             <td class="text-right">{{ number_format($row['paid'], 2) }}</td>
                             <td class="text-right">{{ number_format($row['balance'], 2) }}</td>
+                            <td class="text-right">{{ $row['prior_balance'] != 0 ? number_format($row['prior_balance'], 2) : '-' }}</td>
                             <td class="text-right">{{ $row['overdue_days'] > 0 ? $row['overdue_days'] : '-' }}</td>
                             <td>
                                 @if ($row['next_due'])
@@ -109,6 +111,7 @@
                         <th class="text-right">{{ $currency }}{{ number_format($totals['fine'], 2) }}</th>
                         <th class="text-right">{{ $currency }}{{ number_format($totals['collected'], 2) }}</th>
                         <th class="text-right">{{ $currency }}{{ number_format($totals['outstanding'], 2) }}</th>
+                        <th class="text-right">{{ $currency }}{{ number_format($totals['prior_balance'], 2) }}</th>
                         {{-- Overdue, Next Due, Status and Action: four columns the totals
                              row has nothing to say about. --}}
                         <th colspan="4"></th>

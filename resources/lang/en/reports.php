@@ -266,6 +266,8 @@ return [
     'fees_metric_not_on_plan' => 'Paying in Full',
     'fees_metric_plan_overdue' => 'Missed an Instalment',
     'col_plan' => 'Plan',
+    'col_prior' => 'Prior Years',
+    'fees_metric_prior_balance' => 'Owed from Earlier Years',
     'col_next_due' => 'Next Due',
     'fees_plan_summary' => 'Payment Plans',
     'fees_plan_hint' => 'Balances of students on a plan, and of those paying in full.',

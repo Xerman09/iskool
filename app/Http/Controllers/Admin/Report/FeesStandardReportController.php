@@ -35,9 +35,11 @@ use Illuminate\Support\Facades\Log;
  */
 class FeesStandardReportController extends Controller
 {
-    /* ledgerFor() and priorYearBalanceFor(), so a printed statement is built from
-       the same source as the on-screen ledger a student reads - two different
-       answers to "what do I owe" is the one outcome worth engineering against. */
+    /* ledgerFor(), so a printed statement's charges and payments come from the
+       same source as the on-screen ledger a student reads - two different answers
+       to "what do I owe" is the one outcome worth engineering against. The
+       trait's priorYearBalanceFor() is deliberately not used; see
+       priorBalancesFor() for why. */
     use EnrollmentBalanceBreakdown;
 
     public function __construct()
@@ -73,6 +75,7 @@ class FeesStandardReportController extends Controller
         'aging_current', 'aging_1_30', 'aging_31_60', 'aging_61_90', 'aging_90_plus',
         'wallet',
         'on_plan', 'not_on_plan', 'plan_overdue',
+        'prior_balance',
     ];
 
     public function index(Request $request)
@@ -242,52 +245,13 @@ class FeesStandardReportController extends Controller
         $invoiceIds = $invoices->pluck('id');
         $payments = $ledger['transactions']->whereIn('fees_invoice_id', $invoiceIds)->values();
 
-        $today = now()->startOfDay();
-        $assessed = 0.0;
-        $waiver = 0.0;
-        $fine = 0.0;
-        $paid = 0.0;
-        $overdueDays = null;
+        /* The instalment schedules behind these invoices, one query for the lot, and
+           fetched before the totals below because the schedule is what sets the date
+           this money was promised by.
 
-        /* Per invoice as well as in total: a statement that gives only one figure
-           leaves whoever is being chased unable to see which charge it came from. */
-        $breakdown = $invoices->map(function ($invoice) use (&$assessed, &$waiver, &$fine, &$paid, &$overdueDays, $today) {
-            $lines = $invoice->invoiceDetails;
-
-            $invAssessed = (float) $lines->sum('amount');
-            $invWaiver = (float) $lines->sum('weaver');
-            $invFine = (float) $lines->sum('fine');
-            $invPaid = (float) $lines->sum('paid_amount');
-            $invBalance = ($invAssessed + $invFine) - ($invPaid + $invWaiver);
-
-            $assessed += $invAssessed;
-            $waiver += $invWaiver;
-            $fine += $invFine;
-            $paid += $invPaid;
-
-            if ($invBalance > 0 && $invoice->due_date) {
-                $days = -1 * $today->diffInDays(\Carbon\Carbon::parse($invoice->due_date)->startOfDay(), false);
-                $overdueDays = max($overdueDays ?? 0, $days);
-            }
-
-            return [
-                'invoice' => $invoice,
-                'lines' => $lines,
-                'assessed' => $invAssessed,
-                'waiver' => $invWaiver,
-                'fine' => $invFine,
-                'paid' => $invPaid,
-                'balance' => $invBalance,
-            ];
-        });
-
-        $net = ($assessed + $fine) - $waiver;
-        $balance = $net - $paid;
-
-        /* The instalment schedules behind these invoices, one query for the lot.
-           A statement for somebody on a plan that showed only a single balance
-           would leave out the only thing they were actually told - which amount is
-           due on which date. */
+           A statement for somebody on a plan that showed only a single balance would
+           leave out the only thing they were actually told - which amount is due on
+           which date. */
         $planAssigns = PaymentPlanAssign::where('school_id', $student->school_id)
             ->where('active_status', 1)
             ->whereIn('fm_fees_invoice_id', $invoiceIds)
@@ -307,20 +271,73 @@ class FeesStandardReportController extends Controller
                 'invoice' => $invoice,
                 'schedule' => $this->planScheduleFor($assign, max(0, $invPaid - (float) $assign->baseline_paid_amount)),
             ];
+        })->keyBy(fn ($plan) => $plan['assign']->fm_fees_invoice_id);
+
+        $today = now()->startOfDay();
+        $assessed = 0.0;
+        $waiver = 0.0;
+        $fine = 0.0;
+        $paid = 0.0;
+        $overdueDays = null;
+
+        /* Per invoice as well as in total: a statement that gives only one figure
+           leaves whoever is being chased unable to see which charge it came from. */
+        $breakdown = $invoices->map(function ($invoice) use (&$assessed, &$waiver, &$fine, &$paid, &$overdueDays, $today, $schedules) {
+            $lines = $invoice->invoiceDetails;
+
+            $invAssessed = (float) $lines->sum('amount');
+            $invWaiver = (float) $lines->sum('weaver');
+            $invFine = (float) $lines->sum('fine');
+            $invPaid = (float) $lines->sum('paid_amount');
+            $invBalance = ($invAssessed + $invFine) - ($invPaid + $invWaiver);
+
+            $assessed += $invAssessed;
+            $waiver += $invWaiver;
+            $fine += $invFine;
+            $paid += $invPaid;
+
+            /* The same deadline the report ages against - the next unsettled
+               instalment where a plan exists, the invoice's own due date otherwise.
+               Read off the invoice here too and the statement would say eight days
+               late under a report saying fifteen, which is the one thing a statement
+               printed off a report must not do. */
+            $plan = $schedules->get($invoice->id);
+            $next = $plan ? $this->nextInstallmentOf($plan['schedule']) : null;
+            $deadline = $plan ? ($next ? $next['due_date'] : null) : $invoice->due_date;
+
+            if ($invBalance > 0 && $deadline) {
+                $days = -1 * $today->diffInDays(\Carbon\Carbon::parse($deadline)->startOfDay(), false);
+                $overdueDays = max($overdueDays ?? 0, $days);
+            }
+
+            return [
+                'invoice' => $invoice,
+                'lines' => $lines,
+                'assessed' => $invAssessed,
+                'waiver' => $invWaiver,
+                'fine' => $invFine,
+                'paid' => $invPaid,
+                'balance' => $invBalance,
+            ];
         });
 
+        $net = ($assessed + $fine) - $waiver;
+        $balance = $net - $paid;
+
         /* Arrears from years before this one, which the figures above cannot show:
-           they are of the year being reported on. Only asked when that year is the
-           open one, because priorYearBalanceFor() reckons "prior" against the
-           session's year rather than against a year named in the criteria - asked of
-           an older year it would answer about the wrong one.
+           they are of the period being reported on. The same bulk call the report
+           uses, so the note on a statement and the Prior Years column it was
+           printed from are one answer rather than two.
 
            Never asked of a whole stay: every year is already in the figures above,
            so an arrears note would be the same debt stated twice. */
-        $priorBalance = $criteria['scope'] !== 'whole_stay'
-            && (int) $criteria['academicId'] === (int) getAcademicId()
-            ? (float) $this->priorYearBalanceFor($student)
-            : null;
+        $priorBalance = $criteria['scope'] === 'whole_stay'
+            ? null
+            : (float) ($this->priorBalancesFor(
+                collect([$student->id]),
+                $student->school_id,
+                $criteria['academicId']
+            )[$student->id] ?? 0);
 
         return [
             'student' => $student,
@@ -338,6 +355,88 @@ class FeesStandardReportController extends Controller
             'aging' => $balance > 0 ? $this->agingBucketOf($overdueDays) : null,
             'wallet' => $this->walletBalanceOf($student),
         ];
+    }
+
+    /**
+     * What each of these students still owes from school years before the one
+     * being reported on, keyed by student id.
+     *
+     * The trait has priorYearBalanceFor(), but it answers for one student in four
+     * queries and reckons "prior" against the session's year rather than the year
+     * in the criteria - so on a report of an older year it would answer about the
+     * wrong one. This does the whole population in three, against the year asked
+     * about, and totals the invoice lines with this report's own arithmetic rather
+     * than summing the stored due_amount column, which only the payment flow
+     * maintains.
+     *
+     * Signed, not clamped: a credit carried out of an earlier year is as real as a
+     * debt, and the page decides which to show.
+     */
+    private function priorBalancesFor($studentIds, $schoolId, $academicId)
+    {
+        $current = SmAcademicYear::where('school_id', $schoolId)->find($academicId);
+
+        if (!$current || $studentIds->isEmpty()) {
+            return collect();
+        }
+
+        /* Later by start date, or - when two years carry the same one, which happens
+           readily because the date is typed by hand and a year copied from another
+           inherits its dates - by the order they were created in.
+
+           Prior is then everything that is neither this year nor a later one, which
+           is deliberately the wider way round. Listing the earlier years and asking
+           for invoices in them misses any invoice whose academic year has since been
+           deleted: this database has an invoice stamped academic_id 10 against a
+           school whose years are 1, 11 and 15, and a student carrying 22,500 of it
+           reported as owing nothing. An unknown year is treated as an old one,
+           because that is overwhelmingly what it is. */
+        $laterYearIds = SmAcademicYear::where('school_id', $schoolId)
+            ->where('id', '!=', $current->id)
+            ->where(function ($q) use ($current) {
+                $q->where('starting_date', '>', $current->starting_date)
+                    ->orWhere(function ($q2) use ($current) {
+                        $q2->where('starting_date', $current->starting_date)
+                            ->where('id', '>', $current->id);
+                    });
+            })
+            ->pluck('id');
+
+        $invoices = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('school_id', $schoolId)
+            ->whereIn('student_id', $studentIds)
+            /* An invoice with no year at all is also not of this one. */
+            ->where(function ($q) use ($academicId) {
+                $q->whereNull('academic_id')->orWhere('academic_id', '!=', $academicId);
+            })
+            ->whereNotIn('academic_id', $laterYearIds)
+            ->get(['id', 'student_id']);
+
+        if ($invoices->isEmpty()) {
+            return collect();
+        }
+
+        $totals = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoices->pluck('id'))
+            ->selectRaw('fees_invoice_id,
+                COALESCE(SUM(amount),0) amount,
+                COALESCE(SUM(fine),0) fine,
+                COALESCE(SUM(paid_amount),0) paid,
+                COALESCE(SUM(weaver),0) weaver')
+            ->groupBy('fees_invoice_id')
+            ->get()
+            ->keyBy('fees_invoice_id');
+
+        return $invoices->groupBy('student_id')->map(function ($group) use ($totals) {
+            $balance = 0.0;
+
+            foreach ($group as $invoice) {
+                $total = $totals->get($invoice->id);
+                $balance += ((float) optional($total)->amount + (float) optional($total)->fine)
+                    - ((float) optional($total)->paid + (float) optional($total)->weaver);
+            }
+
+            return round($balance, 2);
+        });
     }
 
     /**
@@ -625,9 +724,17 @@ class FeesStandardReportController extends Controller
                 ->pluck('wallet_balance', 'id')
             : collect();
 
+        /* Arrears carried in from earlier years, which the figures of this period
+           cannot show - and without which a collection report says zero against a
+           student who owes thousands. Not asked over a whole stay: every year is
+           already in the figures, so it would be the same debt counted twice. */
+        $priorBalances = $wholeStay
+            ? collect()
+            : $this->priorBalancesFor($records->pluck('student_id')->unique(), $schoolId, $academicId);
+
         $today = now()->startOfDay();
 
-        $rows = $records->map(function ($record) use ($invoices, $totals, $plans, $wallets, $today, $wholeStay) {
+        $rows = $records->map(function ($record) use ($invoices, $totals, $plans, $wallets, $priorBalances, $today, $wholeStay) {
             $student = $record->studentDetail;
             /* Keyed as the grouping above was - by student over a stay, by record
                otherwise. */
@@ -719,6 +826,10 @@ class FeesStandardReportController extends Controller
                 'status' => $this->paymentStatusOf($own->count(), $paid, $balance),
                 'aging' => $balance > 0 ? $this->agingBucketOf($overdueDays) : null,
                 'overdue_days' => $balance > 0 ? max(0, (int) ($overdueDays ?? 0)) : 0,
+                /* Reported beside this period's balance, never added into it: the
+                   two are of different periods, and one figure covering both could
+                   not be reconciled against either. */
+                'prior_balance' => (float) ($priorBalances[$student->id] ?? 0),
                 'on_plan' => $onPlan,
                 /* Null once every installment is settled, which is how a finished
                    plan stops being chased. */
@@ -849,6 +960,13 @@ class FeesStandardReportController extends Controller
         $summary['plan_overdue'] = round((float) $planOverdue->sum('next_due_amount'), 2);
         $summary['count_plan_overdue'] = $planOverdue->count();
 
+        /* Only what is owed. A credit carried out of an earlier year is kept out of
+           the arrears figure for the same reason a credit balance is kept out of
+           outstanding: it is not money anyone can collect. */
+        $withArrears = $rows->where('prior_balance', '>', 0);
+        $summary['prior_balance'] = round((float) $withArrears->sum('prior_balance'), 2);
+        $summary['count_prior_balance'] = $withArrears->count();
+
         return $summary;
     }
 
@@ -879,6 +997,8 @@ class FeesStandardReportController extends Controller
                 return $rows->where('on_plan', true)
                     ->filter(fn ($r) => $r['balance'] > 0 && $r['overdue_days'] > 0)
                     ->values();
+            case 'prior_balance':
+                return $rows->where('prior_balance', '>', 0)->values();
             case 'paid':
             case 'partial':
             case 'unpaid':
