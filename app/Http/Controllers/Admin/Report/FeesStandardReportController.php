@@ -748,6 +748,7 @@ class FeesStandardReportController extends Controller
             $nextDue = null;
             $nextDueAmount = 0.0;
             $onPlan = false;
+            $buckets = $this->emptyBuckets();
 
             foreach ($own as $invoice) {
                 $total = $totals->get($invoice->id);
@@ -780,11 +781,13 @@ class FeesStandardReportController extends Controller
                    balance is aged against. Cash payers still fall back to the
                    invoice. */
                 $plan = $plans->get($invoice->id);
+                $schedule = null;
 
                 if ($plan) {
                     $onPlan = true;
                     $paidSoFar = max(0, $invPaid - (float) $plan->baseline_paid_amount);
-                    $next = $this->nextInstallmentOf($this->planScheduleFor($plan, $paidSoFar));
+                    $schedule = ['schedule' => $this->planScheduleFor($plan, $paidSoFar)];
+                    $next = $this->nextInstallmentOf($schedule['schedule']);
 
                     if ($next) {
                         /* The soonest unmet promise across the student's plans, which is
@@ -807,6 +810,13 @@ class FeesStandardReportController extends Controller
                     $days = -1 * $today->diffInDays(\Carbon\Carbon::parse($deadline)->startOfDay(), false);
                     $overdueDays = max($overdueDays ?? 0, $days);
                 }
+
+                /* Each invoice's balance spread over the buckets and added in, so a
+                   student holding several invoices is aged across all of them rather
+                   than off whichever happened to be oldest. */
+                foreach ($this->agingSplitFor($invBalance, $schedule, $invoice->due_date, $today) as $bucket => $amount) {
+                    $buckets[$bucket] = round($buckets[$bucket] + $amount, 2);
+                }
             }
 
             $net = ($assessed + $fine) - $waiver;
@@ -824,6 +834,10 @@ class FeesStandardReportController extends Controller
                 'balance' => $balance,
                 'wallet' => (float) ($wallets[$student->user_id] ?? 0),
                 'status' => $this->paymentStatusOf($own->count(), $paid, $balance),
+                /* The balance split across the buckets, which is what the Aging card
+                   totals; the single bucket below is only the worst one this student
+                   is in, for the badge on their row. */
+                'aging_buckets' => $buckets,
                 'aging' => $balance > 0 ? $this->agingBucketOf($overdueDays) : null,
                 'overdue_days' => $balance > 0 ? max(0, (int) ($overdueDays ?? 0)) : 0,
                 /* Reported beside this period's balance, never added into it: the
@@ -898,6 +912,89 @@ class FeesStandardReportController extends Controller
         return 'aging_90_plus';
     }
 
+    /** Every bucket at zero, so a row always carries the full set to add into. */
+    private function emptyBuckets()
+    {
+        return array_fill_keys(array_merge(
+            ['aging_current'],
+            array_keys(self::AGING_BUCKETS),
+            ['aging_90_plus']
+        ), 0.0);
+    }
+
+    /** Which bucket a date falls in, measured from today. */
+    private function bucketForDate($date, $today)
+    {
+        if (!$date) {
+            return 'aging_current';
+        }
+
+        return $this->agingBucketOf(
+            -1 * $today->diffInDays(\Carbon\Carbon::parse($date)->startOfDay(), false)
+        );
+    }
+
+    /**
+     * Spread one invoice's balance across the aging buckets.
+     *
+     * A single bucket per student is the wrong answer wherever a plan exists. Take
+     * a balance of 1,000 made of one instalment 15 days late for 250 and another
+     * not due for another month for 750: bucketed off the oldest unmet date, the
+     * whole 1,000 reports as overdue, and the figure a school would act on is four
+     * times the money actually late.
+     *
+     * So the balance is walked down the unsettled instalments in order, each taking
+     * up to what it still owes and landing in the bucket of its own due date.
+     * Anything left when the schedule runs out - a fine added after the plan was
+     * drawn up, or a plan whose total no longer matches the invoice - goes to the
+     * oldest bucket used rather than being dropped, because the buckets have to add
+     * back up to the balance or they cannot be reconciled against it.
+     *
+     * Without a plan there is one date and one bucket, which is what the invoice's
+     * own due date can honestly support.
+     */
+    private function agingSplitFor($balance, $plan, $invoiceDueDate, $today)
+    {
+        $buckets = $this->emptyBuckets();
+
+        if ($balance <= 0) {
+            return $buckets;
+        }
+
+        if (!$plan) {
+            $buckets[$this->bucketForDate($invoiceDueDate, $today)] = round($balance, 2);
+
+            return $buckets;
+        }
+
+        $left = $balance;
+        $lastBucket = null;
+
+        foreach ($plan['schedule'] as $installment) {
+            if ($left <= 0.009) {
+                break;
+            }
+
+            if ($installment['remaining'] <= 0) {
+                continue;
+            }
+
+            $take = min($left, $installment['remaining']);
+            $bucket = $this->bucketForDate($installment['due_date'], $today);
+
+            $buckets[$bucket] = round($buckets[$bucket] + $take, 2);
+            $left = round($left - $take, 2);
+            $lastBucket = $lastBucket ?: $bucket;
+        }
+
+        if ($left > 0.009) {
+            $bucket = $lastBucket ?: $this->bucketForDate($invoiceDueDate, $today);
+            $buckets[$bucket] = round($buckets[$bucket] + $left, 2);
+        }
+
+        return $buckets;
+    }
+
     /**
      * Both halves of every figure on the page: the money, and how many students it
      * is spread across. A peso total on its own does not say whether it is one
@@ -930,10 +1027,12 @@ class FeesStandardReportController extends Controller
             $summary['count_' . $status] = $rows->where('status', $status)->count();
         }
 
-        foreach (['aging_current', 'aging_1_30', 'aging_31_60', 'aging_61_90', 'aging_90_plus'] as $bucket) {
-            $bucketRows = $rows->where('aging', $bucket);
-            $summary[$bucket] = round((float) $bucketRows->sum('balance'), 2);
-            $summary['count_' . $bucket] = $bucketRows->count();
+        /* Summed off each row's split, not off one bucket per student - so a
+           balance that is part late and part not due reports as both, and the five
+           buckets add back up to outstanding. */
+        foreach (array_keys($this->emptyBuckets()) as $bucket) {
+            $summary[$bucket] = round((float) $rows->sum(fn ($r) => $r['aging_buckets'][$bucket] ?? 0), 2);
+            $summary['count_' . $bucket] = $rows->filter(fn ($r) => ($r['aging_buckets'][$bucket] ?? 0) > 0)->count();
         }
 
         $summary['count_all'] = $rows->count();
@@ -999,6 +1098,14 @@ class FeesStandardReportController extends Controller
                     ->values();
             case 'prior_balance':
                 return $rows->where('prior_balance', '>', 0)->values();
+            case 'aging_current':
+            case 'aging_1_30':
+            case 'aging_31_60':
+            case 'aging_61_90':
+            case 'aging_90_plus':
+                /* Everyone with money in that bucket, which after the split is no
+                   longer the same as everyone whose worst bucket it is. */
+                return $rows->filter(fn ($r) => ($r['aging_buckets'][$metric] ?? 0) > 0)->values();
             case 'paid':
             case 'partial':
             case 'unpaid':

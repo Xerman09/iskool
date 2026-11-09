@@ -342,4 +342,23 @@ return [
     'accounts_metric_no_head' => 'No Head Assigned',
     'accounts_metric_no_account' => 'No Account Assigned',
 
+    /* Cash Receipts Register - see CashReceiptsReportController. */
+    'standard_receipts_report' => 'Cash Receipts Register',
+    'receipts_summary' => 'Receipts',
+    'receipts_by_method' => 'By Payment Method',
+    'receipts_all_breakdown' => 'All Receipts',
+    'receipts_counted' => ':count receipts',
+    'receipts_none' => 'No receipts found for these criteria.',
+    'receipts_all_methods' => 'All methods',
+    'receipts_no_method' => 'No method recorded',
+    'receipts_applied_to' => 'Applied To',
+    'receipts_hint' => 'What was taken in the period, and what it settled.',
+    'click_to_view_receipts' => 'Click any figure to see the receipts behind it.',
+    'receipts_metric_all' => 'All Receipts',
+    'receipts_metric_received' => 'Received',
+    'receipts_metric_fine' => 'Fines Collected',
+    'receipts_metric_waiver' => 'Waived on Receipt',
+    'receipts_metric_unapplied' => 'Unapplied',
+    'receipts_metric_students' => 'students',
+
 ];

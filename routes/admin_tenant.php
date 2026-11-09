@@ -1494,6 +1494,12 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('accounts-standard-report', ['as' => 'accounts-standard-report', 'uses' => 'Admin\Report\AccountsStandardReportController@index'])->middleware('userRolePermission:accounts-standard-report');
         Route::get('accounts-standard-report-metric', ['as' => 'accounts-standard-report-metric', 'uses' => 'Admin\Report\AccountsStandardReportController@metricList'])->middleware('userRolePermission:accounts-standard-report');
 
+        /* Every receipt taken in a period and what it was applied to - the register
+           between the fees report, which is per student, and the accounts report,
+           which sees collections only as the income rows they post. */
+        Route::get('cash-receipts-report', ['as' => 'cash-receipts-report', 'uses' => 'Admin\Report\CashReceiptsReportController@index'])->middleware('userRolePermission:cash-receipts-report');
+        Route::get('cash-receipts-report-metric', ['as' => 'cash-receipts-report-metric', 'uses' => 'Admin\Report\CashReceiptsReportController@metricList'])->middleware('userRolePermission:cash-receipts-report');
+
         Route::get('tabulation-sheet-report', ['as' => 'tabulation_sheet_report', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReport'])->middleware('userRolePermission:tabulation_sheet_report');
         Route::post('tabulation-sheet-report', ['as' => 'tabulation_sheet_report_search', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReportSearch']);
         Route::post('tabulation-sheet/print', 'Admin\Report\SmReportController@tabulationSheetReportPrint')->name('tabulation-sheet/print');
