@@ -1471,6 +1471,29 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('student-standard-report', ['as' => 'student-standard-report', 'uses' => 'Admin\Report\StudentReportController@index'])->middleware('userRolePermission:student-standard-report');
         Route::get('student-standard-report-metric', ['as' => 'student-standard-report-metric', 'uses' => 'Admin\Report\StudentReportController@metricList'])->middleware('userRolePermission:student-standard-report');
 
+        /* The money counterpart of the report above: billed, collected, outstanding
+           and aged, for a year and a term. Admin side only - a student reads their
+           own account off student-transaction-ledger, which is per-student by
+           design and already theirs. */
+        Route::get('fees-standard-report', ['as' => 'fees-standard-report', 'uses' => 'Admin\Report\FeesStandardReportController@index'])->middleware('userRolePermission:fees-standard-report');
+        Route::get('fees-standard-report-metric', ['as' => 'fees-standard-report-metric', 'uses' => 'Admin\Report\FeesStandardReportController@metricList'])->middleware('userRolePermission:fees-standard-report');
+        /* Statements of account printed off that report - one student, or everyone
+           behind the figure currently on screen. Same permission: whoever may read
+           the balances may print them. */
+        Route::get('fees-standard-report-statements', ['as' => 'fees-standard-report-statements', 'uses' => 'Admin\Report\FeesStandardReportController@statements'])->middleware('userRolePermission:fees-standard-report');
+        Route::get('fees-standard-report-statement/{student}', ['as' => 'fees-standard-report-statement', 'uses' => 'Admin\Report\FeesStandardReportController@statement'])->middleware('userRolePermission:fees-standard-report');
+
+        /* Attendance and pay for a month, in the same shape as the two reports
+           above. Not 'staff-report': staff_report is already the sidebar section
+           these sit under, and a route of that name would collide with it. */
+        Route::get('staff-standard-report', ['as' => 'staff-standard-report', 'uses' => 'Admin\Report\StaffStandardReportController@index'])->middleware('userRolePermission:staff-standard-report');
+        Route::get('staff-standard-report-metric', ['as' => 'staff-standard-report-metric', 'uses' => 'Admin\Report\StaffStandardReportController@metricList'])->middleware('userRolePermission:staff-standard-report');
+
+        /* Income, expense and paid payroll over a date range, in the same shape as
+           the three reports above. */
+        Route::get('accounts-standard-report', ['as' => 'accounts-standard-report', 'uses' => 'Admin\Report\AccountsStandardReportController@index'])->middleware('userRolePermission:accounts-standard-report');
+        Route::get('accounts-standard-report-metric', ['as' => 'accounts-standard-report-metric', 'uses' => 'Admin\Report\AccountsStandardReportController@metricList'])->middleware('userRolePermission:accounts-standard-report');
+
         Route::get('tabulation-sheet-report', ['as' => 'tabulation_sheet_report', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReport'])->middleware('userRolePermission:tabulation_sheet_report');
         Route::post('tabulation-sheet-report', ['as' => 'tabulation_sheet_report_search', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReportSearch']);
         Route::post('tabulation-sheet/print', 'Admin\Report\SmReportController@tabulationSheetReportPrint')->name('tabulation-sheet/print');
