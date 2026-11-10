@@ -1263,6 +1263,12 @@ class SmSystemSettingController extends Controller
             $generalSettData->result_type  = $request->result_type;
             $generalSettData->with_guardian  = $request->with_guardian;
             $generalSettData->due_fees_login  = $request->due_fees_login;
+            /* Coalesced rather than taken straight: the amount field is hidden while
+               the limit is off, so the browser posts nothing for it, and assigning
+               that null would wipe a figure the school may want back when they turn
+               it on again. */
+            $generalSettData->credit_limit_enabled  = $request->credit_limit_enabled ?? 0;
+            $generalSettData->credit_limit  = $request->credit_limit ?? $generalSettData->credit_limit;
             $generalSettData->auto_approve  = $request->auto_approve ?? 0;
             $generalSettData->is_comment  = $request->is_comment ?? 0;
             $generalSettData->blog_search  = $request->blog_search;

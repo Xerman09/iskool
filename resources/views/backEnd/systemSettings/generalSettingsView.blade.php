@@ -750,6 +750,29 @@
                                     </div>
                                 </div>
 
+                                {{-- The amount reads beside the switch rather than on a line
+                                     of its own, because "enabled" without it says nothing. --}}
+                                <div class="single-meta">
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-6">
+                                            <div class="name">
+                                                @lang('system_settings.credit_limit_enabled')
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6">
+                                            <div class="value text-left">
+                                                @if (@$editData->credit_limit_enabled)
+                                                    @lang('system_settings.enable')
+                                                    &mdash;
+                                                    {{ generalSetting()->currency_symbol ?: '$' }}{{ number_format((float) @$editData->credit_limit, 2) }}
+                                                @else
+                                                    @lang('common.disable')
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="single-meta">
                                     <div class="row">
                                         <div class="col-lg-6 col-md-6">

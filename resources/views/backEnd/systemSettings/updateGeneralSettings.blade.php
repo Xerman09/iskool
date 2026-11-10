@@ -515,6 +515,43 @@
                             </div>
                         </div>
 
+                        {{-- Sits under the restriction above because the two ask about the
+                             same money, but they are not the same question: that one is
+                             "has a due date passed", regardless of amount, and this is
+                             "how much is owed", regardless of when. --}}
+                        <div class="row md-30 mt-30">
+                            <div class="col-lg-12 d-flex relation-button flex-wrap gap-20 mb-15">
+                                <p class="text-uppercase mb-0">@lang('system_settings.credit_limit_enabled')</p>
+                                <div class="d-flex radio-btn-flex">
+                                    <div class="mr-20">
+                                        <input type="radio" name="credit_limit_enabled" id="credit_limit_enable" value="1" class="common-radio relationButton" {{@$editData->credit_limit_enabled == 1 ? 'checked': ''}}>
+                                        <label for="credit_limit_enable">@lang('system_settings.enable')</label>
+                                    </div>
+                                    <div class="mr-20">
+                                        <input type="radio" name="credit_limit_enabled" id="credit_limit_disable" value="0" class="common-radio relationButton" {{@$editData->credit_limit_enabled == 0 ? 'checked': ''}}>
+                                        <label for="credit_limit_disable">@lang('common.disable')</label>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Shown only while the limit is on, and hidden rather than
+                                 disabled so an amount left over from a previous setting is
+                                 not sitting there looking like it applies. --}}
+                            <div class="col-lg-4" id="creditLimitAmountWrap"
+                                style="{{ @$editData->credit_limit_enabled == 1 ? '' : 'display:none;' }}">
+                                <div class="primary_input">
+                                    <label class="primary_input_label" for="credit_limit">
+                                        @lang('system_settings.credit_limit_amount')
+                                    </label>
+                                    <input class="primary_input_field form-control" type="number" step="0.01" min="0"
+                                        id="credit_limit" name="credit_limit"
+                                        value="{{ @$editData->credit_limit ?: 0 }}">
+                                    <span class="text-muted" style="font-size: 12px;">
+                                        @lang('system_settings.credit_limit_help')
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row md-30 mt-30">
                             <div class="col-lg-12 d-flex relation-button flex-wrap gap-20 mb-15">
                                 <p class="text-uppercase mb-0">@lang('common.global_settings_for_can_comment_and_comment_auto_approval')</p>
@@ -644,6 +681,12 @@
     </div>
 </div>
 <script>
+    /* The amount only means anything while the limit is on, so it follows the
+       radio rather than sitting there looking like it applies. */
+    $(document).on('change', 'input[name="credit_limit_enabled"]', function () {
+        $('#creditLimitAmountWrap').toggle($(this).val() === '1');
+    });
+
     var queueConn = $('#queueConnection').val();
     hideshowQueue(queueConn);
     $(document).on('click', '.layout_image', function(){
