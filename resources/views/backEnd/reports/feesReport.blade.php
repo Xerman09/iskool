@@ -24,7 +24,13 @@
              /* Prior Years sits here rather than in Aging: the aging buckets split
                 this period's balance, while arrears are a different period
                 altogether and are never added into the totals above. */
-             'total' => 'collected', 'rows' => ['collected', 'outstanding', 'wallet', 'prior_balance'],
+             'total' => 'collected',
+             /* Over Limit only when the school has set one - with no limit every
+                student would be under it, and a row of zeroes answers nothing. */
+             'rows' => array_values(array_filter([
+                 'collected', 'outstanding', 'wallet', 'prior_balance',
+                 $criteria['creditLimit'] !== null ? 'over_limit' : null,
+             ])),
              'hint' => __('reports.fees_collection_hint', ['rate' => $summary['collection_rate']])],
             ['title' => __('reports.payment_status_summary'), 'accent' => '#e08b1e', 'money' => false,
              'total' => 'all', 'rows' => ['paid', 'partial', 'unpaid', 'no_invoice']],
@@ -353,6 +359,18 @@
                 </div>
             @endif
 
+            {{-- The line and how many are past it, said once at the top - a badge on a
+                 row says who, but not whether this is three students or thirty. --}}
+            @if ($criteria['creditLimit'] !== null && $summary['count_over_limit'] > 0)
+                <div class="alert alert-danger mt-15 mb-0" style="font-size: 13px;">
+                    {!! __('reports.fees_over_limit_note', [
+                        'count' => $summary['count_over_limit'],
+                        'limit' => $currency . number_format($criteria['creditLimit'], 2),
+                        'excess' => $currency . number_format($summary['over_limit_excess'], 2),
+                    ]) !!}
+                </div>
+            @endif
+
             @if ($criteria['scope'] === 'whole_stay')
                 <div class="alert alert-info mt-15 mb-0" style="font-size: 13px;">
                     <strong>@lang('academics.whole_stay')</strong> &mdash; @lang('reports.fees_whole_stay_note')
@@ -516,6 +534,9 @@
                                             <th>@lang('reports.fees_metric_collected') ({{ $currency }})</th>
                                             <th>@lang('reports.col_balance') ({{ $currency }})</th>
                                             <th>@lang('reports.col_prior') ({{ $currency }})</th>
+                                            @if ($criteria['creditLimit'] !== null)
+                                                <th>@lang('reports.col_exposure') ({{ $currency }})</th>
+                                            @endif
                                             <th>@lang('reports.col_overdue')</th>
                                             <th>@lang('reports.col_plan')</th>
                                             <th>@lang('reports.col_next_due')</th>
@@ -547,6 +568,18 @@
                                                 <td class="amount-cell {{ $row['prior_balance'] > 0 ? 'amount-owing' : ($row['prior_balance'] < 0 ? 'amount-credit' : '') }}">
                                                     {{ $row['prior_balance'] != 0 ? number_format($row['prior_balance'], 2) : '-' }}
                                                 </td>
+                                                {{-- Everything owed, against the line the school drew. A
+                                                     warning only: nothing is refused on the strength of
+                                                     it, and the figure is here to be watched first. --}}
+                                                @if ($criteria['creditLimit'] !== null)
+                                                    @php $over = $row['exposure'] > $criteria['creditLimit']; @endphp
+                                                    <td class="amount-cell {{ $over ? 'amount-owing' : '' }}">
+                                                        {{ number_format($row['exposure'], 2) }}
+                                                        @if ($over)
+                                                            <span class="badge badge-danger">@lang('reports.fees_over_limit_badge')</span>
+                                                        @endif
+                                                    </td>
+                                                @endif
                                                 <td class="amount-cell">
                                                     {{ $row['overdue_days'] > 0 ? $row['overdue_days'] : '-' }}
                                                 </td>

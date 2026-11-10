@@ -76,7 +76,7 @@ class FeesStandardReportController extends Controller
         'aging_current', 'aging_1_30', 'aging_31_60', 'aging_61_90', 'aging_90_plus',
         'wallet',
         'on_plan', 'not_on_plan', 'plan_overdue',
-        'prior_balance',
+        'prior_balance', 'over_limit',
     ];
 
     public function index(Request $request)
@@ -88,7 +88,7 @@ class FeesStandardReportController extends Controller
             return view('backEnd.reports.feesReport', array_merge($criteria['lists'], [
                 'criteria' => $criteria,
                 'rows' => $rows,
-                'summary' => $this->summarise($rows),
+                'summary' => $this->summarise($rows, $criteria['creditLimit']),
                 'programRevenue' => $this->revenueByProgram($rows),
             ]));
         } catch (\Exception $e) {
@@ -115,7 +115,7 @@ class FeesStandardReportController extends Controller
                 'rows' => $rows,
                 'metric' => $request->metric,
                 'title' => __('reports.fees_metric_' . $request->metric),
-                'totals' => $this->summarise($rows),
+                'totals' => $this->summarise($rows, $criteria['creditLimit']),
                 'labels' => $this->criteriaLabels($criteria),
                 /* The same request with print switched on, handed to the button in the
                    modal header - so the sheet is of exactly the list on screen rather
@@ -615,6 +615,12 @@ class FeesStandardReportController extends Controller
             'courseId' => $courseId,
             'type' => $type,
             'asOf' => $asOf,
+            /* Off unless the school has set one. Reporting only: a student past it
+               is marked here and nothing else happens to them - see the migration
+               that added these two settings. */
+            'creditLimit' => generalSetting()->credit_limit_enabled
+                ? (float) generalSetting()->credit_limit
+                : null,
             'search' => trim((string) $request->get('search')),
             'lists' => compact('years', 'semesters', 'courses'),
         ];
@@ -941,6 +947,12 @@ class FeesStandardReportController extends Controller
                 'tuition_paid' => round($paid - $itemPaid, 2),
                 'course_id' => $student->course_id,
                 'course_name' => optional($student->course)->course_name,
+                /* Everything this student owes the school, which is what a limit is
+                   set against - this period's balance and anything carried in from
+                   before. Credits on either side are left out: they reduce nothing
+                   anyone can collect, and netting them would let an overpayment in
+                   one year hide a debt in another. */
+                'exposure' => round(max(0, $balance) + max(0, (float) ($priorBalances[$student->id] ?? 0)), 2),
                 'on_plan' => $onPlan,
                 /* Null once every installment is settled, which is how a finished
                    plan stops being chased. */
@@ -1097,7 +1109,7 @@ class FeesStandardReportController extends Controller
      * is spread across. A peso total on its own does not say whether it is one
      * family or forty.
      */
-    private function summarise($rows)
+    private function summarise($rows, $creditLimit = null)
     {
         $sum = fn ($key) => round((float) $rows->sum($key), 2);
 
@@ -1169,6 +1181,21 @@ class FeesStandardReportController extends Controller
             $summary[$key] = $sum($key);
         }
 
+        /* Students owing more than the school said it would carry. Zero when no
+           limit is set, which is also when the page hides the figure - a limit of
+           nothing would otherwise put everybody over it. */
+        $overLimit = $creditLimit !== null
+            ? $rows->filter(fn ($r) => $r['exposure'] > $creditLimit)
+            : collect();
+
+        $summary['over_limit'] = round((float) $overLimit->sum('exposure'), 2);
+        $summary['count_over_limit'] = $overLimit->count();
+        /* How far past the line they are in total, which is the part the school did
+           not agree to carry. */
+        $summary['over_limit_excess'] = $creditLimit !== null
+            ? round((float) $overLimit->sum(fn ($r) => $r['exposure'] - $creditLimit), 2)
+            : 0.0;
+
         $summary['count_item_assessed'] = $rows->where('item_assessed', '>', 0)->count();
         $summary['count_item_paid'] = $rows->where('item_paid', '>', 0)->count();
         $summary['count_tuition_assessed'] = $rows->where('tuition_assessed', '>', 0)->count();
@@ -1236,6 +1263,17 @@ class FeesStandardReportController extends Controller
                     ->values();
             case 'prior_balance':
                 return $rows->where('prior_balance', '>', 0)->values();
+            case 'over_limit':
+                /* The limit is read here rather than passed, because a metric list
+                   is asked for by name and carries no criteria of its own beyond
+                   the request - and the setting is the same for everyone. */
+                $limit = generalSetting()->credit_limit_enabled
+                    ? (float) generalSetting()->credit_limit
+                    : null;
+
+                return $limit === null
+                    ? collect()
+                    : $rows->filter(fn ($r) => $r['exposure'] > $limit)->values();
             case 'aging_current':
             case 'aging_1_30':
             case 'aging_31_60':
