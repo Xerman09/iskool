@@ -1500,6 +1500,11 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('cash-receipts-report', ['as' => 'cash-receipts-report', 'uses' => 'Admin\Report\CashReceiptsReportController@index'])->middleware('userRolePermission:cash-receipts-report');
         Route::get('cash-receipts-report-metric', ['as' => 'cash-receipts-report-metric', 'uses' => 'Admin\Report\CashReceiptsReportController@metricList'])->middleware('userRolePermission:cash-receipts-report');
 
+        /* The receivables trial balance: the same money as the standard fees
+           report, read one invoice at a time instead of one student at a time. */
+        Route::get('open-invoices-report', ['as' => 'open-invoices-report', 'uses' => 'Admin\Report\OpenInvoicesReportController@index'])->middleware('userRolePermission:open-invoices-report');
+        Route::get('open-invoices-report-metric', ['as' => 'open-invoices-report-metric', 'uses' => 'Admin\Report\OpenInvoicesReportController@metricList'])->middleware('userRolePermission:open-invoices-report');
+
         Route::get('tabulation-sheet-report', ['as' => 'tabulation_sheet_report', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReport'])->middleware('userRolePermission:tabulation_sheet_report');
         Route::post('tabulation-sheet-report', ['as' => 'tabulation_sheet_report_search', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReportSearch']);
         Route::post('tabulation-sheet/print', 'Admin\Report\SmReportController@tabulationSheetReportPrint')->name('tabulation-sheet/print');
