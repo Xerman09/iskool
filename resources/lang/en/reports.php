@@ -432,6 +432,14 @@ return [
     'activity_metric_income' => 'Income Recorded',
     'activity_metric_expense' => 'Expense Recorded',
     'activity_metric_payroll' => 'Wages Paid',
+
+    /* The tab strip over the four receivables views - see ReceivablesController. */
+    'receivables' => 'Receivables',
+    'tab_by_student' => 'By Student',
+    'tab_by_invoice' => 'Open Invoices',
+    'tab_receipts' => 'Receipts',
+    'tab_activity' => 'Activity',
+    'receivables_no_tabs' => 'You have access to Receivables but to none of its views. Ask an administrator to grant at least one.',
     'receipts_metric_students' => 'students',
 
 ];

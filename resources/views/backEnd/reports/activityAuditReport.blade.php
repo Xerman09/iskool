@@ -81,6 +81,12 @@
 
     <section class="admin-visitor-area up_st_admin_visitor">
         <div class="container-fluid p-0">
+            @include("backEnd.reports.partials.receivablesTabs")
+        </div>
+    </section>
+
+    <section class="admin-visitor-area up_st_admin_visitor">
+        <div class="container-fluid p-0">
 
             <div class="row mb-20">
                 <div class="col-lg-12">
