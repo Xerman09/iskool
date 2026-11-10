@@ -303,6 +303,15 @@
                                     </select>
                                 </div>
                             @endif
+                            {{-- Empty means now. A date turns the page into a trial
+                                 balance as that day closed, which is what a month end
+                                 needs. --}}
+                            <div class="col-lg-2 mb-3 mb-lg-0">
+                                <label class="primary_input_label">@lang('reports.fees_as_of')</label>
+                                <input type="date" name="as_of" value="{{ $criteria['asOf'] }}"
+                                    max="{{ date('Y-m-d') }}"
+                                    class="primary_input_field form-control">
+                            </div>
                             <div class="col-lg-2 mb-3 mb-lg-0">
                                 <label class="primary_input_label">@lang('reports.col_charge_type')</label>
                                 <select class="primary_select form-control" name="type">
@@ -335,6 +344,15 @@
             {{-- Said plainly, because the year select stays filled in while being
                  ignored - and a figure covering four years under a heading naming one
                  of them would be read as that year's. --}}
+            {{-- Said plainly, because every figure below is of a day that has passed
+                 and nothing else on the page would say so. --}}
+            @if ($criteria['asOf'])
+                <div class="alert alert-warning mt-15 mb-0" style="font-size: 13px;">
+                    <strong>@lang('reports.fees_as_of'): {{ date('M d, Y', strtotime($criteria['asOf'])) }}</strong>
+                    &mdash; @lang('reports.fees_as_of_note')
+                </div>
+            @endif
+
             @if ($criteria['scope'] === 'whole_stay')
                 <div class="alert alert-info mt-15 mb-0" style="font-size: 13px;">
                     <strong>@lang('academics.whole_stay')</strong> &mdash; @lang('reports.fees_whole_stay_note')
@@ -396,6 +414,74 @@
                         </div>
                     </div>
                 @endforeach
+            </div>
+
+            {{-- Where the money is earned, as against who owes it. Billed per student
+                 is the school's answer to revenue per user: it is what makes a small
+                 programme and a large one comparable. --}}
+            <div class="row mt-10">
+                <div class="col-lg-12">
+                    <div class="white-box">
+                        <div class="main-title">
+                            <h3 class="mb-15">@lang('reports.fees_revenue_by_program')</h3>
+                        </div>
+                        <div class="breakdown-scroll">
+                            <table class="table school-table-style shadow-none p-0" cellspacing="0" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>@lang('academics.program')</th>
+                                        <th class="amount-cell">@lang('academics.student')</th>
+                                        <th class="amount-cell">@lang('reports.fees_metric_assessed') ({{ $currency }})</th>
+                                        <th class="amount-cell">@lang('reports.fees_metric_collected') ({{ $currency }})</th>
+                                        <th class="amount-cell">@lang('reports.fees_metric_outstanding') ({{ $currency }})</th>
+                                        <th class="amount-cell">@lang('reports.fees_per_student') ({{ $currency }})</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($programRevenue as $program)
+                                        <tr>
+                                            <td>{{ $program['name'] }}</td>
+                                            <td class="amount-cell">{{ $program['students'] }}</td>
+                                            <td class="amount-cell">{{ number_format($program['billed'], 2) }}</td>
+                                            <td class="amount-cell">{{ number_format($program['collected'], 2) }}</td>
+                                            <td class="amount-cell {{ $program['outstanding'] > 0 ? 'amount-owing' : '' }}">
+                                                {{ number_format($program['outstanding'], 2) }}
+                                            </td>
+                                            <td class="amount-cell">{{ number_format($program['per_student'], 2) }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">@lang('reports.no_students_found')</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        {{-- Tuition and store cut from the same figures as billed
+                                             and collected, so the two add back up to the row above. --}}
+                                        <th colspan="2" class="text-right">@lang('reports.fees_tuition')</th>
+                                        <th class="amount-cell">{{ number_format($summary['tuition_assessed'], 2) }}</th>
+                                        <th class="amount-cell">{{ number_format($summary['tuition_paid'], 2) }}</th>
+                                        <th colspan="2"></th>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="2" class="text-right">@lang('reports.fees_item_store')</th>
+                                        <th class="amount-cell">{{ number_format($summary['item_assessed'], 2) }}</th>
+                                        <th class="amount-cell">{{ number_format($summary['item_paid'], 2) }}</th>
+                                        <th colspan="2"></th>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="2" class="text-right">@lang('dashboard.total')</th>
+                                        <th class="amount-cell">{{ $currency }}{{ number_format($summary['assessed'], 2) }}</th>
+                                        <th class="amount-cell">{{ $currency }}{{ number_format($summary['collected'], 2) }}</th>
+                                        <th class="amount-cell">{{ $currency }}{{ number_format($summary['outstanding'], 2) }}</th>
+                                        <th></th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="row mt-10">

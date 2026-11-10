@@ -38,9 +38,17 @@ class CashReceiptsReportController extends Controller
         $this->middleware('PM');
     }
 
+    /**
+     * The method a receipt carries when it was settled out of the student's
+     * wallet rather than tendered (see StudentFeesController, which deducts
+     * wallet_balance and stamps the receipt with this).
+     */
+    private const WALLET_METHOD = 'Wallet';
+
     /** The fixed metrics a figure on a card can be clicked through to. */
     private const METRICS = [
-        'all', 'received', 'fine', 'waiver', 'unapplied', 'students',
+        'all', 'received', 'cash_in', 'from_wallet', 'topup',
+        'fine', 'waiver', 'unapplied', 'students',
     ];
 
     public function index(Request $request)
@@ -234,6 +242,15 @@ class CashReceiptsReportController extends Controller
                 'amount' => (float) optional($amount)->paid,
                 'fine' => (float) optional($amount)->fine,
                 'waiver' => (float) optional($amount)->weaver,
+                /* Settled out of the wallet, which is not money arriving: the school
+                   was already holding it, and the cash came in whenever the wallet
+                   was topped up. Counted as a receipt it would overstate the day's
+                   takings and never reconcile against a deposit. */
+                'from_wallet' => $receipt->payment_method === self::WALLET_METHOD,
+                /* The other half of the same story: money handed over on this
+                   receipt that went into the wallet rather than against the invoice.
+                   It is cash in, and it settles nothing. */
+                'topup' => (float) $receipt->add_wallet_money,
                 /* Cash on the books against no invoice. Either the invoice was
                    deleted under it or the receipt was never applied; both are the
                    same problem to whoever has to reconcile, and both are worth a
@@ -287,6 +304,31 @@ class CashReceiptsReportController extends Controller
         $summary['count_fine'] = $rows->where('fine', '>', 0)->count();
         $summary['count_waiver'] = $rows->where('waiver', '>', 0)->count();
 
+        /* Two different true answers, and a register that gives only one of them
+           misleads whoever is holding the other.
+
+           Received is everything applied to invoices, and it is the figure that
+           reconciles with the fees report's Collected. Cash In is money that
+           actually arrived in the period - everything tendered, plus top-ups, less
+           anything settled out of a wallet - and it is the figure that reconciles
+           with a drawer and a bank deposit. They are equal only in a school with no
+           wallet. */
+        $fromWallet = $rows->where('from_wallet', true);
+        $summary['from_wallet'] = round((float) $fromWallet->sum('amount'), 2);
+        $summary['count_from_wallet'] = $fromWallet->count();
+
+        $topups = $rows->where('topup', '>', 0);
+        $summary['topup'] = round((float) $rows->sum('topup'), 2);
+        $summary['count_topup'] = $topups->count();
+
+        $summary['cash_in'] = round(
+            (float) $rows->where('from_wallet', false)->sum('amount') + $summary['topup'],
+            2
+        );
+        $summary['count_cash_in'] = $rows
+            ->filter(fn ($r) => (!$r['from_wallet'] && $r['amount'] > 0) || $r['topup'] > 0)
+            ->count();
+
         $unapplied = $rows->where('unapplied', true);
         $summary['unapplied'] = round((float) $unapplied->sum('amount'), 2);
         $summary['count_unapplied'] = $unapplied->count();
@@ -311,6 +353,14 @@ class CashReceiptsReportController extends Controller
             case 'all':
             case 'received':
                 return $rows;
+            case 'from_wallet':
+                return $rows->where('from_wallet', true)->values();
+            case 'topup':
+                return $rows->where('topup', '>', 0)->values();
+            case 'cash_in':
+                return $rows
+                    ->filter(fn ($r) => (!$r['from_wallet'] && $r['amount'] > 0) || $r['topup'] > 0)
+                    ->values();
             case 'fine':
                 return $rows->where('fine', '>', 0)->values();
             case 'waiver':

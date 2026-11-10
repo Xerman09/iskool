@@ -8,6 +8,7 @@ use App\SmStudent;
 use App\SmAcademicYear;
 use App\PaymentPlanAssign;
 use App\Models\StudentRecord;
+use Modules\Fees\Entities\FmFeesTransaction;
 use App\Scopes\AcademicSchoolScope;
 use App\Traits\EnrollmentBalanceBreakdown;
 use Illuminate\Http\Request;
@@ -88,6 +89,7 @@ class FeesStandardReportController extends Controller
                 'criteria' => $criteria,
                 'rows' => $rows,
                 'summary' => $this->summarise($rows),
+                'programRevenue' => $this->revenueByProgram($rows),
             ]));
         } catch (\Exception $e) {
             Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
@@ -593,6 +595,18 @@ class FeesStandardReportController extends Controller
            chased differently. */
         $type = in_array($request->get('type'), ['fees', 'store'], true) ? $request->get('type') : null;
 
+        /* The date the books are being read at. Empty means now, which is what a
+           collection report is normally asked for; a date makes it a trial balance
+           as that day closed, which is what a month end needs and what nothing here
+           could answer before.
+
+           A date in the future is today's answer dressed up as a forecast, so it is
+           refused rather than honoured. */
+        $asOf = $this->parseDate($request->get('as_of'));
+        if ($asOf && $asOf > date('Y-m-d')) {
+            $asOf = null;
+        }
+
         return [
             'schoolId' => $schoolId,
             'scope' => $scope,
@@ -600,9 +614,50 @@ class FeesStandardReportController extends Controller
             'semesterId' => $semesterId,
             'courseId' => $courseId,
             'type' => $type,
+            'asOf' => $asOf,
             'search' => trim((string) $request->get('search')),
             'lists' => compact('years', 'semesters', 'courses'),
         ];
+    }
+
+    /** A date the picker can hand back, or null - never a guess at what was meant. */
+    private function parseDate($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        $time = strtotime($value);
+
+        return $time ? date('Y-m-d', $time) : null;
+    }
+
+    /**
+     * What had been paid against each of these invoices as at a given date.
+     *
+     * The paid_amount on an invoice line is a running total with no date on it, so
+     * it can only ever answer "now". The receipts carry the dates, and on this
+     * database their lines sum to exactly the invoice lines - every payment has a
+     * dated receipt behind it - which is what makes a balance as at a past date
+     * reconstructable at all.
+     *
+     * Where that stops being true the figure would understate payments and
+     * overstate the receivable, so it is worth checking before trusting a month end
+     * taken this way.
+     */
+    private function paidAsOf($invoiceIds, $asOf)
+    {
+        if ($invoiceIds->isEmpty()) {
+            return collect();
+        }
+
+        return FmFeesTransaction::withoutGlobalScope(AcademicSchoolScope::class)
+            ->whereIn('fm_fees_transactions.fees_invoice_id', $invoiceIds)
+            ->whereDate('fm_fees_transactions.created_at', '<=', $asOf)
+            ->join('fm_fees_transaction_chields as c', 'c.fees_transaction_id', '=', 'fm_fees_transactions.id')
+            ->groupBy('fm_fees_transactions.fees_invoice_id')
+            ->selectRaw('fm_fees_transactions.fees_invoice_id, COALESCE(SUM(c.paid_amount),0) paid')
+            ->pluck('paid', 'fees_invoice_id');
     }
 
     /**
@@ -677,10 +732,32 @@ class FeesStandardReportController extends Controller
                 ->whereIn('record_id', $records->pluck('id')))
             ->when($wholeStay, fn ($q) => $q->whereIn('student_id', $records->pluck('student_id')))
             ->when($criteria['type'], fn ($q) => $q->where('type', $criteria['type']))
+            /* An invoice raised after the date being read at did not exist then, so
+               it is no part of that day's receivable. */
+            ->when($criteria['asOf'], fn ($q) => $q->whereDate('create_date', '<=', $criteria['asOf']))
             ->get()
             ->groupBy($wholeStay ? 'student_id' : 'record_id');
 
         $invoiceIds = $invoices->flatten()->pluck('id');
+
+        /* Read at a date, what was paid comes from the receipts up to it rather than
+           from the line's running total, which carries no date and can only answer
+           "now". */
+        $paidAsOf = $criteria['asOf'] ? $this->paidAsOf($invoiceIds, $criteria['asOf']) : null;
+
+        /* The item-store share of each invoice, which is not the same as the
+           store-typed invoices: while an enrolment invoice is still unpaid it stays
+           open and anything bought from the store lands on it too (see
+           EnrollmentInvoicing::openOrderInvoiceFor()). So store revenue is the lines
+           carrying an item, wherever they sit, and tuition is what is left. */
+        $itemTotals = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoiceIds)
+            ->whereNotNull('sm_item_id')
+            ->selectRaw('fees_invoice_id,
+                COALESCE(SUM(amount),0) amount,
+                COALESCE(SUM(paid_amount),0) paid')
+            ->groupBy('fees_invoice_id')
+            ->get()
+            ->keyBy('fees_invoice_id');
 
         /* Billed, waived, fined and paid summed per invoice in one query - the same
            call StudentReportController makes. The stored payment_status is a cached
@@ -734,7 +811,7 @@ class FeesStandardReportController extends Controller
 
         $today = now()->startOfDay();
 
-        $rows = $records->map(function ($record) use ($invoices, $totals, $plans, $wallets, $priorBalances, $today, $wholeStay) {
+        $rows = $records->map(function ($record) use ($invoices, $totals, $itemTotals, $plans, $wallets, $priorBalances, $paidAsOf, $today, $wholeStay) {
             $student = $record->studentDetail;
             /* Keyed as the grouping above was - by student over a stay, by record
                otherwise. */
@@ -749,6 +826,8 @@ class FeesStandardReportController extends Controller
             $nextDueAmount = 0.0;
             $onPlan = false;
             $buckets = $this->emptyBuckets();
+            $itemAssessed = 0.0;
+            $itemPaid = 0.0;
 
             foreach ($own as $invoice) {
                 $total = $totals->get($invoice->id);
@@ -756,12 +835,22 @@ class FeesStandardReportController extends Controller
                 $invAssessed = (float) optional($total)->amount;
                 $invWaiver = (float) optional($total)->weaver;
                 $invFine = (float) optional($total)->fine;
-                $invPaid = (float) optional($total)->paid;
+                /* Read at a date, what had been paid by then comes from the dated
+                   receipts; read now, from the line's running total. An invoice with
+                   no receipts up to that date had been paid nothing, which is what
+                   the missing key means. */
+                $invPaid = $paidAsOf !== null
+                    ? (float) ($paidAsOf[$invoice->id] ?? 0)
+                    : (float) optional($total)->paid;
 
                 $assessed += $invAssessed;
                 $waiver += $invWaiver;
                 $fine += $invFine;
                 $paid += $invPaid;
+
+                $item = $itemTotals->get($invoice->id);
+                $itemAssessed += (float) optional($item)->amount;
+                $itemPaid += (float) optional($item)->paid;
 
                 /* Same arithmetic the invoice itself settles on - see
                    EnrollmentInvoicing. The module's balance report leaves the waiver
@@ -844,6 +933,14 @@ class FeesStandardReportController extends Controller
                    two are of different periods, and one figure covering both could
                    not be reconciled against either. */
                 'prior_balance' => (float) ($priorBalances[$student->id] ?? 0),
+                /* Store and tuition split out of the same figures above, so the two
+                   add back up to billed and neither can drift from it. */
+                'item_assessed' => round($itemAssessed, 2),
+                'item_paid' => round($itemPaid, 2),
+                'tuition_assessed' => round($assessed - $itemAssessed, 2),
+                'tuition_paid' => round($paid - $itemPaid, 2),
+                'course_id' => $student->course_id,
+                'course_name' => optional($student->course)->course_name,
                 'on_plan' => $onPlan,
                 /* Null once every installment is settled, which is how a finished
                    plan stops being chased. */
@@ -1066,7 +1163,48 @@ class FeesStandardReportController extends Controller
         $summary['prior_balance'] = round((float) $withArrears->sum('prior_balance'), 2);
         $summary['count_prior_balance'] = $withArrears->count();
 
+        /* Where the money is earned, as against who owes it. Store and tuition are
+           cut from the same figures as billed and collected, so they add back up. */
+        foreach (['item_assessed', 'item_paid', 'tuition_assessed', 'tuition_paid'] as $key) {
+            $summary[$key] = $sum($key);
+        }
+
+        $summary['count_item_assessed'] = $rows->where('item_assessed', '>', 0)->count();
+        $summary['count_item_paid'] = $rows->where('item_paid', '>', 0)->count();
+        $summary['count_tuition_assessed'] = $rows->where('tuition_assessed', '>', 0)->count();
+        $summary['count_tuition_paid'] = $rows->where('tuition_paid', '>', 0)->count();
+
         return $summary;
+    }
+
+    /**
+     * What each programme billed and collected, largest first.
+     *
+     * Grouped off the student's course rather than the invoice's, because a
+     * student who has moved programme should read under the one they are in now -
+     * which is the question a registrar asks of this table. Students with no
+     * programme are kept as a group of their own rather than dropped; in a basic
+     * education school that is all of them, and the table simply reads as one row.
+     */
+    private function revenueByProgram($rows)
+    {
+        return $rows->groupBy(fn ($r) => $r['course_id'] ?: 'none')
+            ->map(fn ($group, $key) => [
+                'name' => $key === 'none'
+                    ? __('reports.fees_no_program')
+                    : ($group->first()['course_name'] ?: __('reports.fees_no_program')),
+                'students' => $group->count(),
+                'billed' => round((float) $group->sum('assessed'), 2),
+                'collected' => round((float) $group->sum('paid'), 2),
+                'outstanding' => round((float) $group->where('balance', '>', 0)->sum('balance'), 2),
+                /* Per student, which is what makes two programmes of different sizes
+                   comparable - the school's answer to revenue per user. */
+                'per_student' => $group->count()
+                    ? round((float) $group->sum('assessed') / $group->count(), 2)
+                    : 0.0,
+            ])
+            ->sortByDesc('billed')
+            ->values();
     }
 
     /** The counterpart of summarise(): one figure, the rows it was counted from. */

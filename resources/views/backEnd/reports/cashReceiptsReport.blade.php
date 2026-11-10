@@ -10,9 +10,16 @@
         /* One fixed card. The methods card beside it is built from the data, because
            what a school tenders is whatever it has taken. */
         $cards = [
+            /* Two cards because there are two true totals. Applied is what settled
+               invoices and ties to the fees report; Cash In is what actually arrived
+               and ties to a drawer and a deposit. A wallet settlement is in the
+               first and not the second. */
             ['title' => __('reports.receipts_summary'), 'accent' => '#1a9d6a', 'money' => true,
-             'total' => 'received', 'rows' => ['received', 'fine', 'waiver', 'unapplied'],
+             'total' => 'received', 'rows' => ['received', 'from_wallet', 'fine', 'waiver', 'unapplied'],
              'hint' => __('reports.receipts_hint')],
+            ['title' => __('reports.receipts_cash_summary'), 'accent' => '#7048a8', 'money' => true,
+             'total' => 'cash_in', 'rows' => ['cash_in', 'topup'],
+             'hint' => __('reports.receipts_cash_hint')],
         ];
     @endphp
 
