@@ -121,6 +121,50 @@
             color: var(--metric-accent, #0f8b8d);
         }
 
+        /* The heading over each half of the revenue card. Quiet enough not to read
+           as a row, with its own subtotal so each half adds up on its own. */
+        .metric-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin: 12px -10px 2px;
+            padding: 4px 10px 3px;
+            border-bottom: 1px solid rgba(0, 0, 0, .06);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .metric-group-label { color: #9aa0a6; font-weight: 700; }
+        .metric-group-total { color: #6c757d; font-weight: 700; }
+
+        /* "Others" is a total, not an answer - it gathers several programmes, so
+           there is no one list behind it to open. It reads as a row without
+           behaving as one. */
+        .metric-row-static {
+            padding: 9px 10px;
+            margin: 0 -10px;
+            cursor: default;
+        }
+
+        .metric-row-static .metric-label {
+            color: #9aa0a6;
+            font-style: italic;
+        }
+
+        .metric-row-static .metric-value {
+            font-weight: 700;
+            color: #2b2b2b;
+        }
+
+        .metric-row-static .metric-count {
+            display: block;
+            font-size: 11px;
+            font-weight: 400;
+            color: #9aa0a6;
+            text-align: right;
+        }
+
         .metric-total {
             display: inline-block;
             min-width: 34px;
@@ -432,72 +476,43 @@
                         </div>
                     </div>
                 @endforeach
-            </div>
 
-            {{-- Where the money is earned, as against who owes it. Billed per student
-                 is the school's answer to revenue per user: it is what makes a small
-                 programme and a large one comparable. --}}
-            <div class="row mt-10">
-                <div class="col-lg-12">
-                    <div class="white-box">
-                        <div class="main-title">
-                            <h3 class="mb-15">@lang('reports.fees_revenue_by_program')</h3>
+                {{-- Where the money is earned, as against who owes it. The card itself
+                     is about the revenue, not about programmes: what was billed, and
+                     what it was billed for. The programme split lives behind the
+                     figure, because it is a second question and not everyone asks it. --}}
+                <div class="col-lg-3 col-md-6 mb-20">
+                    <div class="white-box h-100" style="border-top:3px solid #7048a8;">
+                        <div class="d-flex justify-content-between align-items-center metric-head"
+                            style="--metric-accent: #7048a8;">
+                            <h5 class="mb-0">@lang('reports.fees_revenue')</h5>
+                            <a href="#" class="metric-total fees-metric" data-metric="programs">
+                                {{ $currency }}{{ number_format($summary['assessed'], 2) }}
+                            </a>
                         </div>
-                        <div class="breakdown-scroll">
-                            <table class="table school-table-style shadow-none p-0" cellspacing="0" width="100%">
-                                <thead>
-                                    <tr>
-                                        <th>@lang('academics.program')</th>
-                                        <th class="amount-cell">@lang('academics.student')</th>
-                                        <th class="amount-cell">@lang('reports.fees_metric_assessed') ({{ $currency }})</th>
-                                        <th class="amount-cell">@lang('reports.fees_metric_collected') ({{ $currency }})</th>
-                                        <th class="amount-cell">@lang('reports.fees_metric_outstanding') ({{ $currency }})</th>
-                                        <th class="amount-cell">@lang('reports.fees_per_student') ({{ $currency }})</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse ($programRevenue as $program)
-                                        <tr>
-                                            <td>{{ $program['name'] }}</td>
-                                            <td class="amount-cell">{{ $program['students'] }}</td>
-                                            <td class="amount-cell">{{ number_format($program['billed'], 2) }}</td>
-                                            <td class="amount-cell">{{ number_format($program['collected'], 2) }}</td>
-                                            <td class="amount-cell {{ $program['outstanding'] > 0 ? 'amount-owing' : '' }}">
-                                                {{ number_format($program['outstanding'], 2) }}
-                                            </td>
-                                            <td class="amount-cell">{{ number_format($program['per_student'], 2) }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="6" class="text-center text-muted">@lang('reports.no_students_found')</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        {{-- Tuition and store cut from the same figures as billed
-                                             and collected, so the two add back up to the row above. --}}
-                                        <th colspan="2" class="text-right">@lang('reports.fees_tuition')</th>
-                                        <th class="amount-cell">{{ number_format($summary['tuition_assessed'], 2) }}</th>
-                                        <th class="amount-cell">{{ number_format($summary['tuition_paid'], 2) }}</th>
-                                        <th colspan="2"></th>
-                                    </tr>
-                                    <tr>
-                                        <th colspan="2" class="text-right">@lang('reports.fees_item_store')</th>
-                                        <th class="amount-cell">{{ number_format($summary['item_assessed'], 2) }}</th>
-                                        <th class="amount-cell">{{ number_format($summary['item_paid'], 2) }}</th>
-                                        <th colspan="2"></th>
-                                    </tr>
-                                    <tr>
-                                        <th colspan="2" class="text-right">@lang('dashboard.total')</th>
-                                        <th class="amount-cell">{{ $currency }}{{ number_format($summary['assessed'], 2) }}</th>
-                                        <th class="amount-cell">{{ $currency }}{{ number_format($summary['collected'], 2) }}</th>
-                                        <th class="amount-cell">{{ $currency }}{{ number_format($summary['outstanding'], 2) }}</th>
-                                        <th></th>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                        <p class="text-muted mb-10" style="font-size: 12px;">@lang('reports.fees_revenue_hint')</p>
+
+                        {{-- Two ways of asking where the revenue came from: a programme
+                             says who was billed, an item says what was bought. Only the
+                             two totals here - the card answers "how much", and which
+                             programmes or which items is a second question that belongs
+                             behind the figure rather than crowding it. --}}
+                        <a href="#" class="metric-row fees-metric d-flex justify-content-between align-items-center"
+                            style="--metric-accent: #7048a8;" data-metric="programs">
+                            <span class="metric-label">@lang('reports.fees_by_program')</span>
+                            <span>
+                                <span class="metric-value">{{ $currency }}{{ number_format($summary['tuition_assessed'], 2) }}</span>
+                                <span class="metric-count">{{ __('reports.fees_programs_counted', ['count' => $programRevenue->count()]) }}</span>
+                            </span>
+                        </a>
+                        <a href="#" class="metric-row fees-metric d-flex justify-content-between align-items-center"
+                            style="--metric-accent: #7048a8;" data-metric="items">
+                            <span class="metric-label">@lang('reports.fees_by_item')</span>
+                            <span>
+                                <span class="metric-value">{{ $currency }}{{ number_format($summary['item_assessed'], 2) }}</span>
+                                <span class="metric-count">{{ __('reports.fees_items_counted', ['count' => $itemRevenue->count()]) }}</span>
+                            </span>
+                        </a>
                     </div>
                 </div>
             </div>

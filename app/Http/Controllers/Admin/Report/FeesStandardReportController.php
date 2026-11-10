@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Report;
 
 use App\Course;
+use App\SmItem;
 use App\Semester;
 use App\SmStudent;
 use App\SmAcademicYear;
@@ -77,6 +78,7 @@ class FeesStandardReportController extends Controller
         'wallet',
         'on_plan', 'not_on_plan', 'plan_overdue',
         'prior_balance', 'over_limit',
+        'tuition', 'store',
     ];
 
     public function index(Request $request)
@@ -89,7 +91,8 @@ class FeesStandardReportController extends Controller
                 'criteria' => $criteria,
                 'rows' => $rows,
                 'summary' => $this->summarise($rows, $criteria['creditLimit']),
-                'programRevenue' => $this->revenueByProgram($rows),
+                'programRevenue' => $this->programTotals($rows),
+                'itemRevenue' => $this->itemTotals($rows),
             ]));
         } catch (\Exception $e) {
             Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
@@ -105,7 +108,17 @@ class FeesStandardReportController extends Controller
      */
     public function metricList(Request $request)
     {
-        $request->validate(['metric' => 'required|in:' . implode(',', self::METRICS)]);
+        /* A programme or item metric carries its own id, so the set of valid
+           metrics is not a fixed list and cannot be written as one. */
+        $request->validate([
+            'metric' => ['required', function ($attribute, $value, $fail) {
+                if (!in_array($value, ['programs', 'items'], true)
+                    && !in_array($value, self::METRICS, true)
+                    && !preg_match('/^(program_(\d+|none)|item_\d+)$/', (string) $value)) {
+                    $fail(__('validation.in', ['attribute' => $attribute]));
+                }
+            }],
+        ]);
 
         try {
             $criteria = $this->criteria($request);
@@ -114,7 +127,7 @@ class FeesStandardReportController extends Controller
             $data = [
                 'rows' => $rows,
                 'metric' => $request->metric,
-                'title' => __('reports.fees_metric_' . $request->metric),
+                'title' => $this->metricTitle($request->metric, $rows),
                 'totals' => $this->summarise($rows, $criteria['creditLimit']),
                 'labels' => $this->criteriaLabels($criteria),
                 /* The same request with print switched on, handed to the button in the
@@ -129,6 +142,28 @@ class FeesStandardReportController extends Controller
                    filtered population. */
                 'statementsUrl' => route('fees-standard-report-statements', $request->except('print')),
             ];
+
+            /* The revenue card's own figure opens the split behind it rather than the
+               students under it. Every programme is a line of its own here, not the
+               largest few the card has room for - a breakdown that hid half of itself
+               would be the card again. */
+            if ($request->metric === 'programs') {
+                $data['programs'] = $this->programTotals($rows);
+
+                return $request->boolean('print')
+                    ? view('backEnd.reports.feesProgramPrint', $data)
+                    : view('backEnd.reports.partials.feesProgramList', $data)->render();
+            }
+
+            /* The store half of the same question: a programme says who was billed,
+               an item says what was bought. */
+            if ($request->metric === 'items') {
+                $data['items'] = $this->itemTotals($rows);
+
+                return $request->boolean('print')
+                    ? view('backEnd.reports.feesItemPrint', $data)
+                    : view('backEnd.reports.partials.feesItemList', $data)->render();
+            }
 
             /* A standalone page that prints itself, the same shape the student report
                uses - not the modal with the rest of the screen hidden, which carries
@@ -756,14 +791,27 @@ class FeesStandardReportController extends Controller
            open and anything bought from the store lands on it too (see
            EnrollmentInvoicing::openOrderInvoiceFor()). So store revenue is the lines
            carrying an item, wherever they sit, and tuition is what is left. */
-        $itemTotals = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoiceIds)
+        $itemLines = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoiceIds)
             ->whereNotNull('sm_item_id')
-            ->selectRaw('fees_invoice_id,
+            ->selectRaw('fees_invoice_id, sm_item_id,
                 COALESCE(SUM(amount),0) amount,
-                COALESCE(SUM(paid_amount),0) paid')
-            ->groupBy('fees_invoice_id')
-            ->get()
-            ->keyBy('fees_invoice_id');
+                COALESCE(SUM(paid_amount),0) paid,
+                COALESCE(SUM(quantity),0) qty')
+            ->groupBy('fees_invoice_id', 'sm_item_id')
+            ->get();
+
+        /* Per invoice, for the tuition-and-store split each row carries. */
+        $itemTotals = $itemLines->groupBy('fees_invoice_id')
+            ->map(fn ($lines) => (object) [
+                'amount' => $lines->sum('amount'),
+                'paid' => $lines->sum('paid'),
+            ]);
+
+        /* Which items each invoice carries and for how much, so a row can be
+           matched to an item without going back to the database per student. */
+        $itemsByInvoice = $itemLines->groupBy('fees_invoice_id')
+            ->map(fn ($lines) => $lines->pluck('amount', 'sm_item_id'));
+
 
         /* Billed, waived, fined and paid summed per invoice in one query - the same
            call StudentReportController makes. The stored payment_status is a cached
@@ -817,7 +865,7 @@ class FeesStandardReportController extends Controller
 
         $today = now()->startOfDay();
 
-        $rows = $records->map(function ($record) use ($invoices, $totals, $itemTotals, $plans, $wallets, $priorBalances, $paidAsOf, $today, $wholeStay) {
+        $rows = $records->map(function ($record) use ($invoices, $totals, $itemTotals, $itemsByInvoice, $plans, $wallets, $priorBalances, $paidAsOf, $today, $wholeStay) {
             $student = $record->studentDetail;
             /* Keyed as the grouping above was - by student over a stay, by record
                otherwise. */
@@ -834,6 +882,7 @@ class FeesStandardReportController extends Controller
             $buckets = $this->emptyBuckets();
             $itemAssessed = 0.0;
             $itemPaid = 0.0;
+            $itemsBought = [];
 
             foreach ($own as $invoice) {
                 $total = $totals->get($invoice->id);
@@ -857,6 +906,10 @@ class FeesStandardReportController extends Controller
                 $item = $itemTotals->get($invoice->id);
                 $itemAssessed += (float) optional($item)->amount;
                 $itemPaid += (float) optional($item)->paid;
+
+                foreach ($itemsByInvoice->get($invoice->id, collect()) as $itemId => $amount) {
+                    $itemsBought[$itemId] = round(($itemsBought[$itemId] ?? 0) + (float) $amount, 2);
+                }
 
                 /* Same arithmetic the invoice itself settles on - see
                    EnrollmentInvoicing. The module's balance report leaves the waiver
@@ -943,6 +996,10 @@ class FeesStandardReportController extends Controller
                    add back up to billed and neither can drift from it. */
                 'item_assessed' => round($itemAssessed, 2),
                 'item_paid' => round($itemPaid, 2),
+                /* What this student bought from the store and for how much, keyed by
+                   item - so an item's revenue can be opened without asking the
+                   database again per student. */
+                'items' => $itemsBought,
                 'tuition_assessed' => round($assessed - $itemAssessed, 2),
                 'tuition_paid' => round($paid - $itemPaid, 2),
                 'course_id' => $student->course_id,
@@ -1213,10 +1270,57 @@ class FeesStandardReportController extends Controller
      * programme are kept as a group of their own rather than dropped; in a basic
      * education school that is all of them, and the table simply reads as one row.
      */
-    private function revenueByProgram($rows)
+    /**
+     * What a metric is called, for the modal heading. A programme metric is named
+     * after the programme itself, which is the only name that would mean anything.
+     *
+     * Read off the rows rather than looked up: they are already in hand and
+     * already carry the programme's name, and a programme deleted since the page
+     * was drawn would not be found by a lookup anyway.
+     */
+    private function metricTitle($metric, $rows)
+    {
+        if ($metric === 'programs') {
+            return __('reports.fees_revenue_by_program');
+        }
+
+        if ($metric === 'items') {
+            return __('reports.fees_revenue_by_item');
+        }
+
+        if (in_array($metric, self::METRICS, true)) {
+            return __('reports.fees_metric_' . $metric);
+        }
+
+        if (preg_match('/^item_(\d+)$/', (string) $metric, $m)) {
+            return __('reports.fees_item_store') . ' - '
+                . (optional(SmItem::find($m[1]))->item_name
+                    ?: __('reports.fees_deleted_item', ['id' => $m[1]]));
+        }
+
+        $name = optional($rows->first())['course_name'] ?: __('reports.fees_no_program');
+
+        return __('reports.fees_revenue_by_program') . ' - ' . $name;
+    }
+
+    /**
+     * What each programme billed and collected, largest first, each line carrying
+     * the metric that opens the students behind it.
+     *
+     * Grouped off the student's course rather than the invoice's, because a
+     * student who has moved programme should read under the one they are in now -
+     * which is the question a registrar asks of this figure. Students with no
+     * programme are kept as a group of their own rather than dropped; in a basic
+     * education school that is all of them, and it simply reads as one line.
+     *
+     * Every programme, in order. The card shortens this; the breakdown behind the
+     * card's own figure does not, because that is what it is for.
+     */
+    private function programTotals($rows)
     {
         return $rows->groupBy(fn ($r) => $r['course_id'] ?: 'none')
             ->map(fn ($group, $key) => [
+                'metric' => 'program_' . $key,
                 'name' => $key === 'none'
                     ? __('reports.fees_no_program')
                     : ($group->first()['course_name'] ?: __('reports.fees_no_program')),
@@ -1234,9 +1338,76 @@ class FeesStandardReportController extends Controller
             ->values();
     }
 
+    /**
+     * What each store item sold for, largest first.
+     *
+     * The other half of where the revenue came from: a programme says who was
+     * billed, an item says what was bought. Read off the item totals each row
+     * already carries rather than queried again, so this costs nothing.
+     *
+     * An item deleted since it was sold keeps its money and is reported under the
+     * id that is left, because the revenue happened whether or not the record of
+     * what it was for survived.
+     */
+    private function itemTotals($rows)
+    {
+        $totals = [];
+
+        foreach ($rows as $row) {
+            foreach ($row['items'] ?? [] as $itemId => $amount) {
+                if (!isset($totals[$itemId])) {
+                    $totals[$itemId] = ['amount' => 0.0, 'students' => 0];
+                }
+
+                $totals[$itemId]['amount'] = round($totals[$itemId]['amount'] + $amount, 2);
+                $totals[$itemId]['students']++;
+            }
+        }
+
+        /* The names, read once for the whole set rather than per line. */
+        $names = SmItem::whereIn('id', array_keys($totals))->pluck('item_name', 'id');
+
+        return collect($totals)
+            ->map(fn ($t, $itemId) => [
+                'metric' => 'item_' . $itemId,
+                'name' => $names[$itemId] ?? __('reports.fees_deleted_item', ['id' => $itemId]),
+                'amount' => $t['amount'],
+                'students' => $t['students'],
+            ])
+            ->sortByDesc('amount')
+            ->values();
+    }
+
     /** The counterpart of summarise(): one figure, the rows it was counted from. */
     private function filterByMetric($rows, $metric)
     {
+        /* The whole population, split by programme in the view rather than filtered
+           here - the breakdown is of everyone the criteria selected. */
+        if ($metric === 'programs') {
+            return $rows;
+        }
+
+        /* Only those who bought something: a student who bought nothing is no part
+           of what the store sold. */
+        if ($metric === 'items') {
+            return $rows->filter(fn ($r) => !empty($r['items']))->values();
+        }
+
+        /* An item metric carries its own id, matched before the fixed list. The
+           students who bought it are the ones carrying it in their own item
+           totals, which every row already holds. */
+        if (preg_match('/^item_(\d+)$/', (string) $metric, $m)) {
+            return $rows->filter(fn ($r) => isset($r['items'][$m[1]]))->values();
+        }
+
+        /* A programme metric carries its own id, so it is matched before the fixed
+           list rather than inside it. */
+        if (preg_match('/^program_(\d+|none)$/', (string) $metric, $m)) {
+            return $m[1] === 'none'
+                ? $rows->filter(fn ($r) => !$r['course_id'])->values()
+                : $rows->filter(fn ($r) => (int) $r['course_id'] === (int) $m[1])->values();
+        }
+
         switch ($metric) {
             case 'all':
                 return $rows;
@@ -1263,6 +1434,12 @@ class FeesStandardReportController extends Controller
                     ->values();
             case 'prior_balance':
                 return $rows->where('prior_balance', '>', 0)->values();
+            case 'tuition':
+                return $rows->where('tuition_assessed', '>', 0)->values();
+            case 'store':
+                return $rows->where('item_assessed', '>', 0)->values();
+            case 'programs':
+                return $rows;
             case 'over_limit':
                 /* The limit is read here rather than passed, because a metric list
                    is asked for by name and carries no criteria of its own beyond

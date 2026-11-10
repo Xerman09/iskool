@@ -208,7 +208,51 @@
                                     @endforeach
                                 </select>
                             </div>
+                            {{-- All years by default, unlike the invoices report where the
+                                 year is the frame. Here the date range is the frame, and
+                                 defaulting the year would quietly drop every receipt that
+                                 settled no invoice. --}}
                             <div class="col-lg-3">
+                                <label class="primary_input_label">@lang('reports.school_year')</label>
+                                <select class="primary_select form-control" name="academic_id">
+                                    <option value="">@lang('reports.receipts_all_years')</option>
+                                    @foreach ($years as $year)
+                                        <option value="{{ $year->id }}"
+                                            {{ (int) $criteria['academicId'] === (int) $year->id ? 'selected' : '' }}>
+                                            {{ $year->year }}{{ $year->title ? ' - ' . $year->title : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-15">
+                            @if (!isBasicEd())
+                                <div class="col-lg-3 mb-3 mb-lg-0">
+                                    <label class="primary_input_label">@lang('academics.program')</label>
+                                    <select class="primary_select form-control" name="course_id">
+                                        <option value="">@lang('reports.all_programs')</option>
+                                        @foreach ($courses as $course)
+                                            <option value="{{ $course->id }}"
+                                                {{ (int) $criteria['courseId'] === (int) $course->id ? 'selected' : '' }}>
+                                                {{ $course->course_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
+                            <div class="col-lg-3 mb-3 mb-lg-0">
+                                <label class="primary_input_label">@lang('reports.col_charge_type')</label>
+                                <select class="primary_select form-control" name="type">
+                                    <option value="">@lang('reports.fees_type_all')</option>
+                                    <option value="fees" {{ $criteria['type'] === 'fees' ? 'selected' : '' }}>
+                                        @lang('reports.fees_type_fees')
+                                    </option>
+                                    <option value="store" {{ $criteria['type'] === 'store' ? 'selected' : '' }}>
+                                        @lang('reports.fees_type_store')
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="{{ isBasicEd() ? 'col-lg-9' : 'col-lg-6' }}">
                                 <label class="primary_input_label">&nbsp;</label>
                                 <div class="criteria-actions">
                                     <button type="submit" class="primary-btn small fix-gr-bg">

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin\Report;
 
+use App\Course;
 use App\SmStudent;
+use App\SmAcademicYear;
 use App\Scopes\AcademicSchoolScope;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -120,13 +122,22 @@ class CashReceiptsReportController extends Controller
 
     private function criteriaLabels(array $criteria)
     {
+        $year = $criteria['academicId'] ? SmAcademicYear::find($criteria['academicId']) : null;
+
         return array_filter([
             __('reports.accounts_period') . ': '
                 . date('M d, Y', strtotime($criteria['dateFrom']))
                 . ' - ' . date('M d, Y', strtotime($criteria['dateTo'])),
-            $criteria['method']
-                ? __('fees.payment_method') . ': ' . $criteria['method']
-                : null,
+            __('reports.school_year') . ': ' . ($year
+                ? $year->year . ($year->title ? ' - ' . $year->title : '')
+                : __('reports.receipts_all_years')),
+            isBasicEd() ? null : __('academics.program') . ': ' . ($criteria['courseId']
+                ? optional(Course::find($criteria['courseId']))->course_name
+                : __('reports.all_programs')),
+            __('reports.col_charge_type') . ': ' . ($criteria['type']
+                ? __('reports.fees_type_' . $criteria['type'])
+                : __('reports.fees_type_all')),
+            __('fees.payment_method') . ': ' . ($criteria['method'] ?: __('reports.receipts_all_methods')),
         ]);
     }
 
@@ -157,13 +168,28 @@ class CashReceiptsReportController extends Controller
             ->sort()
             ->values();
 
+        /* The same narrowings the open invoices report offers, so the two read
+           alike. Two of its criteria are deliberately not here: "as at" asks what
+           was true on a day, and a receipt simply happened on one; and settled or
+           open is a state of an invoice, not of a payment.
+
+           All of these default to everything, unlike the invoices report where the
+           school year is the frame. Here the date range is the frame, and defaulting
+           the year as well would quietly drop every receipt that points at no
+           invoice - which is the one kind worth not losing. */
+        $years = SmAcademicYear::where('school_id', $schoolId)->orderByDesc('id')->get();
+        $courses = Course::selectable()->where('school_id', $schoolId)->orderBy('course_name')->get();
+
         return [
             'schoolId' => $schoolId,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
             'method' => $methods->contains($request->get('method')) ? $request->get('method') : null,
+            'academicId' => $request->filled('academic_id') ? (int) $request->academic_id : null,
+            'courseId' => $request->filled('course_id') ? (int) $request->course_id : null,
+            'type' => in_array($request->get('type'), ['fees', 'store'], true) ? $request->get('type') : null,
             'search' => trim((string) $request->get('search')),
-            'lists' => compact('methods'),
+            'lists' => compact('methods', 'years', 'courses'),
         ];
     }
 
@@ -216,7 +242,7 @@ class CashReceiptsReportController extends Controller
 
         $invoices = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
             ->whereIn('id', $receipts->pluck('fees_invoice_id')->filter()->unique())
-            ->get(['id', 'invoice_id', 'student_id', 'staff_id', 'type'])
+            ->get(['id', 'invoice_id', 'student_id', 'staff_id', 'type', 'academic_id'])
             ->keyBy('id');
 
         /* Whole models, not a column list. full_name on SmStudent is an accessor
@@ -259,6 +285,23 @@ class CashReceiptsReportController extends Controller
                 'note' => $receipt->payment_note,
             ];
         });
+
+        /* Narrowings that belong to the invoice a receipt settled, so a receipt that
+           settled nothing cannot satisfy any of them. Dropping the unapplied ones
+           when a narrowing is on is the honest answer - they are not of that year,
+           that programme or that charge - and with no narrowing they stay, which is
+           when anyone is looking for them. */
+        if ($criteria['academicId']) {
+            $rows = $rows->filter(fn ($r) => $r['invoice'] && (int) $r['invoice']->academic_id === $criteria['academicId']);
+        }
+
+        if ($criteria['type']) {
+            $rows = $rows->filter(fn ($r) => $r['invoice'] && $r['invoice']->type === $criteria['type']);
+        }
+
+        if ($criteria['courseId']) {
+            $rows = $rows->filter(fn ($r) => $r['student'] && (int) $r['student']->course_id === $criteria['courseId']);
+        }
 
         if ($criteria['search'] !== '') {
             $needle = mb_strtolower($criteria['search']);
