@@ -1505,6 +1505,11 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('open-invoices-report', ['as' => 'open-invoices-report', 'uses' => 'Admin\Report\OpenInvoicesReportController@index'])->middleware('userRolePermission:open-invoices-report');
         Route::get('open-invoices-report-metric', ['as' => 'open-invoices-report-metric', 'uses' => 'Admin\Report\OpenInvoicesReportController@metricList'])->middleware('userRolePermission:open-invoices-report');
 
+        /* The thread running through the other reports: billing raised, money in,
+           money out, all on one timeline in the order it happened. */
+        Route::get('activity-audit-report', ['as' => 'activity-audit-report', 'uses' => 'Admin\Report\ActivityAuditReportController@index'])->middleware('userRolePermission:activity-audit-report');
+        Route::get('activity-audit-report-metric', ['as' => 'activity-audit-report-metric', 'uses' => 'Admin\Report\ActivityAuditReportController@metricList'])->middleware('userRolePermission:activity-audit-report');
+
         Route::get('tabulation-sheet-report', ['as' => 'tabulation_sheet_report', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReport'])->middleware('userRolePermission:tabulation_sheet_report');
         Route::post('tabulation-sheet-report', ['as' => 'tabulation_sheet_report_search', 'uses' => 'Admin\Report\SmReportController@tabulationSheetReportSearch']);
         Route::post('tabulation-sheet/print', 'Admin\Report\SmReportController@tabulationSheetReportPrint')->name('tabulation-sheet/print');
