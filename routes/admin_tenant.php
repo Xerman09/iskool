@@ -1471,11 +1471,6 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('student-standard-report', ['as' => 'student-standard-report', 'uses' => 'Admin\Report\StudentReportController@index'])->middleware('userRolePermission:student-standard-report');
         Route::get('student-standard-report-metric', ['as' => 'student-standard-report-metric', 'uses' => 'Admin\Report\StudentReportController@metricList'])->middleware('userRolePermission:student-standard-report');
 
-        /* The one sidebar entry for the four receivables views, which are the same
-           money at four grains. Holds no report: it sends the visitor to the first
-           tab they are allowed, so a per-tab grant lands somewhere readable. */
-        Route::get('receivables', ['as' => 'receivables', 'uses' => 'Admin\Report\ReceivablesController@index'])->middleware('userRolePermission:receivables');
-
         /* The money counterpart of the report above: billed, collected, outstanding
            and aged, for a year and a term. Admin side only - a student reads their
            own account off student-transaction-ledger, which is per-student by

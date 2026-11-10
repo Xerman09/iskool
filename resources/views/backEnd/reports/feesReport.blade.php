@@ -220,12 +220,6 @@
 
     <section class="admin-visitor-area up_st_admin_visitor">
         <div class="container-fluid p-0">
-            @include("backEnd.reports.partials.receivablesTabs")
-        </div>
-    </section>
-
-    <section class="admin-visitor-area up_st_admin_visitor">
-        <div class="container-fluid p-0">
 
             {{-- The one-line answer, so the page says what it found before anyone reads
                  a card. --}}

@@ -78,12 +78,6 @@
 
     <section class="admin-visitor-area up_st_admin_visitor">
         <div class="container-fluid p-0">
-            @include("backEnd.reports.partials.receivablesTabs")
-        </div>
-    </section>
-
-    <section class="admin-visitor-area up_st_admin_visitor">
-        <div class="container-fluid p-0">
 
             {{-- How many documents and how much, which is what a trial balance is
                  asked for before anything else on the page is read. --}}
