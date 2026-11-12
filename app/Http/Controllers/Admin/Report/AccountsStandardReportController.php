@@ -14,6 +14,8 @@ use App\Scopes\ActiveStatusSchoolScope;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
+use Modules\Fees\Entities\FmFeesInvoice;
+use Modules\Fees\Entities\FmFeesInvoiceChield;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -54,12 +56,18 @@ class AccountsStandardReportController extends Controller
             $criteria = $this->criteria($request);
             $rows = $this->classify($criteria);
 
+            $summary = $this->summarise($rows);
+
             return view('backEnd.reports.accountsReport', array_merge($criteria['lists'], [
                 'criteria' => $criteria,
                 'rows' => $rows,
-                'summary' => $this->summarise($rows),
+                'summary' => $summary,
                 'incomeHeadTotals' => $this->headTotals($rows, 'income'),
                 'expenseHeadTotals' => $this->headTotals($rows, 'expense'),
+                'billed' => $this->billedInPeriod($criteria),
+                /* The same figures for the stretch before this one, so the net can
+                   be read as a direction and not only as an amount. */
+                'prior' => $this->summarise($this->classify($this->priorPeriod($criteria))),
             ]));
         } catch (\Exception $e) {
             Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
@@ -80,7 +88,7 @@ class AccountsStandardReportController extends Controller
         $request->validate([
             'metric' => ['required', function ($attribute, $value, $fail) {
                 if (!in_array($value, self::METRICS, true)
-                    && !preg_match('/^head_(income|expense)_(\d+|none)$/', (string) $value)) {
+                    && !preg_match('/^(head_(income|expense)_(\d+|none)|heads_(income|expense)|billed(_paid|_unpaid|_waived)?)$/', (string) $value)) {
                     $fail(__('validation.in', ['attribute' => $attribute]));
                 }
             }],
@@ -105,6 +113,30 @@ class AccountsStandardReportController extends Controller
                 )),
             ];
 
+            /* The card's own figure opens every head, not the four it has room for.
+               Without this a school with thirty heads can see four of them and a
+               line saying "26 others", and no way at all to reach the twenty-six. */
+            if (preg_match('/^heads_(income|expense)$/', (string) $request->metric, $m)) {
+                $data['kind'] = $m[1];
+                $data['heads'] = $this->allHeadTotals($rows, $m[1]);
+
+                return $request->boolean('print')
+                    ? view('backEnd.reports.accountsHeadPrint', $data)
+                    : view('backEnd.reports.partials.accountsHeadList', $data)->render();
+            }
+
+            /* The billed card opens the invoices behind it. They are a different
+               grain from the entries the rest of this page lists - one invoice, not
+               one cash movement - which is a reason to say so in the heading, not a
+               reason to leave the figure unopenable while every other one opens. */
+            if (preg_match('/^billed(_paid|_unpaid|_waived)?$/', (string) $request->metric, $m)) {
+                $data['invoices'] = $this->billedInvoices($criteria, $m[1] ?? '');
+
+                return $request->boolean('print')
+                    ? view('backEnd.reports.accountsBilledPrint', $data)
+                    : view('backEnd.reports.partials.accountsBilledList', $data)->render();
+            }
+
             if ($request->boolean('print')) {
                 return view('backEnd.reports.accountsReportPrint', $data);
             }
@@ -124,6 +156,23 @@ class AccountsStandardReportController extends Controller
     {
         if (in_array($metric, self::METRICS, true)) {
             return __('reports.accounts_metric_' . $metric);
+        }
+
+        if (preg_match('/^heads_(income|expense)$/', (string) $metric, $m)) {
+            return __('reports.accounts_by_head_' . $m[1]);
+        }
+
+        if (preg_match('/^billed(_paid|_unpaid|_waived)?$/', (string) $metric, $m)) {
+            /* Mapped rather than built from the suffix: the collected row is keyed
+               accounts_billed_collected, so "_paid" appended to the stem resolves
+               to a key that does not exist and prints itself. */
+            $part = [
+                '_paid' => 'reports.accounts_billed_collected',
+                '_unpaid' => 'reports.accounts_billed_unpaid',
+                '_waived' => 'reports.accounts_billed_waived',
+            ][$m[1] ?? ''] ?? null;
+
+            return __('reports.accounts_billed_summary') . ($part ? ' - ' . __($part) : '');
         }
 
         [, $kind, $id] = explode('_', $metric, 3);
@@ -232,6 +281,142 @@ class AccountsStandardReportController extends Controller
         $name = optional($heads->get($headId))->name;
 
         return $name ?: __('reports.accounts_unknown_head', ['id' => $headId]);
+    }
+
+    /**
+     * What the school billed students over the period, and how much of it has
+     * come in.
+     *
+     * The cash flow above is money that moved. This is money that was earned,
+     * which for a school is a different and larger number: bill 31,500, collect
+     * 4,000, and the books look tiny while the term was not. Reading only the
+     * cash cannot tell a quiet term from a collection problem, and the two want
+     * very different answers.
+     */
+    private function billedInPeriod(array $criteria)
+    {
+        $invoiceIds = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('school_id', $criteria['schoolId'])
+            ->whereNotNull('student_id')
+            ->whereDate('create_date', '>=', $criteria['dateFrom'])
+            ->whereDate('create_date', '<=', $criteria['dateTo'])
+            ->pluck('id');
+
+        $lines = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoiceIds)
+            ->selectRaw('
+                COALESCE(SUM(amount),0) amount,
+                COALESCE(SUM(fine),0) fine,
+                COALESCE(SUM(weaver),0) weaver,
+                COALESCE(SUM(paid_amount),0) paid')
+            ->first();
+
+        /* Fines are earned like any other line - they are charged and owed.
+           Waivers were given away and never were. */
+        $total = round((float) $lines->amount + (float) $lines->fine - (float) $lines->weaver, 2);
+        $paid = round((float) $lines->paid, 2);
+
+        return [
+            'total' => $total,
+            'paid' => $paid,
+            /* Only what is still owed. An overpayment is not negative debt. */
+            'unpaid' => round(max(0, $total - $paid), 2),
+            'rate' => $total > 0 ? round($paid / $total * 100, 1) : 0,
+            /* Revenue given away. It is already netted out of the total above, and
+               reported here as well because a figure that quietly reduces another
+               is a figure nobody can question. It belongs nowhere in the cash flow
+               beside it - a waiver is not money that moved, it is money that never
+               will - so this card is the only place it can be seen. */
+            'waived' => round((float) $lines->weaver, 2),
+        ];
+    }
+
+    /**
+     * The invoices behind the billed card, one line each.
+     *
+     * Three queries: the invoices raised in the period, their lines summed in the
+     * database, and the students they belong to. Whole student models, because
+     * full_name on SmStudent is an accessor over first_name and last_name and
+     * selecting the column of that name hands back a single space.
+     *
+     * $only narrows to the figure that was clicked: '_paid' for the collected
+     * line, '_unpaid' for what is still owed, empty for the total.
+     */
+    private function billedInvoices(array $criteria, string $only = '')
+    {
+        $invoices = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('school_id', $criteria['schoolId'])
+            ->whereNotNull('student_id')
+            ->whereDate('create_date', '>=', $criteria['dateFrom'])
+            ->whereDate('create_date', '<=', $criteria['dateTo'])
+            ->orderBy('create_date')
+            ->get(['id', 'invoice_id', 'student_id', 'type', 'create_date', 'due_date']);
+
+        if ($invoices->isEmpty()) {
+            return collect();
+        }
+
+        $totals = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoices->pluck('id'))
+            ->selectRaw('fees_invoice_id,
+                COALESCE(SUM(amount),0) amount,
+                COALESCE(SUM(fine),0) fine,
+                COALESCE(SUM(weaver),0) weaver,
+                COALESCE(SUM(paid_amount),0) paid')
+            ->groupBy('fees_invoice_id')
+            ->get()
+            ->keyBy('fees_invoice_id');
+
+        $students = \App\SmStudent::withoutGlobalScope(ActiveStatusSchoolScope::class)
+            ->whereIn('id', $invoices->pluck('student_id')->unique())
+            ->get()
+            ->keyBy('id');
+
+        $rows = $invoices->map(function ($invoice) use ($totals, $students) {
+            $t = $totals->get($invoice->id);
+            $billed = round((float) optional($t)->amount + (float) optional($t)->fine - (float) optional($t)->weaver, 2);
+            $paid = round((float) optional($t)->paid, 2);
+
+            return [
+                'invoice' => $invoice,
+                'student' => $students->get($invoice->student_id),
+                'billed' => $billed,
+                'paid' => $paid,
+                'unpaid' => round(max(0, $billed - $paid), 2),
+                'waived' => round((float) optional($t)->weaver, 2),
+            ];
+        });
+
+        if ($only === '_paid') {
+            return $rows->where('paid', '>', 0)->values();
+        }
+
+        if ($only === '_unpaid') {
+            return $rows->where('unpaid', '>', 0)->values();
+        }
+
+        if ($only === '_waived') {
+            return $rows->where('waived', '>', 0)->values();
+        }
+
+        return $rows->values();
+    }
+
+    /**
+     * The stretch of the same length immediately before the one being looked at.
+     *
+     * "Are we losing money" is nearly always "is it getting worse", and a figure
+     * with nothing beside it cannot answer that. Matched on length rather than on
+     * the calendar so a fortnight compares with the fortnight before it, without
+     * anyone having to choose a second range.
+     */
+    private function priorPeriod(array $criteria)
+    {
+        $from = \Carbon\Carbon::parse($criteria['dateFrom'])->startOfDay();
+        $days = $from->diffInDays(\Carbon\Carbon::parse($criteria['dateTo'])->startOfDay()) + 1;
+
+        return array_merge($criteria, [
+            'dateFrom' => $from->copy()->subDays($days)->toDateString(),
+            'dateTo' => $from->copy()->subDay()->toDateString(),
+        ]);
     }
 
     /** A date the pickers can hand back, or null - never a guess at what was meant. */
@@ -372,9 +557,13 @@ class AccountsStandardReportController extends Controller
      * Entries with no head are kept as a head of their own rather than dropped -
      * unfiled money is exactly what a report like this is for finding.
      */
-    private function headTotals($rows, $kind)
+    /**
+     * Every head of one side, largest first - what the card shortens and what
+     * the figure above it opens.
+     */
+    private function allHeadTotals($rows, $kind)
     {
-        $grouped = $rows->where('kind', $kind)
+        return $rows->where('kind', $kind)
             ->groupBy(fn ($r) => $r['head_id'] ?: 'none')
             ->map(fn ($group, $key) => [
                 'metric' => 'head_' . $kind . '_' . $key,
@@ -386,6 +575,11 @@ class AccountsStandardReportController extends Controller
             ])
             ->sortByDesc('amount')
             ->values();
+    }
+
+    private function headTotals($rows, $kind)
+    {
+        $grouped = $this->allHeadTotals($rows, $kind);
 
         if ($grouped->count() <= self::TOP_HEADS + 1) {
             return ['top' => $grouped, 'others' => null];
@@ -456,6 +650,17 @@ class AccountsStandardReportController extends Controller
     /** The counterpart of summarise(): one figure, the rows it was counted from. */
     private function filterByMetric($rows, $metric)
     {
+        /* One side in full, split by head in the view rather than filtered here. */
+        if (preg_match('/^heads_(income|expense)$/', (string) $metric, $m)) {
+            return $rows->where('kind', $m[1])->values();
+        }
+
+        /* The billed figures are of invoices, not of the entries on this page, so
+           there is nothing here to filter - billedInvoices() fetches them. */
+        if (preg_match('/^billed(_paid|_unpaid|_waived)?$/', (string) $metric)) {
+            return collect();
+        }
+
         if (preg_match('/^head_(income|expense)_(\d+|none)$/', (string) $metric, $m)) {
             $kind = $m[1];
             $headId = $m[2] === 'none' ? null : (int) $m[2];

@@ -352,6 +352,9 @@ return [
     'accounts_unknown_head' => 'Deleted head (#:id)',
     'accounts_no_entries' => 'No entries found for these criteria.',
     'accounts_other_heads' => ':count other heads',
+    'accounts_heads_counted' => ':count head(s)',
+    'accounts_billed_grain' => 'One line per invoice. The rest of this report lists cash movements, so these totals will not match the entries table - they are of what was billed, not of what moved.',
+    'pl_share_col' => 'Share',
     'accounts_out' => 'Total Out',
     'accounts_payroll_head' => 'Payroll',
     'accounts_cashflow_hint' => 'Net = income - expense - payroll paid.',
@@ -366,6 +369,16 @@ return [
     'accounts_metric_expense_entries' => 'Expense Entries',
     'accounts_metric_no_head' => 'No Head Assigned',
     'accounts_metric_no_account' => 'No Account Assigned',
+    'accounts_billed_summary' => 'Billed This Period',
+    'accounts_billed_hint' => 'Money earned, as against money that moved. For a school these differ.',
+    'accounts_billed_collected' => 'Collected so far',
+    'accounts_billed_unpaid' => 'Still unpaid',
+    'accounts_collection_note' => 'Only :rate% of what was billed this period has been collected.',
+    'accounts_see_open' => 'See all open invoices',
+    'accounts_better' => 'better',
+    'accounts_worse' => 'worse',
+    'accounts_unchanged' => 'Net unchanged',
+    'accounts_vs_prior' => 'than the period before this one',
 
     /* Cash Receipts Register - see CashReceiptsReportController. */
     'standard_receipts_report' => 'Cash Receipts Register',
@@ -447,6 +460,7 @@ return [
     'activity_metric_income' => 'Income Recorded',
     'activity_metric_expense' => 'Expense Recorded',
     'activity_metric_payroll' => 'Wages Paid',
+
     'receipts_metric_students' => 'students',
 
 ];

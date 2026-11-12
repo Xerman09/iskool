@@ -10,8 +10,12 @@
         /* The two fixed cards. The by-head cards below them are built from the data
            instead, because the heads are whatever this school has made. */
         $cards = [
+            /* netRow draws the subtraction out as its own line under the three it is
+               made of. The badge carries the same figure, but a badge is a label -
+               set below income, expense and payroll it reads as the sum of them,
+               which is what it is. */
             ['title' => __('reports.accounts_cashflow_summary'), 'accent' => '#1a9d6a',
-             'total' => 'net', 'rows' => ['income', 'expense', 'payroll'],
+             'total' => 'net', 'rows' => ['income', 'expense', 'payroll'], 'netRow' => 'net',
              'hint' => __('reports.accounts_cashflow_hint')],
             ['title' => __('reports.accounts_entries_summary'), 'accent' => '#e08b1e', 'count' => true,
              'total' => 'all', 'rows' => ['income_entries', 'expense_entries', 'no_head', 'no_account'],
@@ -93,6 +97,24 @@
         .metric-row.is-selected .metric-value {
             color: var(--metric-accent, #0f8b8d);
         }
+
+        /* The sum of the rows above it, so it is ruled off from them and set in the
+           heavier weight a total earns. */
+        .metric-row-net {
+            margin-top: 6px;
+            padding-top: 11px;
+            border-top: 1px solid rgba(0, 0, 0, .14);
+        }
+
+        .metric-row-net .metric-label {
+            color: #2b2b2b;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: .4px;
+        }
+
+        .metric-row-net .metric-value { font-size: 15px; }
 
         /* "Others" is a total, not an answer - it gathers several heads, so there is
            no one list behind it to open. It reads as a row without behaving as one. */
@@ -330,9 +352,96 @@
                                     </span>
                                 </a>
                             @endforeach
+
+                            {{-- The subtraction, drawn as its own line under the three it
+                                 is made of. Ruled off above so it reads as their sum
+                                 rather than as a fourth figure beside them, and coloured
+                                 by sign because a negative net is the whole point of
+                                 looking. --}}
+                            @if (!empty($card['netRow']))
+                                @php $net = $summary[$card['netRow']]; @endphp
+                                <a href="#" class="metric-row metric-row-net accounts-metric d-flex justify-content-between align-items-center"
+                                    style="--metric-accent: {{ $card['accent'] }};"
+                                    data-metric="{{ $card['netRow'] }}">
+                                    <span class="metric-label">@lang('reports.accounts_metric_' . $card['netRow'])</span>
+                                    <span class="metric-value {{ $net < 0 ? 'amount-out' : ($net > 0 ? 'amount-in' : '') }}">
+                                        {{ $currency }}{{ number_format($net, 2) }}
+                                    </span>
+                                </a>
+                            @endif
                         </div>
                     </div>
                 @endforeach
+
+                {{-- The accrual side of the same period. The cash flow card is money
+                     that moved; this is money that was earned, and for a school they
+                     are different and the second is larger. Reading only the cash
+                     cannot tell a quiet term from a collection problem.
+
+                     These open invoices, not the cash entries the rest of the page
+                     lists - a different grain, which the modal heading says rather
+                     than the figure being left unopenable while every other opens. --}}
+                <div class="col-lg-3 col-md-6 mb-20">
+                    <div class="white-box h-100" style="border-top:3px solid #7048a8;">
+                        <div class="d-flex justify-content-between align-items-center metric-head"
+                            style="--metric-accent: #7048a8;">
+                            <h5 class="mb-0">@lang('reports.accounts_billed_summary')</h5>
+                            <a href="#" class="metric-total accounts-metric" data-metric="billed">
+                                {{ $currency }}{{ number_format($billed['total'], 2) }}
+                            </a>
+                        </div>
+                        <p class="text-muted mb-10" style="font-size: 12px;">@lang('reports.accounts_billed_hint')</p>
+
+                        <a href="#" class="metric-row accounts-metric d-flex justify-content-between align-items-center"
+                            style="--metric-accent: #7048a8;" data-metric="billed_paid">
+                            <span class="metric-label">@lang('reports.accounts_billed_collected')</span>
+                            <span class="metric-value">{{ $currency }}{{ number_format($billed['paid'], 2) }}</span>
+                        </a>
+                        <a href="#" class="metric-row accounts-metric d-flex justify-content-between align-items-center"
+                            style="--metric-accent: #7048a8;" data-metric="billed_unpaid">
+                            <span class="metric-label">@lang('reports.accounts_billed_unpaid')</span>
+                            <span class="metric-value {{ $billed['unpaid'] > 0 ? 'amount-out' : '' }}">
+                                {{ $currency }}{{ number_format($billed['unpaid'], 2) }}
+                            </span>
+                        </a>
+
+                        {{-- Already netted out of the total above, and shown anyway: a
+                             figure that quietly reduces another is a figure nobody can
+                             question. It has no place in the cash flow card beside this
+                             one - a waiver is not money that moved - so this is the only
+                             card it can appear on. --}}
+                        @if ($billed['waived'] > 0)
+                            <a href="#" class="metric-row accounts-metric d-flex justify-content-between align-items-center"
+                                style="--metric-accent: #7048a8;" data-metric="billed_waived">
+                                <span class="metric-label">@lang('reports.accounts_billed_waived')</span>
+                                <span class="metric-value">&ndash; {{ $currency }}{{ number_format($billed['waived'], 2) }}</span>
+                            </a>
+                        @endif
+
+                        @if ($billed['total'] > 0)
+                            <p class="text-muted mb-0 mt-10" style="font-size: 12px;">
+                                @lang('reports.accounts_collection_note', ['rate' => $billed['rate']])
+                                @if ($billed['unpaid'] > 0)
+                                    <a href="{{ route('open-invoices-report') }}">@lang('reports.accounts_see_open')</a>
+                                @endif
+                            </p>
+                        @endif
+
+                        {{-- The net read as a direction, not only as an amount: "worse
+                             than last month" lands before any figure does. --}}
+                        @php $delta = round($summary['net'] - $prior['net'], 2); @endphp
+                        <p class="mb-0 mt-10 pt-10" style="font-size: 12px; border-top: 1px solid rgba(0,0,0,.08);">
+                            @if ($delta > 0)
+                                <span class="amount-in">&#9650; {{ $currency }}{{ number_format($delta, 2) }} @lang('reports.accounts_better')</span>
+                            @elseif ($delta < 0)
+                                <span class="amount-out">&#9660; {{ $currency }}{{ number_format(abs($delta), 2) }} @lang('reports.accounts_worse')</span>
+                            @else
+                                <span class="text-muted">@lang('reports.accounts_unchanged')</span>
+                            @endif
+                            <span class="text-muted d-block">@lang('reports.accounts_vs_prior')</span>
+                        </p>
+                    </div>
+                </div>
 
                 {{-- The two by-head cards. Built from the data rather than from a fixed
                      list, because the heads are whatever this school has set up - and
@@ -343,7 +452,10 @@
                             <div class="d-flex justify-content-between align-items-center metric-head"
                                 style="--metric-accent: {{ $accent }};">
                                 <h5 class="mb-0">@lang('reports.accounts_by_head_' . $kind)</h5>
-                                <a href="#" class="metric-total accounts-metric" data-metric="{{ $kind }}">
+                                {{-- The card's own figure opens every head, not the four it
+                                     has room for: a school with thirty would otherwise see
+                                     four and a line saying "26 others" it could not reach. --}}
+                                <a href="#" class="metric-total accounts-metric" data-metric="heads_{{ $kind }}">
                                     {{ $currency }}{{ number_format($summary[$kind], 2) }}
                                 </a>
                             </div>
