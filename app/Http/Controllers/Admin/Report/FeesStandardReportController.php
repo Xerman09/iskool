@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Report;
 
 use App\Course;
 use App\SmItem;
+use App\SmSubject;
 use App\Semester;
 use App\SmStudent;
 use App\SmAcademicYear;
@@ -11,12 +12,14 @@ use App\PaymentPlanAssign;
 use App\Models\StudentRecord;
 use Modules\Fees\Entities\FmFeesTransaction;
 use App\Scopes\AcademicSchoolScope;
+use App\Scopes\ActiveStatusSchoolScope;
 use App\Traits\EnrollmentBalanceBreakdown;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
+use Modules\Fees\Entities\FmFeesType;
 use Modules\Fees\Entities\FmFeesInvoice;
 use Modules\Fees\Entities\FmFeesInvoiceChield;
 use Illuminate\Support\Facades\Log;
@@ -180,6 +183,351 @@ class FeesStandardReportController extends Controller
     }
 
     /**
+     * The way in to a student's account: the list, with the balance beside each
+     * name so the choice is made knowing who owes what.
+     *
+     * Everyone is listed and the table searches itself, which is how every other
+     * list in this application behaves - a page that showed nothing until
+     * something was typed would be the one screen here that does not.
+     *
+     * Inactive students are listed too, badged. A student who has left still owes
+     * what they owed, and is the one somebody is most likely to come looking for.
+     */
+    public function accountSearch(Request $request)
+    {
+        try {
+            $schoolId = auth()->user()->school_id;
+
+            $students = SmStudent::withoutGlobalScope(ActiveStatusSchoolScope::class)
+                ->where('school_id', $schoolId)
+                ->with('course')
+                ->orderBy('full_name')
+                ->get();
+
+            return view('backEnd.reports.studentAccountSearch', [
+                'students' => $students,
+                'balances' => $this->balancesFor($students->pluck('id'), $schoolId),
+            ]);
+        } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
+            Toastr::error('Operation Failed', 'Failed');
+
+            return redirect()->back();
+        }
+    }
+
+    /**
+     * What each of these students owes across every year, keyed by student id.
+     *
+     * Two queries whatever the size of the match. Totalled from the invoice lines
+     * with this report's own arithmetic rather than from the stored due_amount,
+     * so the figure beside a name here is the figure on the account behind it.
+     */
+    private function balancesFor($studentIds, $schoolId)
+    {
+        if ($studentIds->isEmpty()) {
+            return collect();
+        }
+
+        $invoices = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('school_id', $schoolId)
+            ->whereIn('student_id', $studentIds)
+            ->get(['id', 'student_id']);
+
+        if ($invoices->isEmpty()) {
+            return collect();
+        }
+
+        $totals = FmFeesInvoiceChield::whereIn('fees_invoice_id', $invoices->pluck('id'))
+            ->selectRaw('fees_invoice_id,
+                COALESCE(SUM(amount),0) amount,
+                COALESCE(SUM(fine),0) fine,
+                COALESCE(SUM(paid_amount),0) paid,
+                COALESCE(SUM(weaver),0) weaver')
+            ->groupBy('fees_invoice_id')
+            ->get()
+            ->keyBy('fees_invoice_id');
+
+        return $invoices->groupBy('student_id')->map(function ($group) use ($totals) {
+            $balance = 0.0;
+
+            foreach ($group as $invoice) {
+                $t = $totals->get($invoice->id);
+                $balance += ((float) optional($t)->amount + (float) optional($t)->fine)
+                    - ((float) optional($t)->paid + (float) optional($t)->weaver);
+            }
+
+            return round($balance, 2);
+        });
+    }
+
+    /**
+     * One student's account on screen: what they have paid, what they still owe,
+     * and what is coming next.
+     *
+     * The same figures the statement prints, laid out to be read rather than
+     * filed - and the statement is one button away, because an account someone
+     * is looking at is an account they will be asked to send.
+     *
+     * Two per-student views already existed, both reached only through Assign
+     * Program: a balance summary carrying what is due now, and a ledger carrying
+     * what has been paid. Between them they answer this, but in two places and
+     * behind a permission a cashier has no other reason to hold.
+     */
+    public function account(Request $request, $studentId)
+    {
+        try {
+            $criteria = $this->criteria($request);
+
+            /* Scoped to the school rather than found by id alone: an id in the URL
+               is whatever the sender typed, and one school's admin has no business
+               reading another's student. */
+            $student = SmStudent::where('school_id', $criteria['schoolId'])->find($studentId);
+
+            if (!$student) {
+                Toastr::error(__('common.not_found'), 'Failed');
+
+                return redirect()->route('fees-standard-report');
+            }
+
+            /* Rebuilt once the student is known. The report's criteria can only pin
+               a single term, because that is the question the report asks; an
+               account is asked over a whole stay as often as over one term, and the
+               terms on offer are this student's, not the school's. */
+            $criteria = $this->accountCriteria($request, $student);
+
+            $statement = $this->statementFor($student, $criteria);
+
+            return view('backEnd.reports.studentAccount', [
+                'criteria' => $criteria,
+                'student' => $student,
+                's' => $statement,
+                'next' => $this->nextDueAcross($statement),
+                'cost' => $this->programmeCostFor($student),
+                'labels' => $this->accountLabels($criteria),
+            ]);
+        } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
+            Toastr::error('Operation Failed', 'Failed');
+
+            return redirect()->back();
+        }
+    }
+
+    /**
+     * What the whole programme will cost this student, year level by year level.
+     *
+     * Not what has been billed - that is the account itself - but what the course
+     * comes to end to end, which is the question a parent asks before the first
+     * invoice and nothing here could answer. Priced the way enrolment prices a
+     * term (see EnrollmentBalanceBreakdown): units at the course rate, plus the
+     * fee types entered against that year level and term.
+     *
+     * Follows the student's own curriculum version. A school keeps the older
+     * versions on file for the cohorts still finishing them, and summing across
+     * all of them would charge every version of a year level at once.
+     *
+     * Returns null for basic education, where there is no programme to total -
+     * a learner enrols by grade level and the next one is next year's decision.
+     */
+    /**
+     * What is behind one of the three figures on an account page.
+     *
+     * Built from the same statement the page was drawn from, over the same
+     * period, so the list and the figure above it cannot disagree - the rule the
+     * rest of this report is built on.
+     *
+     * Answers twice: as a fragment for the modal, and, with print=1, as a
+     * standalone sheet that prints itself. Both include one partial, so a column
+     * added to the screen cannot go missing from the paper.
+     */
+    public function accountDetail(Request $request, $studentId)
+    {
+        $request->validate(['part' => ['required', 'in:paid,unpaid,incoming']]);
+
+        try {
+            $student = SmStudent::where('school_id', auth()->user()->school_id)->find($studentId);
+
+            if (!$student) {
+                Toastr::error(__('common.not_found'), 'Failed');
+
+                return redirect()->route('student-account');
+            }
+
+            $criteria = $this->accountCriteria($request, $student);
+            $statement = $this->statementFor($student, $criteria);
+
+            $data = [
+                'student' => $student,
+                's' => $statement,
+                'next' => $this->nextDueAcross($statement),
+                'part' => $request->part,
+                'labels' => $this->accountLabels($criteria),
+                /* The same request with print switched on, so the sheet is of
+                   exactly the list on screen rather than of criteria reassembled a
+                   second time. */
+                'printUrl' => route('student-account-detail', array_merge(
+                    ['student' => $student->id],
+                    $request->except('print'),
+                    ['print' => 1]
+                )),
+            ];
+
+            return $request->boolean('print')
+                ? view('backEnd.reports.studentAccountDetailPrint', $data)
+                : view('backEnd.reports.partials.studentAccountDetail', $data)->render();
+        } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
+
+            return response()->json(['msg' => __('common.Operation failed')], 500);
+        }
+    }
+
+    private function programmeCostFor(SmStudent $student)
+    {
+        if (isBasicEd() || !$student->course_id) {
+            return null;
+        }
+
+        $course = Course::where('school_id', $student->school_id)->find($student->course_id);
+        $perUnit = (float) (optional($course)->price_per_unit ?: 0);
+
+        /* Every year level and term the curriculum defines, in order. */
+        $subjects = SmSubject::where('course_id', $student->course_id)
+            ->where('curriculum_version_id', $student->curriculum_version_id)
+            ->whereNotNull('class_id')
+            ->selectRaw('class_id, semester_id, COALESCE(SUM(units),0) units')
+            ->groupBy('class_id', 'semester_id')
+            ->get();
+
+        if ($subjects->isEmpty()) {
+            return null;
+        }
+
+        $fees = FmFeesType::where('school_id', $student->school_id)
+            ->where('course_id', $student->course_id)
+            ->whereIn('class_id', $subjects->pluck('class_id')->unique())
+            ->get()
+            ->groupBy(fn ($f) => $f->class_id . ':' . $f->semester_id);
+
+        $classes = \App\SmClass::whereIn('id', $subjects->pluck('class_id')->unique())->pluck('class_name', 'id');
+        $semesters = Semester::whereIn('id', $subjects->pluck('semester_id')->filter()->unique())
+            ->pluck('semester_name', 'id');
+
+        /* What has actually happened against each year level and term, as against
+           what the curriculum says it costs. The invoice carries both the year
+           level and the semester, which is what lets a charge be matched back to
+           the term of the course it belongs to.
+
+           Read across every academic year, not the open one: a first-year term was
+           billed in a year that has since closed, and pinned to the open one it
+           would report nothing paid for everything already settled. */
+        $actuals = FmFeesInvoiceChield::query()
+            ->join('fm_fees_invoices', 'fm_fees_invoices.id', '=', 'fm_fees_invoice_chields.fees_invoice_id')
+            ->where('fm_fees_invoices.student_id', $student->id)
+            ->where('fm_fees_invoices.school_id', $student->school_id)
+            ->whereNotNull('fm_fees_invoices.class_id')
+            ->selectRaw('fm_fees_invoices.class_id as cid, fm_fees_invoices.semester_id as sid,
+                         COALESCE(SUM(fm_fees_invoice_chields.amount), 0) as billed,
+                         COALESCE(SUM(fm_fees_invoice_chields.paid_amount), 0) as paid')
+            ->groupBy('fm_fees_invoices.class_id', 'fm_fees_invoices.semester_id')
+            ->get()
+            ->keyBy(fn ($r) => $r->cid . ':' . $r->sid);
+
+        $levels = $subjects
+            ->groupBy('class_id')
+            ->map(function ($terms, $classId) use ($perUnit, $fees, $classes, $semesters, $actuals) {
+                $rows = $terms->map(function ($t) use ($perUnit, $fees, $semesters, $actuals) {
+                    $key = $t->class_id . ':' . $t->semester_id;
+                    $misc = (float) optional($fees->get($key))->sum('amount');
+                    $tuition = round((float) $t->units * $perUnit, 2);
+                    $total = round($tuition + $misc, 2);
+
+                    $actual = $actuals->get($key);
+                    $billed = round((float) optional($actual)->billed, 2);
+                    $paid = round((float) optional($actual)->paid, 2);
+
+                    return [
+                        'term' => $semesters[$t->semester_id] ?? __('reports.cost_no_term'),
+                        'units' => (float) $t->units,
+                        'tuition' => $tuition,
+                        'misc' => round($misc, 2),
+                        'total' => $total,
+                        'billed' => $billed,
+                        'paid' => $paid,
+                        /* Against the course price, not against the invoice - this
+                           table is of the whole course, and a term nobody has billed
+                           yet is still money the student will owe. Never below zero:
+                           an overpayment is money on account, not a negative cost. */
+                        'left' => round(max($total - $paid, 0), 2),
+                    ];
+                })->values();
+
+                return [
+                    'level' => $classes[$classId] ?? ('#' . $classId),
+                    'terms' => $rows,
+                    'units' => $rows->sum('units'),
+                    'total' => round($rows->sum('total'), 2),
+                    'paid' => round($rows->sum('paid'), 2),
+                    'left' => round($rows->sum('left'), 2),
+                ];
+            })
+            ->values();
+
+        return [
+            'course' => optional($course)->course_name,
+            'per_unit' => $perUnit,
+            'levels' => $levels,
+            'units' => $levels->sum('units'),
+            'total' => round($levels->sum('total'), 2),
+            'paid' => round($levels->sum('paid'), 2),
+            'left' => round($levels->sum('left'), 2),
+        ];
+    }
+
+    /**
+     * The soonest unmet promise across every plan this student holds, and what
+     * is left on it - the "incoming" figure.
+     *
+     * Where no plan exists there is no schedule to read, so the invoice's own
+     * due date stands in: the whole balance is due on it, which is what an
+     * invoice without instalments means.
+     */
+    private function nextDueAcross(array $statement)
+    {
+        $next = null;
+
+        foreach ($statement['schedules'] as $plan) {
+            $candidate = $this->nextInstallmentOf($plan['schedule']);
+
+            if ($candidate && ($next === null || $candidate['due_date'] < $next['due_date'])) {
+                $next = [
+                    'due_date' => $candidate['due_date'],
+                    'amount' => $candidate['remaining'],
+                    'of_plan' => true,
+                ];
+            }
+        }
+
+        if ($next || $statement['balance'] <= 0) {
+            return $next;
+        }
+
+        /* No plan and something still owing: the invoice that owes, soonest due
+           first. */
+        $owing = $statement['breakdown']
+            ->filter(fn ($g) => $g['balance'] > 0 && $g['invoice']->due_date)
+            ->sortBy(fn ($g) => $g['invoice']->due_date)
+            ->first();
+
+        return $owing ? [
+            'due_date' => $owing['invoice']->due_date,
+            'amount' => $owing['balance'],
+            'of_plan' => false,
+        ] : null;
+    }
+
+    /**
      * One student's statement of account, as a sheet that prints itself.
      *
      * Scoped to the same criteria the report was read at, so the balance on the
@@ -201,9 +549,22 @@ class FeesStandardReportController extends Controller
                 return redirect()->route('fees-standard-report');
             }
 
+            /* Two places print this sheet, and they ask over different periods. The
+               report's row prints what the report was read at; the account page
+               prints what is on screen there, and says so by sending scope. Without
+               this the button on an account read over a whole stay would hand back
+               a sheet for one term, which is a different balance under the same
+               heading. */
+            if ($request->filled('scope')) {
+                $criteria = $this->accountCriteria($request, $student);
+                $labels = $this->accountLabels($criteria);
+            } else {
+                $labels = $this->criteriaLabels($criteria);
+            }
+
             return view('backEnd.reports.feesStatementPrint', [
                 'statements' => collect([$this->statementFor($student, $criteria)]),
-                'labels' => $this->criteriaLabels($criteria),
+                'labels' => $labels,
             ]);
         } catch (\Exception $e) {
             Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
@@ -269,14 +630,32 @@ class FeesStandardReportController extends Controller
     private function statementFor(SmStudent $student, array $criteria)
     {
         /* ledgerFor() takes the same three scopes the picker offers, so a whole-stay
-           statement is one call rather than a year's call repeated. */
+           statement is one call rather than a year's call repeated.
+
+           The two callers disagree about what a year is, so only one of them says
+           so. For the report, scope 'year' means one term row read without a term
+           filter - the picker's "whole year" - which is a semester call. For the
+           account page it means every term of a calendar year, which is a different
+           query, and that page sets ledgerYear to ask for it. Keying on the key
+           rather than on the scope name leaves the report's reading untouched. */
         $ledger = $criteria['scope'] === 'whole_stay'
             ? $this->ledgerFor($student, 'whole_stay', null)
-            : $this->ledgerFor($student, 'semester', $criteria['academicId']);
+            : (isset($criteria['ledgerYear'])
+                ? $this->ledgerFor($student, 'year', $criteria['ledgerYear'])
+                : $this->ledgerFor($student, 'semester', $criteria['academicId']));
 
         $invoices = $ledger['invoices'];
         if ($criteria['type']) {
             $invoices = $invoices->where('type', $criteria['type'])->values();
+        }
+
+        /* One semester of the chosen school year, where the account page asked for
+           one. Only that page sets the key - see accountCriteria() for why it is
+           not criteria()'s semesterId. */
+        if (!empty($criteria['invoiceSemesterId'])) {
+            $invoices = $invoices
+                ->where('semester_id', $criteria['invoiceSemesterId'])
+                ->values();
         }
 
         $invoiceIds = $invoices->pluck('id');
@@ -591,6 +970,160 @@ class FeesStandardReportController extends Controller
             : __('reports.fees_type_all'));
 
         return array_filter($labels);
+    }
+
+    /**
+     * What one account page is being asked about: how wide a period, and which
+     * one.
+     *
+     * Separate from criteria() because the two pages ask different questions.
+     * The report filters a roll of students by term, programme and charge type;
+     * an account is one student read over a period, and the period runs as wide
+     * as their whole stay.
+     *
+     * The scope names and the query keys are ledgerPageData()'s - scope,
+     * session_id, year - so this page and the student's own ledger behave the
+     * same way and there is one set of names to learn rather than two.
+     *
+     * Only the terms and years this student has invoices in are offered, plus the
+     * open one. A picker listing terms from before they enrolled invites a reader
+     * to conclude an empty page means nothing is owed.
+     */
+    private function accountCriteria(Request $request, SmStudent $student)
+    {
+        $schoolId = $student->school_id;
+
+        $usedSessionIds = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('student_id', $student->id)
+            ->where('school_id', $schoolId)
+            ->distinct()
+            ->pluck('academic_id')
+            ->push(getAcademicId())
+            ->unique();
+
+        $sessions = SmAcademicYear::where('school_id', $schoolId)
+            ->whereIn('id', $usedSessionIds)
+            ->orderByDesc('starting_date')
+            ->get();
+        $years = $sessions->pluck('year')->unique()->values();
+
+        /* A term is a school year and a semester together, because that is how the
+           invoice is stamped: it carries both. The school year alone names a span
+           of two or three semesters, so asking for one semester needs both answers.
+
+           Every active semester the school runs is offered, unlike the years above.
+           The years are narrowed because listing one from before a student enrolled
+           invites the reader to read an empty page as nothing owed; a semester is
+           one of two or three the school always runs, and narrowing to the ones
+           already billed would leave a picker that can only ever pick what is
+           there - a filter that filters nothing. Choosing a semester with no
+           charges is a real question, and the heading says which one was asked. */
+        $semesters = Semester::where('school_id', $schoolId)
+            ->where('active_status', 1)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        /* Whole stay is the default. An account is opened to answer "what does
+           this student owe", and the answer narrowed to the open term is the one
+           figure most likely to be wrong - a balance carried from last year is
+           still owed, and a page that opened on one term would hide it behind a
+           picker the reader has no reason to touch. */
+        $scope = in_array($request->query('scope'), ['semester', 'year', 'whole_stay'], true)
+            ? $request->query('scope')
+            : 'whole_stay';
+
+        $currentSession = $sessions->firstWhere('id', getAcademicId()) ?: $sessions->first();
+
+        $selectedSessionId = $sessions->firstWhere('id', (int) $request->query('session_id'))
+            ? (int) $request->query('session_id')
+            : optional($currentSession)->id;
+
+        $selectedYear = $years->contains($request->query('year'))
+            ? $request->query('year')
+            : optional($currentSession)->year;
+
+        /* Empty means every semester of the chosen school year, which is a real
+           question and not a missing answer - so it stays empty rather than being
+           filled in with whichever semester happens to be open. */
+        $selectedSemesterId = $semesters->firstWhere('id', (int) $request->query('semester_id'))
+            ? (int) $request->query('semester_id')
+            : null;
+
+        $criteria = [
+            'schoolId' => $schoolId,
+            'scope' => $scope,
+            'academicId' => $selectedSessionId,
+            'semesterId' => null,
+            'courseId' => null,
+            /* No charge-type filter here. An account is what the student owes the
+               school, and tuition and store purchases are both owed - splitting
+               them would show a balance the cashier's drawer disagrees with. */
+            'type' => null,
+            'asOf' => null,
+            'creditLimit' => generalSetting()->credit_limit_enabled
+                ? (float) generalSetting()->credit_limit
+                : null,
+            'search' => '',
+            'lists' => [
+                'sessions' => $sessions,
+                'years' => $years,
+                'semesters' => $semesters,
+            ],
+            'selectedSessionId' => $selectedSessionId,
+            'selectedYear' => $selectedYear,
+            'selectedSemesterId' => $selectedSemesterId,
+        ];
+
+        /* Set only for the calendar-year scope, because its presence is what tells
+           statementFor() which of the two readings of "year" is meant. */
+        if ($scope === 'year') {
+            $criteria['ledgerYear'] = $selectedYear;
+        }
+
+        /* Narrows to the semester stamped on the invoice, and named apart from
+           criteria()'s semesterId because the two filter different things. The
+           report's narrows which students are listed, by the term each one sits
+           in; this one narrows which charges are counted. Sharing the key would
+           make the report's roll filter start cutting its statements. */
+        if ($scope === 'semester' && $selectedSemesterId) {
+            $criteria['invoiceSemesterId'] = $selectedSemesterId;
+        }
+
+        return $criteria;
+    }
+
+    /**
+     * The one-line description of an account page's period, for the heading and
+     * the printed sheet.
+     */
+    private function accountLabels(array $criteria)
+    {
+        if ($criteria['scope'] === 'whole_stay') {
+            return [__('reports.fees_period') . ': ' . __('academics.whole_stay')];
+        }
+
+        if ($criteria['scope'] === 'year') {
+            return [__('reports.fees_period') . ': ' . $criteria['selectedYear']];
+        }
+
+        $session = $criteria['lists']['sessions']->firstWhere('id', $criteria['academicId']);
+
+        $labels = [__('reports.fees_period') . ': ' . ($session
+            ? $session->year . ($session->title ? ' - ' . $session->title : '')
+            : __('academics.whole_stay'))];
+
+        /* The semester is named only when one was chosen. Saying "all semesters"
+           where none was picked would read as a filter somebody applied. */
+        $semester = $criteria['selectedSemesterId']
+            ? $criteria['lists']['semesters']->firstWhere('id', $criteria['selectedSemesterId'])
+            : null;
+
+        $labels[] = termLabel() . ': ' . ($semester
+            ? $semester->semester_name
+            : __('reports.whole_year'));
+
+        return $labels;
     }
 
     private function criteria(Request $request)

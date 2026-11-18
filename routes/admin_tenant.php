@@ -1483,6 +1483,26 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         Route::get('fees-standard-report-statements', ['as' => 'fees-standard-report-statements', 'uses' => 'Admin\Report\FeesStandardReportController@statements'])->middleware('userRolePermission:fees-standard-report');
         Route::get('fees-standard-report-statement/{student}', ['as' => 'fees-standard-report-statement', 'uses' => 'Admin\Report\FeesStandardReportController@statement'])->middleware('userRolePermission:fees-standard-report');
 
+        /* One student's account on screen - paid, owed, and what is coming - with
+           the statement a button away. Its own permission, so a cashier who needs
+           to read a balance does not have to be given Assign Program, which is the
+           only way to the two older per-student views. */
+        /* The sidebar entry: find the student, then read the account.
+
+           It carries the bare name, and the per-student page takes -view, because
+           the sidebar builds its href with validRouteUrl() on the permission's own
+           route - "student-account". Given that name on a route needing a
+           {student}, route() throws, validRouteUrl swallows it and returns null,
+           and the menu item renders with an empty href that goes nowhere.
+
+           Registered before the one that takes an id, so the bare path is not
+           matched as a student id. */
+        Route::get('student-account', ['as' => 'student-account', 'uses' => 'Admin\Report\FeesStandardReportController@accountSearch'])->middleware('userRolePermission:student-account');
+        Route::get('student-account/{student}', ['as' => 'student-account-view', 'uses' => 'Admin\Report\FeesStandardReportController@account'])->middleware('userRolePermission:student-account');
+        /* Declared after the page it belongs to, but matched before it: the segment
+           is literal, so "student-account/4/detail" cannot be read as a student id. */
+        Route::get('student-account/{student}/detail', ['as' => 'student-account-detail', 'uses' => 'Admin\Report\FeesStandardReportController@accountDetail'])->middleware('userRolePermission:student-account');
+
         /* Attendance and pay for a month, in the same shape as the two reports
            above. Not 'staff-report': staff_report is already the sidebar section
            these sit under, and a route of that name would collide with it. */

@@ -3,6 +3,19 @@
      counted from, so the two cannot disagree. --}}
 @php
     $currency = generalSetting()->currency_symbol ?: '$';
+
+    /* The period this report is being read at, translated into the account page's
+       own terms. The two name periods differently - the report says academic_id
+       and semester_id, the account says scope, session_id and semester_id - so the
+       link has to carry the translation or the account opens on its own default
+       and the reader lands on different figures from the row they clicked. */
+    $acctParams = request('semester_id') === 'whole_stay'
+        ? ['scope' => 'whole_stay']
+        : array_filter([
+            'scope' => 'semester',
+            'session_id' => request('academic_id'),
+            'semester_id' => request('semester_id'),
+        ]);
 @endphp
 <div class="modal-header">
     <h4 class="modal-title">
@@ -60,7 +73,7 @@
                     @foreach ($rows as $key => $row)
                         <tr>
                             <td>{{ $key + 1 }}</td>
-                            <td>{{ $row['student']->full_name }}</td>
+                            <td><a href="{{ route('student-account-view', array_merge(['student' => $row['student']->id], $acctParams)) }}">{{ $row['student']->full_name }}</a></td>
                             <td>{{ $row['student']->admission_no }}</td>
                             @if (!isBasicEd())
                                 <td>{{ optional($row['student']->course)->course_name ?: '-' }}</td>

@@ -8,6 +8,14 @@
         $currency = generalSetting()->currency_symbol ?: '$';
         $showProgram = !isBasicEd();
 
+        /* This report has no term picker, only a school year, so the account opens
+           on that year with every semester in it. Translated into the account
+           page's own names, which differ from this one's. */
+        $acctParams = array_filter([
+            'scope' => 'semester',
+            'session_id' => request('academic_id'),
+        ]);
+
         $cards = [
             ['title' => __('reports.open_summary'), 'accent' => '#c0392b', 'money' => true,
              'total' => 'outstanding', 'rows' => ['billed', 'collected', 'outstanding'],
@@ -263,7 +271,7 @@
                                                 <td>
                                                     {{ $row['invoice']->due_date ? \Carbon\Carbon::parse($row['invoice']->due_date)->format('M d, Y') : '-' }}
                                                 </td>
-                                                <td>{{ optional($row['student'])->full_name ?: '-' }}</td>
+                                                <td>@if ($row['student'])<a href="{{ route('student-account-view', array_merge(['student' => $row['student']->id], $acctParams)) }}">{{ $row['student']->full_name }}</a>@else-@endif</td>
                                                 @if ($showProgram)
                                                     <td>{{ $row['course_name'] ?: '-' }}</td>
                                                 @endif

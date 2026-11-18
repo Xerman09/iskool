@@ -15,6 +15,7 @@ use App\SmBankStatement;
 use App\SmPaymentMethhod;
 use App\SmGeneralSettings;
 use App\SmFeesCarryForward;
+use App\Scopes\AcademicSchoolScope;
 use Illuminate\Http\Request;
 use App\Models\StudentRecord;
 use Illuminate\Validation\Rule;
@@ -850,12 +851,31 @@ class FeesController extends Controller
     public function feesInvoiceView($id, $state)
     {
         $generalSetting = SmGeneralSettings::where('school_id', Auth::user()->school_id)->first();
-        $invoiceInfo = FmFeesInvoice::find($id);
 
+        /* Scoped to the school, not found by id alone: the id comes from the URL,
+           and one school's staff have no business reading another's invoice. The
+           school is the check that matters, so the academic year is dropped - an
+           invoice raised in an earlier year is still this school's invoice, and
+           left pinned to the open year the lookup returned nothing and the page
+           died reading a property off null. */
+        $invoiceInfo = FmFeesInvoice::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('school_id', Auth::user()->school_id)
+            ->findOrFail($id);
+
+        /* The lines are no longer filtered to the open academic year. An invoice
+           raised in an earlier year has lines stamped with that year, so the filter
+           matched nothing and the invoice opened with an empty body - the totals in
+           the header against a blank table. Keyed on the invoice instead, which is
+           already school-scoped above, so it can only ever return its own lines.
+
+           The fee type is unscoped for the same reason: it is pinned to the open
+           year by a global scope, and an older line points at that year's type, so
+           the name came back blank. */
         $invoiceDetails = FmFeesInvoiceChield::where('fees_invoice_id', $invoiceInfo->id)
             ->where('school_id', Auth::user()->school_id)
-            ->where('academic_id', getAcademicId())
-            ->with('feesType', 'item')
+            ->with(['feesType' => function ($q) {
+                $q->withoutGlobalScope(\App\Scopes\AcademicSchoolScope::class);
+            }, 'item'])
             ->get();
         $banks = SmBankAccount::where('active_status', '=', 1)
             ->where('school_id', Auth::user()->school_id)

@@ -8,6 +8,18 @@
         $showProgram = !isBasicEd();
         $currency = generalSetting()->currency_symbol ?: '$';
 
+        /* The period this report is being read at, translated into the account
+           page's own terms - it names periods differently, so without this the
+           account opens on its default and shows different figures from the row
+           that was clicked. */
+        $acctParams = request('semester_id') === 'whole_stay'
+            ? ['scope' => 'whole_stay']
+            : array_filter([
+                'scope' => 'semester',
+                'session_id' => request('academic_id'),
+                'semester_id' => request('semester_id'),
+            ]);
+
         /* Each card is a question, and each row under it one of that question's
            answers. Held here rather than repeated below, so a metric cannot end up
            labelled one way on the card and another in its modal - both read the
@@ -564,7 +576,7 @@
                                         @foreach ($rows as $key => $row)
                                             <tr>
                                                 <td>{{ $key + 1 }}</td>
-                                                <td>{{ $row['student']->full_name }}</td>
+                                                <td><a href="{{ route('student-account-view', array_merge(['student' => $row['student']->id], $acctParams)) }}">{{ $row['student']->full_name }}</a></td>
                                                 <td>{{ $row['student']->admission_no }}</td>
                                                 @if ($showProgram)
                                                     <td>{{ optional($row['student']->course)->course_name ?: '-' }}</td>

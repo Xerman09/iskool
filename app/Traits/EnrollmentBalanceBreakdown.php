@@ -476,7 +476,18 @@ trait EnrollmentBalanceBreakdown
                 ->pluck('id'));
         }
 
-        $invoices = $invoiceQuery->with('invoiceDetails.feesType', 'invoiceDetails.item')
+        /* The fee type is pinned to the current academic year by a global scope,
+           but a charge raised in an earlier year points at that year's type. Left
+           scoped, the lookup misses and withDefault() hands back a nameless model,
+           so an older charge loses its description and reads as blank. The invoice
+           query above already crosses years; the names have to as well. */
+        $invoices = $invoiceQuery
+            ->with([
+                'invoiceDetails.feesType' => function ($q) {
+                    $q->withoutGlobalScope(AcademicSchoolScope::class);
+                },
+                'invoiceDetails.item',
+            ])
             ->orderBy('create_date')
             ->orderBy('id')
             ->get();
@@ -487,7 +498,11 @@ trait EnrollmentBalanceBreakdown
             ->whereIn('fees_invoice_id', $invoiceIds)
             ->with([
                 'transcationDetails' => function ($q) {
-                    $q->withoutGlobalScope(AcademicSchoolScope::class)->with('transcationFeesType');
+                    $q->withoutGlobalScope(AcademicSchoolScope::class)
+                        ->with(['transcationFeesType' => function ($q) {
+                            // Same reason as the charge lines above.
+                            $q->withoutGlobalScope(AcademicSchoolScope::class);
+                        }]);
                 },
                 'feesInvoiceInfo' => function ($q) {
                     $q->withoutGlobalScope(AcademicSchoolScope::class);
