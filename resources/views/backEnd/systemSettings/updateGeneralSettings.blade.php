@@ -472,6 +472,24 @@
                             @endif
                             <div class="row mb-30">
                                 <div class="col-lg-6 d-flex relation-button flex-wrap gap-20 mb-15">
+                                    <p class="text-uppercase mb-0">@lang('system_settings.school_type')</p>
+                                    <div class="d-flex radio-btn-flex">
+                                        <div class="mr-20">
+                                            <input type="radio" name="school_type" id="school_type_basic_ed" value="basic_ed" class="common-radio relationButton" {{@$editData->school_type == "basic_ed"? 'checked': ''}}>
+                                            <label for="school_type_basic_ed">@lang('system_settings.basic_education')</label>
+                                        </div>
+                                        <div class="mr-20">
+                                            <input type="radio" name="school_type" id="school_type_tertiary" value="tertiary" class="common-radio relationButton" {{@$editData->school_type != "basic_ed"? 'checked': ''}}>
+                                            <label for="school_type_tertiary">@lang('system_settings.tertiary')</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 mb-15">
+                                    <p class="mb-0">@lang('system_settings.school_type_hint')</p>
+                                </div>
+                            </div>
+                            <div class="row mb-30">
+                                <div class="col-lg-6 d-flex relation-button flex-wrap gap-20 mb-15">
                                     <p class="text-uppercase mb-0">@lang('system_settings.result_type')</p>
                                     <div class="d-flex radio-btn-flex">
                                         <div class="mr-20">

@@ -675,6 +675,25 @@
                                     <div class="row">
                                         <div class="col-lg-6 col-md-6">
                                             <div class="name">
+                                                @lang('system_settings.school_type')
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6">
+                                            <div class="value text-left">
+                                                @if (@$editData->school_type == 'basic_ed')
+                                                    @lang('system_settings.basic_education')
+                                                @else
+                                                    @lang('system_settings.tertiary')
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="single-meta">
+                                    <div class="row">
+                                        <div class="col-lg-6 col-md-6">
+                                            <div class="name">
                                                 @lang('system_settings.result_type')
                                             </div>
                                         </div>

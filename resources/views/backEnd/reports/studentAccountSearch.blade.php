@@ -16,16 +16,15 @@
     @endphp
 
     <style>
-        .acct-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .acct-head .sum { font-size: 13px; color: #4b5563; }
-        .acct-head .sum strong { color: #b03024; }
-        .acct-head .hint { font-size: 12px; color: #9aa0a6; }
-
-        /* Ten columns is wider than the card on a laptop and the table is started
-           without the Responsive extension, so nothing folds the extra ones away.
-           Scrolling sideways keeps every column readable and the card whole. */
-        .list-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .list-scroll table td, .list-scroll table th { white-space: nowrap; }
+        /* The heading keeps to the left of its row on purpose. The theme pins the
+           quick search and the export buttons into the strip above the table -
+           position: absolute, top: -56px, one centred and one hard right - so
+           that strip is theirs, and anything spanning the full width lands under
+           them. The same reason the other list pages put their title in a narrow
+           column. */
+        .sum { font-size: 13px; color: #4b5563; }
+        .sum strong { color: #b03024; }
+        .hint { font-size: 12px; color: #9aa0a6; display: block; }
 
         .num { text-align: right; font-variant-numeric: tabular-nums; }
         .owes { color: #b03024; font-weight: 600; }
@@ -50,18 +49,20 @@
             <div class="row">
                 <div class="col-lg-12">
                     <div class="white-box">
-                        <div class="main-title acct-head mb-15">
-                            <div>
-                                <h3 class="mb-0">@lang('reports.account_all_students')</h3>
-                                <span class="hint">@lang('reports.account_list_hint')</span>
-                            </div>
-                            <div class="sum">
-                                {{ __('reports.students_counted', ['count' => $students->count()]) }}
-                                &nbsp;&middot;&nbsp;
-                                {{ __('reports.account_owing_count', ['count' => $owing->count()]) }}
-                                &nbsp;&middot;&nbsp;
-                                <strong>{{ $currency }}{{ number_format($owedTotal, 2) }}</strong>
-                                @lang('reports.account_owed_total')
+                        <div class="row">
+                            <div class="col-lg-5 no-gutters">
+                                <div class="main-title">
+                                    <h3 class="mb-5">@lang('reports.account_all_students')</h3>
+                                    <span class="hint mb-10">@lang('reports.account_list_hint')</span>
+                                    <div class="sum mb-15">
+                                        {{ __('reports.students_counted', ['count' => $students->count()]) }}
+                                        &nbsp;&middot;&nbsp;
+                                        {{ __('reports.account_owing_count', ['count' => $owing->count()]) }}
+                                        &nbsp;&middot;&nbsp;
+                                        <strong>{{ $currency }}{{ number_format($owedTotal, 2) }}</strong>
+                                        @lang('reports.account_owed_total')
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -69,8 +70,10 @@
                             <p class="text-center text-muted mb-0">@lang('reports.no_students_found')</p>
                         @else
                             <x-table>
-                                <div class="list-scroll">
-                                <table id="table_id" class="table data-table Crm_table_active3 no-footer dtr-inline collapsed"
+                                {{-- Its own id and no Crm_table_active3: that class is
+                                     started by account.js with a config of its own, and
+                                     two inits on one table fight each other. --}}
+                                <table id="studentAccountTable" class="table no-footer dtr-inline"
                                     cellspacing="0" width="100%">
                                     <thead>
                                         <tr>
@@ -122,7 +125,6 @@
                                         @endforeach
                                     </tbody>
                                 </table>
-                                </div>
                             </x-table>
                         @endif
                     </div>
@@ -131,3 +133,63 @@
         </div>
     </section>
 @endsection
+
+@include('backEnd.partials.data_table_js')
+
+@push('script')
+<script>
+    $(document).ready(function () {
+        if (!$('#studentAccountTable').length) {
+            return;
+        }
+
+        /* responsive: true is the whole point of this init - it puts the +/- in
+           the first column and folds whatever does not fit into the row's own
+           panel, instead of letting the table run off the card. The rest matches
+           Pending Enrollees so the two lists read the same. */
+        $('#studentAccountTable').DataTable({
+            bLengthChange: false,
+            bDestroy: true,
+            responsive: true,
+            /* The Action column holds a button, so it is never sorted on and
+               never exported - a control is not a value. */
+            columnDefs: [{ orderable: false, targets: -1 }],
+            language: {
+                search: "<i class='ti-search'></i>",
+                searchPlaceholder: window.jsLang('quick_search'),
+                paginate: {
+                    next: "<i class='ti-arrow-right'></i>",
+                    previous: "<i class='ti-arrow-left'></i>"
+                }
+            },
+            dom: "Bfrtip",
+            buttons: [
+                {
+                    extend: 'copyHtml5',
+                    text: '<i class="fa fa-files-o"></i>',
+                    titleAttr: window.jsLang('copy_table'),
+                    exportOptions: { columns: ':not(:last-child)' }
+                },
+                {
+                    extend: 'excelHtml5',
+                    text: '<i class="fa fa-file-excel-o"></i>',
+                    titleAttr: window.jsLang('export_to_excel'),
+                    exportOptions: { columns: ':not(:last-child)' }
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fa fa-print"></i>',
+                    titleAttr: window.jsLang('print'),
+                    exportOptions: { columns: ':not(:last-child)' }
+                }
+            ]
+        });
+
+        /* The search box and the buttons are deliberately left where DataTables
+           puts them. The theme pins both against the wrapper - absolute, top:
+           -56px, one centred and one hard right - so carrying them into the
+           heading carries those offsets along, and they land on the breadcrumb
+           above the card. */
+    });
+</script>
+@endpush

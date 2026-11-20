@@ -1261,6 +1261,7 @@ class SmSystemSettingController extends Controller
             $generalSettData->multiple_roll  = $request->multiple_roll;
             $generalSettData->direct_fees_assign  = $request->direct_fees_assign;
             $generalSettData->result_type  = $request->result_type;
+            $generalSettData->school_type  = $request->school_type ?: $generalSettData->school_type;
             $generalSettData->with_guardian  = $request->with_guardian;
             $generalSettData->due_fees_login  = $request->due_fees_login;
             /* Coalesced rather than taken straight: the amount field is hidden while
