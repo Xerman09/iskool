@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Report;
 
 use App\Course;
+use App\ClassTuition;
 use App\SmClass;
 use App\SmItem;
 use App\SmSubject;
@@ -455,9 +456,177 @@ class FeesStandardReportController extends Controller
         }
     }
 
+    /**
+     * What the rest of a basic-education learner's schooling comes to: the year
+     * level they started in, through to the last one the school runs.
+     *
+     * There is no curriculum to price here - basic education charges a flat
+     * amount per year level - so the figure is the fees somebody has set against
+     * each level, summed across its terms. A level nobody has priced shows as
+     * nothing rather than being skipped: a gap in the fee setup is worth seeing,
+     * and a silently shorter list reads as a shorter schooling.
+     */
+    private function basicEdCostFor(SmStudent $student)
+    {
+        /* Where this learner started. The earliest record is the honest answer -
+           a learner who joined in Grade 9 should not be quoted Grade 7. Falls back
+           to where they sit now, for anyone with no record history yet. */
+        $startClassId = StudentRecord::where('school_id', $student->school_id)
+            ->where('student_id', $student->id)
+            ->orderBy('academic_id')
+            ->orderBy('id')
+            ->value('class_id') ?: $student->class_id;
+
+        if (!$startClassId) {
+            return null;
+        }
+
+        /* Ordered by id, because sm_classes carries no sort column of its own -
+           no class_order, no sort_order, nothing. A school entering Grade 7
+           through Grade 12 enters them in that order, so id follows the years;
+           where it does not, the list is out of order and nothing here can tell.
+           Said plainly on the page rather than left as a surprise. */
+        $classes = \App\SmClass::where('school_id', $student->school_id)
+            ->where('active_status', 1)
+            ->where('id', '>=', $startClassId)
+            ->orderBy('id')
+            ->get();
+
+        if ($classes->isEmpty()) {
+            return null;
+        }
+
+        $classIds = $classes->pluck('id');
+
+        /* The price list as it stands today. Fee rows are stamped with the year
+           they were entered in, and a school that re-enters them each year would
+           otherwise have every past year counted again - so only the most recent
+           year that has rows for a level is taken. */
+        $allFees = FmFeesType::withoutGlobalScope(AcademicSchoolScope::class)
+            ->where('school_id', $student->school_id)
+            ->whereIn('class_id', $classIds)
+            ->get();
+
+        /* The open year's rows, and only those - which is exactly the set billing
+           charges from, because FmFeesType is pinned to the open year by a global
+           scope. No falling back to an older price list: a projection quoting a
+           price the invoice would not use is a projection that disagrees with the
+           bill the family is handed, and this whole report is built on those two
+           never disagreeing.
+
+           The reading is "what each year level costs if billed today". A level
+           with nothing priced this year shows as nothing, which says the fee
+           setup is unfinished rather than inventing a figure from two years ago. */
+        $openYear = (int) getAcademicId();
+
+        $fees = $allFees
+            ->filter(fn ($f) => (int) $f->academic_id === $openYear)
+            ->groupBy('class_id');
+
+        $semesters = Semester::where('school_id', $student->school_id)
+            ->pluck('semester_name', 'id');
+
+        /* What has been paid against each year level, across every school year -
+           the projection spans the whole stay, so what has been paid towards it
+           has to as well. */
+        $paid = FmFeesInvoiceChield::query()
+            ->join('fm_fees_invoices', 'fm_fees_invoices.id', '=', 'fm_fees_invoice_chields.fees_invoice_id')
+            ->where('fm_fees_invoices.student_id', $student->id)
+            ->where('fm_fees_invoices.school_id', $student->school_id)
+            ->whereIn('fm_fees_invoices.class_id', $classIds)
+            ->selectRaw('fm_fees_invoices.class_id as cid,
+                         COALESCE(SUM(fm_fees_invoice_chields.amount), 0) as billed,
+                         COALESCE(SUM(fm_fees_invoice_chields.paid_amount), 0) as paid')
+            ->groupBy('fm_fees_invoices.class_id')
+            ->get()
+            ->keyBy('cid');
+
+        /* Tuition is priced per year level and belongs to the year, so it is read
+           once per level rather than per term. Through amountFor(), which is the
+           same call billing makes - so the figure quoted here for the level the
+           learner is in is the figure their invoice carries. */
+        $tuitions = collect($classIds)->mapWithKeys(fn ($classId) => [
+            $classId => ClassTuition::amountFor($classId, getAcademicId(), $student->school_id),
+        ]);
+
+        $levels = $classes->map(function ($class) use ($fees, $semesters, $paid, $tuitions) {
+            $tuition = round((float) ($tuitions[$class->id] ?? 0), 2);
+
+            $rows = ($fees->get($class->id) ?: collect())
+                ->groupBy('semester_id')
+                ->map(function ($termFees, $semesterId) use ($semesters) {
+                    $amount = round((float) $termFees->sum('amount'), 2);
+
+                    return [
+                        'term' => $semesters[$semesterId] ?? __('reports.cost_no_term'),
+                        'units' => 0.0,
+                        'tuition' => 0.0,
+                        'misc' => $amount,
+                        'total' => $amount,
+                        /* Billing and payment are per year level here, not per
+                           term - basic education raises one invoice for the year -
+                           so the money sits on the level below, and a term carries
+                           only what it costs. */
+                        'billed' => 0.0,
+                        'paid' => 0.0,
+                        'left' => $amount,
+                    ];
+                })
+                ->values();
+
+            /* Tuition first, as its own row, so the family can see what the year
+               itself costs before the fees added to it. It carries no term,
+               because it is priced for the year. */
+            if ($tuition > 0) {
+                $rows->prepend([
+                    'term' => __('academics.tuition_whole_year'),
+                    'units' => 0.0,
+                    'tuition' => $tuition,
+                    'misc' => 0.0,
+                    'total' => $tuition,
+                    'billed' => 0.0,
+                    'paid' => 0.0,
+                    'left' => $tuition,
+                    'is_tuition' => true,
+                ]);
+            }
+
+            $total = round((float) $rows->sum('total'), 2);
+            $actual = $paid->get($class->id);
+            $levelPaid = round((float) optional($actual)->paid, 2);
+
+            return [
+                'level' => $class->class_name,
+                'terms' => $rows,
+                'units' => 0.0,
+                'tuition' => $tuition,
+                'total' => $total,
+                'billed' => round((float) optional($actual)->billed, 2),
+                'paid' => $levelPaid,
+                'left' => round(max($total - $levelPaid, 0), 2),
+            ];
+        })->values();
+
+        return [
+            /* No programme to name, so the heading says the schooling instead. */
+            'course' => null,
+            'per_unit' => 0.0,
+            'basic_ed' => true,
+            'levels' => $levels,
+            'units' => 0.0,
+            'total' => round((float) $levels->sum('total'), 2),
+            'paid' => round((float) $levels->sum('paid'), 2),
+            'left' => round((float) $levels->sum('left'), 2),
+        ];
+    }
+
     private function programmeCostFor(SmStudent $student)
     {
-        if (isBasicEd() || !$student->course_id) {
+        if (isBasicEd()) {
+            return $this->basicEdCostFor($student);
+        }
+
+        if (!$student->course_id) {
             return null;
         }
 

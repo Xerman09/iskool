@@ -336,11 +336,20 @@ trait SidebarDataStore
     {
         $tertiaryOnly = ['program', 'assign-program', 'curriculum-layout', 'subject-completion'];
 
+        /* The mirror of the list above: a college prices tuition per unit on the
+           course, so a screen for setting it per year level would be a second
+           place to set one number. Shown only on basic education. */
+        $basicEdOnly = ['class-tuition'];
+
         $visible = isBasicEd() ? 0 : 1;
 
         $changed = Permission::whereIn('route', $tertiaryOnly)
             ->where('status', '!=', $visible)
             ->update(['is_menu' => $visible, 'menu_status' => $visible, 'status' => $visible]);
+
+        $changed += Permission::whereIn('route', $basicEdOnly)
+            ->where('status', '!=', 1 - $visible)
+            ->update(['is_menu' => 1 - $visible, 'menu_status' => 1 - $visible, 'status' => 1 - $visible]);
 
         // sidebar_menus() is a rememberForever cache keyed per role, so flipping
         // menu_status in the table alone would not change a single rendered menu.

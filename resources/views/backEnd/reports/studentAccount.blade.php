@@ -297,6 +297,13 @@
                  balance. It is the answer to a different question, asked less
                  often, so it waits behind a toggle. --}}
             @if ($cost)
+                @php
+                    /* A college prices a course by units; basic education prices a
+                       year level flat. The panel is the same question either way -
+                       what does the rest of this cost - so one table answers both,
+                       with the columns that mean nothing left out. */
+                    $isBasic = !empty($cost['basic_ed']);
+                @endphp
                 <div class="row mb-20">
                     <div class="col-lg-12">
                         <div class="white-box">
@@ -305,19 +312,25 @@
                                 aria-expanded="false" aria-controls="programmeCost"
                                 style="color: inherit; text-decoration: none;">
                                 <span>
-                                    <strong>@lang('reports.cost_title')</strong>
+                                    <strong>{{ $isBasic ? __('reports.cost_title_basic') : __('reports.cost_title') }}</strong>
                                     <span class="d-block text-muted" style="font-size: 12px;">
-                                        @lang('reports.cost_hint')
+                                        {{ $isBasic ? __('reports.cost_hint_basic') : __('reports.cost_hint') }}
                                     </span>
                                 </span>
                                 <span class="text-right">
                                     <span style="font-size: 18px; font-weight: 700;">{{ $money($cost['total']) }}</span>
-                                    {{-- What has been paid against the course belongs on the
-                                         shut row: it is half the answer, and a reader who
-                                         never opens the panel would otherwise see only the
-                                         bill. --}}
+                                    {{-- What has been paid belongs on the shut row: it is half
+                                         the answer, and a reader who never opens the panel
+                                         would otherwise see only the bill. --}}
                                     <span class="d-block text-muted" style="font-size: 12px;">
-                                        {{ __('reports.cost_units', ['units' => rtrim(rtrim(number_format($cost['units'], 1), '0'), '.')]) }}
+                                        {{-- Units say nothing in a school that does not charge
+                                             by them, so the span of year levels stands there
+                                             instead. --}}
+                                        @if ($isBasic)
+                                            {{ __('reports.cost_levels', ['count' => count($cost['levels'])]) }}
+                                        @else
+                                            {{ __('reports.cost_units', ['units' => rtrim(rtrim(number_format($cost['units'], 1), '0'), '.')]) }}
+                                        @endif
                                         &nbsp;&middot;&nbsp;
                                         <span class="cost-paid">{{ $money($cost['paid']) }}</span> @lang('reports.cost_paid_so_far')
                                         &nbsp;&middot;&nbsp; @lang('reports.cost_show')
@@ -331,10 +344,18 @@
                                         <tr>
                                             <th>@lang('academics.year_level')</th>
                                             <th>{{ termLabel() }}</th>
-                                            <th class="num">@lang('reports.cost_units_col')</th>
-                                            <th class="num">@lang('reports.cost_tuition')</th>
-                                            <th class="num">@lang('reports.cost_misc')</th>
-                                            <th class="num">@lang('dashboard.total')</th>
+                                            {{-- Units and a tuition rate are a college's way of
+                                                 pricing. Basic education charges a flat amount
+                                                 per year level, so those two columns would be a
+                                                 pair of zeroes down the page. --}}
+                                            @unless ($isBasic)
+                                                <th class="num">@lang('reports.cost_units_col')</th>
+                                                <th class="num">@lang('reports.cost_tuition')</th>
+                                            @endunless
+                                            <th class="num">{{ $isBasic ? __('reports.cost_fees_col') : __('reports.cost_misc') }}</th>
+                                            @unless ($isBasic)
+                                                <th class="num">@lang('dashboard.total')</th>
+                                            @endunless
                                             <th class="num">@lang('reports.account_paid')</th>
                                             <th class="num">@lang('reports.cost_left')</th>
                                         </tr>
@@ -347,33 +368,58 @@
                                                          groups the terms under it. --}}
                                                     <td>{{ $i === 0 ? $level['level'] : '' }}</td>
                                                     <td>{{ $t['term'] }}</td>
-                                                    <td class="num">{{ rtrim(rtrim(number_format($t['units'], 1), '0'), '.') }}</td>
-                                                    <td class="num">{{ number_format($t['tuition'], 2) }}</td>
+                                                    @unless ($isBasic)
+                                                        <td class="num">{{ rtrim(rtrim(number_format($t['units'], 1), '0'), '.') }}</td>
+                                                        <td class="num">{{ number_format($t['tuition'], 2) }}</td>
+                                                    @endunless
                                                     <td class="num">{{ number_format($t['misc'], 2) }}</td>
-                                                    <td class="num">{{ number_format($t['total'], 2) }}</td>
-                                                    <td class="num {{ $t['paid'] > 0 ? 'cost-paid' : '' }}">
-                                                        {{ number_format($t['paid'], 2) }}
-                                                        {{-- A term with nothing invoiced says so, because a
-                                                             zero on its own reads as a bill that has gone
-                                                             unpaid rather than one not yet raised. --}}
-                                                        @if ($t['billed'] <= 0)
-                                                            <span class="d-block text-muted" style="font-size: 11px; font-weight: 400;">
-                                                                @lang('reports.cost_not_billed')
-                                                            </span>
-                                                        @endif
-                                                    </td>
-                                                    <td class="num">{{ number_format($t['left'], 2) }}</td>
+                                                    @unless ($isBasic)
+                                                        <td class="num">{{ number_format($t['total'], 2) }}</td>
+                                                    @endunless
+                                                    {{-- Basic education raises one invoice for the whole
+                                                         year, so no payment belongs to a single term. The
+                                                         cells are left empty and the money is stated on the
+                                                         year-level row below, where it actually sits. --}}
+                                                    @if ($isBasic)
+                                                        <td class="num">&mdash;</td>
+                                                        <td class="num">&mdash;</td>
+                                                    @else
+                                                        <td class="num {{ $t['paid'] > 0 ? 'cost-paid' : '' }}">
+                                                            {{ number_format($t['paid'], 2) }}
+                                                            {{-- A term with nothing invoiced says so, because a
+                                                                 zero on its own reads as a bill that has gone
+                                                                 unpaid rather than one not yet raised. --}}
+                                                            @if ($t['billed'] <= 0)
+                                                                <span class="d-block text-muted" style="font-size: 11px; font-weight: 400;">
+                                                                    @lang('reports.cost_not_billed')
+                                                                </span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="num">{{ number_format($t['left'], 2) }}</td>
+                                                    @endif
                                                 </tr>
                                             @endforeach
                                             {{-- A subtotal only where there is something to subtotal
                                                  against. On a one-level curriculum it would repeat the
                                                  footer, and saying the same figure twice invites the
                                                  reader to look for the difference. --}}
-                                            @if (count($cost['levels']) > 1)
+                                            {{-- Always shown in basic education, because the money
+                                                 lives on this row and nowhere else; in a college it
+                                                 would repeat the footer on a one-level curriculum,
+                                                 and saying the same figure twice invites the reader
+                                                 to look for the difference. --}}
+                                            @if ($isBasic || count($cost['levels']) > 1)
                                                 <tr class="grp">
-                                                    <td colspan="5">{{ $level['level'] }}</td>
+                                                    <td colspan="{{ $isBasic ? 2 : 5 }}">{{ $level['level'] }}</td>
                                                     <td class="num">{{ number_format($level['total'], 2) }}</td>
-                                                    <td class="num">{{ number_format($level['paid'], 2) }}</td>
+                                                    <td class="num {{ $isBasic && $level['paid'] > 0 ? 'cost-paid' : '' }}">
+                                                        {{ number_format($level['paid'], 2) }}
+                                                        @if ($isBasic && $level['billed'] <= 0)
+                                                            <span class="d-block text-muted" style="font-size: 11px; font-weight: 400;">
+                                                                @lang('reports.cost_not_billed')
+                                                            </span>
+                                                        @endif
+                                                    </td>
                                                     <td class="num">{{ number_format($level['left'], 2) }}</td>
                                                 </tr>
                                             @endif
@@ -381,8 +427,8 @@
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <th colspan="5">
-                                                @lang('reports.cost_whole_course')
+                                            <th colspan="{{ $isBasic ? 2 : 5 }}">
+                                                {{ $isBasic ? __('reports.cost_whole_schooling') : __('reports.cost_whole_course') }}
                                                 @if ($cost['course'])
                                                     <span class="text-muted" style="font-weight: 400;">&mdash; {{ $cost['course'] }}</span>
                                                 @endif
@@ -394,7 +440,11 @@
                                     </tfoot>
                                 </table>
                                 <p class="note mt-15 mb-0">
-                                    @lang('reports.cost_note', ['rate' => $money($cost['per_unit'])])
+                                    @if ($isBasic)
+                                        @lang('reports.cost_note_basic')
+                                    @else
+                                        @lang('reports.cost_note', ['rate' => $money($cost['per_unit'])])
+                                    @endif
                                     @lang('reports.cost_paid_note')
                                 </p>
                             </div>

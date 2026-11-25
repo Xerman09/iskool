@@ -326,6 +326,11 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
         // off the "recent orders" list on the Item Store page itself.
         Route::get('staff-transaction-history', ['as' => 'staff-transaction-history', 'uses' => 'Staff\StaffTransactionHistoryController@index'])->middleware('userRolePermission:staff-transaction-history');
 
+        /* Basic education's counterpart to price-per-unit on a course: one amount
+           per year level. Tuition only - everything else stays in Assign Misc Fee. */
+        Route::get('class-tuition', ['as' => 'class-tuition', 'uses' => 'Admin\Academics\ClassTuitionController@index'])->middleware('userRolePermission:class-tuition');
+        Route::post('class-tuition-store', ['as' => 'class-tuition-store', 'uses' => 'Admin\Academics\ClassTuitionController@store'])->middleware('userRolePermission:class-tuition');
+
         Route::get('misc-fee-assign', ['as' => 'misc-fee-assign', 'uses' => 'Admin\Academics\MiscFeeController@index'])->middleware('userRolePermission:misc-fee-assign');
 
         Route::get('down-payment', ['as' => 'down-payment', 'uses' => 'Admin\Academics\DownPaymentController@index'])->middleware('userRolePermission:down-payment');

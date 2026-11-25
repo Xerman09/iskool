@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Course;
+use App\ClassTuition;
 use App\SmStudent;
 use App\SmSubject;
 use App\SmAcademicYear;
@@ -24,6 +25,14 @@ trait EnrollmentBalanceBreakdown
 
         $course = Course::where('school_id', $student->school_id)->find($student->course_id);
         $pricePerUnit = $basicEd ? 0 : (optional($course)->price_per_unit ?: 0);
+
+        /* Basic education's tuition, which is priced per year level rather than
+           per unit and so belongs to the year, not to a term. Read once here and
+           added as a single line after the term loop below - splitting it across
+           quarters would invent a division the school never made. */
+        $basicEdTuition = $basicEd
+            ? ClassTuition::amountFor($student->class_id, getAcademicId(), $student->school_id)
+            : 0.0;
 
         // Which terms this learner is billed for. A college reads them off the
         // curriculum, because the subject load is what sets the price. Basic education
@@ -97,6 +106,25 @@ trait EnrollmentBalanceBreakdown
 
             $allLines = $allLines->concat($semesterLines->all());
             $total += $semesterTotal;
+        }
+
+        /* The year's tuition, led rather than trailed: it is the charge the family
+           came about, and the fees under it are the additions. Added outside the
+           loop because it belongs to the year - and so it still appears for a
+           school that has set tuition but no other fees, where the loop above
+           never runs at all.
+
+           feesType is null for the same reason as the college tuition line:
+           billing resolves it lazily through tuitionFeesType(), and a plain read
+           should not have the side effect of creating that row. */
+        if ($basicEd && $basicEdTuition > 0) {
+            $allLines->prepend([
+                'label' => trim(__('academics.tuition') . ' — ' . optional($student->class)->class_name),
+                'amount' => $basicEdTuition,
+                'feesType' => null,
+            ]);
+
+            $total += $basicEdTuition;
         }
 
         // A college student chooses whether to settle a semester at a time or the whole

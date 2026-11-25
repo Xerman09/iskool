@@ -90,6 +90,13 @@
                                 </div>
                                 @endif
 
+                                {{-- A college re-forms its blocks each semester, so an adviser is
+                                     named per term there. Basic education keeps one adviser for
+                                     the school year - the quarters are grading periods, not new
+                                     assignments - so asking for a term would mean naming the same
+                                     person four times for the same section. The picker is left
+                                     out there, and the row is stored against the year. --}}
+                                @unless (isBasicEd())
                                 <div class="row mt-15">
                                     <div class="col-lg-12">
                                         <label class="primary_input_label" for="">
@@ -109,6 +116,7 @@
                                         @endif
                                     </div>
                                 </div>
+                                @endunless
 
                                 <div class="row mt-15">
                                     <div class="col-lg-12">
@@ -232,8 +240,13 @@
                                     <thead>
                                       
                                         <tr>
-                                            <th>@lang('academics.program')</th>
-                                            <th>@lang('academics.semester')</th>
+                                            {{-- Neither column says anything on a basic-education
+                                                 deployment: there is one programme, hidden, and the
+                                                 adviser is named for the year rather than a term. --}}
+                                            @unless (isBasicEd())
+                                                <th>@lang('academics.program')</th>
+                                                <th>{{ termLabel() }}</th>
+                                            @endunless
                                             <th>@lang('common.class')</th>
                                             <th>@lang('common.section')</th>
                                             <th>@lang('common.teacher')</th>
@@ -243,8 +256,10 @@
                                     <tbody>
                                         @foreach($assign_class_teachers as $assign_class_teacher)
                                         <tr>
-                                            <td valign="top">{{@$assign_class_teacher->course != ""? @$assign_class_teacher->course->course_name:""}}</td>
-                                            <td valign="top">{{@$assign_class_teacher->semester != ""? @$assign_class_teacher->semester->semester_name:""}}</td>
+                                            @unless (isBasicEd())
+                                                <td valign="top">{{@$assign_class_teacher->course != ""? @$assign_class_teacher->course->course_name:""}}</td>
+                                                <td valign="top">{{@$assign_class_teacher->semester != ""? @$assign_class_teacher->semester->semester_name:""}}</td>
+                                            @endunless
                                             <td valign="top">{{@$assign_class_teacher->class !=""? @$assign_class_teacher->class->class_name:""}}</td>
                                             <td valign="top">{{@$assign_class_teacher->section != ""? @$assign_class_teacher->section->section_name:""}}</td>
                                             <td valign="top">

@@ -50,9 +50,22 @@ class SmAssignClassTeacherController extends Controller
     {
         DB::beginTransaction();
         try {
+            /* Null on basic education, where an adviser is named once for the
+               school year. Normalised here rather than trusted from the form: a
+               select that posts an empty string would otherwise be stored as ''
+               and never match the null this looks for. */
+            $semesterId = isBasicEd() ? null : ($request->semester ?: null);
+
             $assigned_class_teacher = SmAssignClassTeacher::where('active_status', 1)
                 ->where('course_id', $request->course)
-                ->where('semester_id', $request->semester)
+                /* whereNull, not where(..., null): SQL never matches a column
+                   against NULL with =, so the duplicate check would miss every
+                   time and the same section would collect an adviser per save. */
+                ->when(
+                    $semesterId,
+                    fn ($q) => $q->where('semester_id', $semesterId),
+                    fn ($q) => $q->whereNull('semester_id')
+                )
                 ->where('class_id', $request->class)
                 ->where('section_id', $request->section)
                 ->where('academic_id', getAcademicId())
@@ -62,7 +75,7 @@ class SmAssignClassTeacherController extends Controller
             if (empty($assigned_class_teacher)) {
                 $assign_class_teacher = new SmAssignClassTeacher();
                 $assign_class_teacher->course_id = $request->course;
-                $assign_class_teacher->semester_id = $request->semester;
+                $assign_class_teacher->semester_id = $semesterId;
                 $assign_class_teacher->class_id = $request->class;
                 $assign_class_teacher->section_id = $request->section;
                 $assign_class_teacher->school_id = auth()->user()->school_id;
@@ -127,7 +140,21 @@ class SmAssignClassTeacherController extends Controller
     public function update(SmAssignClassTeacherRequest $request, $id)
     {
 
-        $is_duplicate = SmAssignClassTeacher::where('school_id', Auth::user()->school_id)->where('academic_id', getAcademicId())->where('course_id', $request->course)->where('semester_id', $request->semester)->where('class_id', $request->class)->where('section_id', $request->section)->where('id', '!=', $request->id)->first();
+        // Null on basic education - see store() for why, and for why whereNull.
+        $semesterId = isBasicEd() ? null : ($request->semester ?: null);
+
+        $is_duplicate = SmAssignClassTeacher::where('school_id', Auth::user()->school_id)
+            ->where('academic_id', getAcademicId())
+            ->where('course_id', $request->course)
+            ->when(
+                $semesterId,
+                fn ($q) => $q->where('semester_id', $semesterId),
+                fn ($q) => $q->whereNull('semester_id')
+            )
+            ->where('class_id', $request->class)
+            ->where('section_id', $request->section)
+            ->where('id', '!=', $request->id)
+            ->first();
         if ($is_duplicate) {
             Toastr::warning('Duplicate entry found!', 'Warning');
             return redirect()->back();
@@ -139,7 +166,7 @@ class SmAssignClassTeacherController extends Controller
 
             $assign_class_teacher = SmAssignClassTeacher::find($request->id);
             $assign_class_teacher->course_id = $request->course;
-            $assign_class_teacher->semester_id = $request->semester;
+            $assign_class_teacher->semester_id = $semesterId;
             $assign_class_teacher->class_id = $request->class;
             $assign_class_teacher->academic_id = getAcademicId();
             $assign_class_teacher->section_id = $request->section;
