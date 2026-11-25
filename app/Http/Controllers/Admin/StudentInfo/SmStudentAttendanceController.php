@@ -467,6 +467,75 @@ class SmStudentAttendanceController extends Controller
         return redirect()->back();
     }
 
+    /**
+     * The import sample, filled with this school's own learners.
+     *
+     * It used to be a fixed file shipped with the app, carrying admission
+     * numbers 501-504. The importer looks each number up and silently skips the
+     * ones it cannot find - so following that sample imported nothing at all and
+     * said nothing about it. Real numbers make the sample a working file that
+     * can be edited rather than a shape to copy.
+     *
+     * attendance_date is written as a real date cell, not text: the importer
+     * reads it through excelToDateTimeObject(), which needs one.
+     */
+    public function downloadAttendanceImportSample()
+    {
+        $students = SmStudent::where('school_id', Auth::user()->school_id)
+            ->whereNotNull('admission_no')
+            ->orderBy('id')
+            ->take(4)
+            ->get(['admission_no', 'first_name', 'last_name']);
+
+        $rows = [['attendance_date', 'attendance_type', 'note', 'admission_no']];
+
+        /* P present, A absent, L late, H holiday - the four the attendance screen
+           itself offers, so the sample cannot teach a code the system rejects. */
+        $types = ['P', 'A', 'L', 'P'];
+        $today = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(now());
+
+        if ($students->isEmpty()) {
+            $rows[] = [$today, 'P', 'no learners yet - put an admission number here', ''];
+        } else {
+            foreach ($students as $i => $student) {
+                $rows[] = [$today, $types[$i] ?? 'P', '', $student->admission_no];
+            }
+        }
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new class($rows) implements
+                \Maatwebsite\Excel\Concerns\FromArray,
+                \Maatwebsite\Excel\Concerns\WithStyles,
+                \Maatwebsite\Excel\Concerns\ShouldAutoSize {
+                private $rows;
+
+                public function __construct($rows)
+                {
+                    $this->rows = $rows;
+                }
+
+                public function array(): array
+                {
+                    return $this->rows;
+                }
+
+                public function styles(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet)
+                {
+                    $last = $sheet->getHighestRow();
+                    $sheet->getStyle('A1:D' . $last)->getBorders()->getAllBorders()
+                        ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+                    // Without this the date column opens as a bare serial number.
+                    $sheet->getStyle('A2:A' . $last)->getNumberFormat()->setFormatCode('yyyy/mm/dd');
+
+                    return [1 => ['font' => ['bold' => true, 'size' => 12],
+                        'alignment' => ['horizontal' => 'center']]];
+                }
+            },
+            'student-attendance-import-sample.xlsx'
+        );
+    }
+
     public function studentAttendanceImport()
     {
 

@@ -1416,6 +1416,10 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
 
 
         Route::get('student-attendance-import', 'Admin\StudentInfo\SmStudentAttendanceController@studentAttendanceImport')->name('student-attendance-import');
+        /* Built per school rather than shipped as a fixed file: the importer looks
+           admission numbers up and skips the ones it cannot find, so a sample
+           carrying somebody else's imported nothing and said nothing. */
+        Route::get('student-attendance-import-sample', 'Admin\StudentInfo\SmStudentAttendanceController@downloadAttendanceImportSample')->name('student-attendance-import-sample');
         Route::get('download-student-attendance-file', 'Admin\StudentInfo\SmStudentAttendanceController@downloadStudentAtendanceFile');
         Route::post('student-attendance-bulk-store', 'Admin\StudentInfo\SmStudentAttendanceController@studentAttendanceBulkStore')->name('student-attendance-bulk-store');
 

@@ -166,15 +166,49 @@ class CurriculumBuilderController extends Controller
 
     public function downloadImportSample()
     {
-        return Excel::download(new class implements FromArray, WithStyles, ShouldAutoSize {
+        $schoolId = auth()->user()->school_id;
+
+        /* The example rows are filled with this school's own year levels, terms
+           and subject codes. The importer matches class and semester on their
+           exact names and subject_code against a base subject, so a sample
+           carrying invented ones ("Year 1", "Semester 1", "MATH-101") teaches
+           the format and then fails on every row - and the first thing anybody
+           does is open the sample, not read the screen. */
+        $classes = SmClass::where('school_id', $schoolId)->orderBy('id')->pluck('class_name');
+        $semesters = Semester::where('school_id', $schoolId)->orderBy('sort_order')->orderBy('id')->pluck('semester_name');
+        $codes = SmSubject::whereNull('course_id')
+            ->where('school_id', $schoolId)
+            ->whereNotNull('subject_code')
+            ->orderBy('id')
+            ->pluck('subject_code');
+
+        /* Where the school has not set one up yet, a placeholder in angle
+           brackets - which reads as "put something here" rather than as a value
+           that happens not to work. */
+        $class1 = $classes->get(0) ?: '<your year level>';
+        $class2 = $classes->get(1) ?: $class1;
+        $sem1 = $semesters->get(0) ?: '<your term>';
+        $sem2 = $semesters->get(1) ?: $sem1;
+        $code1 = $codes->get(0) ?: '<subject code>';
+        $code2 = $codes->get(1) ?: $code1;
+        $code3 = $codes->get(2) ?: $code2;
+
+        return Excel::download(new class($class1, $class2, $sem1, $sem2, $code1, $code2, $code3) implements FromArray, WithStyles, ShouldAutoSize {
+            private $rows;
+
+            public function __construct($class1, $class2, $sem1, $sem2, $code1, $code2, $code3)
+            {
+                $this->rows = [
+                    ['subject_code', 'class', 'semester', 'subject_classification', 'prerequisite_codes'],
+                    [$code1, $class1, $sem1, 'major', ''],
+                    [$code2, $class1, $sem2, 'major', $code1],
+                    [$code3, $class2, $sem1, 'minor', $code1 . ',' . $code2],
+                ];
+            }
+
             public function array(): array
             {
-                return [
-                    ['subject_code', 'class', 'semester', 'subject_classification', 'prerequisite_codes'],
-                    ['MATH-101', 'Year 1', 'Semester 1', 'major', ''],
-                    ['MATH-102', 'Year 1', 'Semester 2', 'major', 'MATH-101'],
-                    ['MATH-201', 'Year 2', 'Semester 1', 'major', 'MATH-101,MATH-102'],
-                ];
+                return $this->rows;
             }
 
             public function styles(Worksheet $sheet)

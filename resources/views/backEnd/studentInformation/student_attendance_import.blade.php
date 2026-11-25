@@ -26,7 +26,11 @@
                 </div>
 
                 <div class="offset-lg-3 col-lg-3 text-right mb-20">
-                    <a href="{{url('/public/backEnd/bulkxl/student_attendance.xlsx')}}">
+                    {{-- Built for this school, with its own admission numbers in it.
+                         The old fixed file carried 501-504, which belong to nobody
+                         here - and the importer skips a number it cannot find
+                         without saying so, so that sample imported nothing. --}}
+                    <a href="{{ route('student-attendance-import-sample') }}">
                         <button class="primary-btn tr-bg text-uppercase bord-rad">
                             @lang('student.download_sample_file')
                             <span class="pl ti-download"></span>
