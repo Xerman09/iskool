@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Report;
 
 use App\Course;
+use App\SmClass;
 use App\SmItem;
 use App\SmSubject;
 use App\Semester;
@@ -13,6 +14,7 @@ use App\Models\StudentRecord;
 use Modules\Fees\Entities\FmFeesTransaction;
 use App\Scopes\AcademicSchoolScope;
 use App\Scopes\ActiveStatusSchoolScope;
+use App\Scopes\StatusAcademicSchoolScope;
 use App\Traits\EnrollmentBalanceBreakdown;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -82,7 +84,77 @@ class FeesStandardReportController extends Controller
         'on_plan', 'not_on_plan', 'plan_overdue',
         'prior_balance', 'over_limit',
         'tuition', 'store',
+        /* Owed and already past its date - the chase list, as against
+           'outstanding', which is everything owed whether it is late or not. Two
+           questions a cashier asks separately: how much is out there, and who do
+           I ring today. */
+        'due_now',
     ];
+
+    /**
+     * One metric, on a page of its own.
+     *
+     * The five fees reports this school already knew - Fees Due, Balance, Fine,
+     * Payment, Waiver - each asking one question and showing the students behind
+     * it. They were separate reports with separate queries, which is how the
+     * Balance one came to compute a balance without subtracting waivers; here
+     * they are five doors onto classify(), so there is one arithmetic and they
+     * cannot drift apart again.
+     *
+     * The page is deliberately not the Standard Fees Report with a card opened.
+     * Somebody chasing one section does not want the whole school's figures to
+     * read past first, and a page that is about their question is a shorter walk
+     * than a page that contains it.
+     */
+    public function metricPage(Request $request, $metric)
+    {
+        if (!in_array($metric, self::METRICS, true)) {
+            abort(404);
+        }
+
+        /* These pages keep the names the school already knows them by. A card's
+           label and a report's name are not the same job: "Outstanding" is right
+           on a card, where the heading above it says what is being counted, and
+           wrong as a menu entry, where it has to say so itself. */
+        $pageTitles = [
+            'due_now' => 'reports.fees_due_report',
+            'outstanding' => 'reports.fees_balance_report',
+            'fine' => 'reports.fees_fine_report',
+            'collected' => 'reports.fees_payment_report',
+            'waiver' => 'reports.fees_waiver_report',
+        ];
+
+        try {
+            $criteria = $this->criteria($request);
+            $rows = $this->filterByMetric($this->classify($criteria), $metric);
+
+            return view('backEnd.reports.feesMetricPage', array_merge($criteria['lists'], [
+                'criteria' => $criteria,
+                'metric' => $metric,
+                'rows' => $rows,
+                'title' => isset($pageTitles[$metric])
+                    ? __($pageTitles[$metric])
+                    : $this->metricTitle($metric, $rows),
+                'totals' => $this->summarise($rows, $criteria['creditLimit']),
+                'labels' => $this->criteriaLabels($criteria),
+                /* The same criteria with print switched on, so the sheet is of what
+                   is on screen rather than of criteria reassembled a second time. */
+                'printUrl' => route('fees-standard-report-metric', array_merge(
+                    $request->except('print'),
+                    ['metric' => $metric, 'print' => 1]
+                )),
+                'statementsUrl' => route('fees-standard-report-statements', array_merge(
+                    $request->except('print'),
+                    ['metric' => $metric]
+                )),
+            ]));
+        } catch (\Exception $e) {
+            Log::error(__METHOD__ . ': ' . $e->getMessage(), ['exception' => $e]);
+            Toastr::error('Operation Failed', 'Failed');
+
+            return redirect()->back();
+        }
+    }
 
     public function index(Request $request)
     {
@@ -755,11 +827,25 @@ class FeesStandardReportController extends Controller
                 $criteria['academicId']
             )[$student->id] ?? 0);
 
+        /* What was bought at the store, pulled out of the charges already in hand
+           rather than queried again. They appear in the charges above as well -
+           this is the same money read a different way, the way a parent asks it:
+           not "what is on invoice 24" but "what did my child buy, and how many".
+           Quantity is the reason it earns a section of its own; the charges table
+           has no column for it. */
+        $itemLines = $breakdown
+            ->flatMap(fn ($g) => $g['lines']->map(fn ($l) => ['invoice' => $g['invoice'], 'line' => $l]))
+            ->filter(fn ($r) => $r['line']->sm_item_id)
+            ->values();
+
         return [
             'student' => $student,
             'breakdown' => $breakdown,
             'schedules' => $schedules,
             'payments' => $payments,
+            'items' => $itemLines,
+            'items_total' => round((float) $itemLines->sum(fn ($r) => (float) $r['line']->amount), 2),
+            'items_paid' => round((float) $itemLines->sum(fn ($r) => (float) $r['line']->paid_amount), 2),
             'assessed' => $assessed,
             'waiver' => $waiver,
             'fine' => $fine,
@@ -965,6 +1051,17 @@ class FeesStandardReportController extends Controller
                 : __('reports.all_programs'));
         }
 
+        /* Named only when narrowed. "Year Level: All" on every sheet is a line the
+           reader learns to skip, and then misses the day it says Grade 7. */
+        if ($criteria['classId']) {
+            $labels[] = __('academics.year_level') . ': '
+                . (optional(SmClass::find($criteria['classId']))->class_name ?: $criteria['classId']);
+        }
+
+        if ($criteria['sectionName']) {
+            $labels[] = __('academics.section') . ': ' . $criteria['sectionName'];
+        }
+
         $labels[] = __('reports.col_charge_type') . ': ' . ($criteria['type']
             ? __('reports.fees_type_' . $criteria['type'])
             : __('reports.fees_type_all'));
@@ -1157,6 +1254,62 @@ class FeesStandardReportController extends Controller
         $semesterId = $scope === 'semester' ? (int) $request->semester_id : null;
         $courseId = $request->filled('course_id') ? (int) $request->course_id : null;
 
+        /* Year level and section. The report reads whole-school by default, which
+           is the question it was built for; a class adviser or a cashier chasing
+           one section was left to read past everybody else's figures. Both narrow
+           the cards as well as the list, so the totals are of whoever is on
+           screen rather than of the school behind them. */
+        $classId = $request->filled('class_id') ? (int) $request->class_id : null;
+
+        /* By name, not by id. A section is created afresh each academic year - this
+           school has three rows called "A", one per year - so an id picks out one
+           year's section and misses the same section in every other year. A
+           whole-stay reading walks several years at once, and filtering on the id
+           would quietly drop most of them. The name is what the registrar means. */
+        $sectionName = $request->filled('section_name') ? trim((string) $request->section_name) : null;
+
+        $classes = SmClass::where('school_id', $schoolId)->orderBy('id')->get();
+
+        /* The sections of the chosen year level. Two places say which sections a
+           level has - the learners sitting in it, and the subject assignments made
+           against it - and either alone comes up empty often enough to leave the
+           picker dead: a school that has set its timetable but not yet placed
+           anyone has the second and not the first, and the reverse happens too.
+           Both are read, and the school's own sections stand in if neither
+           answers, so the control is never offered disabled. */
+        $sections = collect();
+
+        if ($classId) {
+            $linked = StudentRecord::where('school_id', $schoolId)
+                ->where('class_id', $classId)
+                ->whereNotNull('section_id')
+                ->distinct()
+                ->pluck('section_id')
+                ->merge(DB::table('sm_assign_subjects')
+                    ->where('school_id', $schoolId)
+                    ->where('class_id', $classId)
+                    ->whereNotNull('section_id')
+                    ->distinct()
+                    ->pluck('section_id'))
+                ->unique();
+
+            /* Unscoped: the scope pins sections to the open academic year, and a
+               section is usually created once and used for years afterwards - so
+               with it the list came back empty while records and timetables
+               pointed happily at those very sections. */
+            $sections = \App\SmSection::withoutGlobalScope(StatusAcademicSchoolScope::class)
+                ->where('school_id', $schoolId)
+                ->when($linked->isNotEmpty(), fn ($q) => $q->whereIn('id', $linked))
+                ->where('active_status', 1)
+                ->orderBy('section_name')
+                ->get()
+                /* One entry per name. Without this the picker offers "A" three
+                   times - once for each year the section was recreated - and the
+                   reader has no way to tell them apart. */
+                ->unique('section_name')
+                ->values();
+        }
+
         /* Tuition and item-store purchases are both owed to the school, so both are
            counted by default - leaving the store out would report a receivable the
            cashier's drawer disagrees with. The filter is there because the two are
@@ -1181,6 +1334,8 @@ class FeesStandardReportController extends Controller
             'academicId' => $academicId,
             'semesterId' => $semesterId,
             'courseId' => $courseId,
+            'classId' => $classId,
+            'sectionName' => $sectionName,
             'type' => $type,
             'asOf' => $asOf,
             /* Off unless the school has set one. Reporting only: a student past it
@@ -1190,7 +1345,7 @@ class FeesStandardReportController extends Controller
                 ? (float) generalSetting()->credit_limit
                 : null,
             'search' => trim((string) $request->get('search')),
-            'lists' => compact('years', 'semesters', 'courses'),
+            'lists' => compact('years', 'semesters', 'courses', 'classes', 'sections'),
         ];
     }
 
@@ -1268,6 +1423,31 @@ class FeesStandardReportController extends Controller
 
         if ($criteria['courseId']) {
             $records = $records->filter(fn ($r) => $r->studentDetail->course_id == $criteria['courseId']);
+        }
+
+        /* Narrowed on the record, not on the student: a learner's year level and
+           section belong to the year they sat in, and a whole-stay reading walks
+           several of those. Filtering the student row instead would judge every
+           past year by where they sit today. */
+        if ($criteria['classId']) {
+            $records = $records->filter(fn ($r) => (int) $r->class_id === (int) $criteria['classId']);
+        }
+
+        if ($criteria['sectionName']) {
+            /* Matched on the name the section carries, whichever year's row the
+               record happens to point at - see criteria() for why the id will not
+               do. The map is built once, unscoped, rather than touching the
+               database per record. */
+            $sectionNames = \App\SmSection::withoutGlobalScope(StatusAcademicSchoolScope::class)
+                ->where('school_id', $schoolId)
+                ->pluck('section_name', 'id');
+
+            $wanted = mb_strtolower($criteria['sectionName']);
+
+            $records = $records->filter(
+                fn ($r) => $r->section_id
+                    && mb_strtolower((string) ($sectionNames[$r->section_id] ?? '')) === $wanted
+            );
         }
 
         /* One row per student, not per record. Over a single year the two are the
@@ -1771,6 +1951,14 @@ class FeesStandardReportController extends Controller
             $summary[$key] = $sum($key);
         }
 
+        /* What is already past its date, and how many owe it. The headline a chase
+           list wants: not how many names are on the page, but how much money the
+           school should have had by now. Counted off the same rows as every other
+           figure here, so it can never exceed outstanding. */
+        $dueNow = $rows->filter(fn ($r) => $r['overdue_days'] > 0);
+        $summary['due_now'] = round((float) $dueNow->sum('balance'), 2);
+        $summary['count_due_now'] = $dueNow->count();
+
         /* Students owing more than the school said it would carry. Zero when no
            limit is set, which is also when the page hides the figure - a limit of
            nothing would otherwise put everybody over it. */
@@ -1973,6 +2161,13 @@ class FeesStandardReportController extends Controller
                 return $rows->where('item_assessed', '>', 0)->values();
             case 'programs':
                 return $rows;
+            /* Already past the date, longest overdue first - the order somebody
+               works a chase list in. Not simply "owes something": a balance that
+               is not due yet is money the school agreed to wait for. */
+            case 'due_now':
+                return $rows->filter(fn ($r) => $r['overdue_days'] > 0)
+                    ->sortByDesc('overdue_days')
+                    ->values();
             case 'over_limit':
                 /* The limit is read here rather than passed, because a metric list
                    is asked for by name and carries no criteria of its own beyond

@@ -526,6 +526,53 @@
                                 </tfoot>
                             </table>
                         @endif
+
+                        {{-- The store purchases on their own, which the charges table
+                             above cannot show: it lists lines per invoice and has no
+                             column for quantity. Same money, counted once - this is a
+                             second reading of those lines, not a second charge, and
+                             the note says so. --}}
+                        @if ($s['items']->isNotEmpty())
+                            <div class="main-title mt-30">
+                                <h3 class="mb-5">@lang('academics.items_purchased')</h3>
+                                <p class="note mb-15">@lang('reports.account_items_note')</p>
+                            </div>
+
+                            <table class="acct">
+                                <thead>
+                                    <tr>
+                                        <th>@lang('fees.create_date')</th>
+                                        <th>@lang('academics.description')</th>
+                                        <th class="num">@lang('inventory.quantity')</th>
+                                        <th class="num">@lang('accounts.amount')</th>
+                                        <th class="num">@lang('reports.fees_metric_collected')</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($s['items'] as $row)
+                                        @php $line = $row['line']; @endphp
+                                        <tr>
+                                            <td>
+                                                {{ $row['invoice']->create_date
+                                                    ? \Carbon\Carbon::parse($row['invoice']->create_date)->format('M d, Y')
+                                                    : '-' }}
+                                            </td>
+                                            <td>{{ optional($line->item)->item_name ?: ($line->note ?: __('reports.pay_unnamed')) }}</td>
+                                            <td class="num">{{ $line->quantity ?: 1 }}</td>
+                                            <td class="num">{{ number_format((float) $line->amount, 2) }}</td>
+                                            <td class="num">{{ number_format((float) $line->paid_amount, 2) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th colspan="3">@lang('academics.items_total')</th>
+                                        <th class="num">{{ $money($s['items_total']) }}</th>
+                                        <th class="num">{{ $money($s['items_paid']) }}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        @endif
                     </div>
                 </div>
 

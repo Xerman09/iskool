@@ -1,0 +1,117 @@
+{{-- The students behind one figure, as a table.
+
+     Included by both the modal that opens from a card and the standalone page
+     each metric has of its own, so a column added here reaches both. The caller
+     supplies $rows and $totals; nothing is counted in here.
+--}}
+@php
+    $currency = generalSetting()->currency_symbol ?: '$';
+
+    /* The period this report is being read at, translated into the account page's
+       own terms. The two name periods differently - the report says academic_id
+       and semester_id, the account says scope, session_id and semester_id - so the
+       link has to carry the translation or the account opens on its own default
+       and the reader lands on different figures from the row they clicked.
+
+       Defined here rather than in the including page, because the link that uses
+       it lives here and a partial that depends on its caller's variables breaks
+       the moment it is included somewhere else - which is exactly what happened
+       when this table was lifted out of the modal. */
+    $acctParams = request('semester_id') === 'whole_stay'
+        ? ['scope' => 'whole_stay']
+        : array_filter([
+            'scope' => 'semester',
+            'session_id' => request('academic_id'),
+            'semester_id' => request('semester_id'),
+        ]);
+@endphp
+    @if ($rows->count() == 0)
+        <p class="text-center text-muted mb-0">@lang('reports.no_students_found')</p>
+    @else
+        <div class="table-responsive">
+            <table class="table school-table-style shadow-none p-0" cellspacing="0" width="100%">
+                <thead>
+                    <tr>
+                        <th>@lang('common.sl')</th>
+                        <th>@lang('academics.student')</th>
+                        <th>@lang('student.admission_no')</th>
+                        @if (!isBasicEd())
+                            <th>@lang('academics.program')</th>
+                        @endif
+                        <th>@lang('academics.year_level')</th>
+                        <th class="text-right">@lang('reports.fees_metric_assessed')</th>
+                        <th class="text-right">@lang('reports.fees_metric_waiver')</th>
+                        <th class="text-right">@lang('reports.fees_metric_fine')</th>
+                        <th class="text-right">@lang('reports.fees_metric_collected')</th>
+                        <th class="text-right">@lang('reports.col_balance')</th>
+                        <th class="text-right">@lang('reports.col_prior')</th>
+                        <th class="text-right">@lang('reports.col_overdue')</th>
+                        <th>@lang('reports.col_next_due')</th>
+                        <th>@lang('reports.col_status')</th>
+                        <th>@lang('common.action')</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($rows as $key => $row)
+                        <tr>
+                            <td>{{ $key + 1 }}</td>
+                            <td><a href="{{ route('student-account-view', array_merge(['student' => $row['student']->id], $acctParams)) }}">{{ $row['student']->full_name }}</a></td>
+                            <td>{{ $row['student']->admission_no }}</td>
+                            @if (!isBasicEd())
+                                <td>{{ optional($row['student']->course)->course_name ?: '-' }}</td>
+                            @endif
+                            <td>{{ optional($row['record']->class)->class_name ?: '-' }}</td>
+                            <td class="text-right">{{ number_format($row['assessed'], 2) }}</td>
+                            <td class="text-right">{{ number_format($row['waiver'], 2) }}</td>
+                            <td class="text-right">{{ number_format($row['fine'], 2) }}</td>
+                            <td class="text-right">{{ number_format($row['paid'], 2) }}</td>
+                            <td class="text-right">{{ number_format($row['balance'], 2) }}</td>
+                            <td class="text-right">{{ $row['prior_balance'] != 0 ? number_format($row['prior_balance'], 2) : '-' }}</td>
+                            <td class="text-right">{{ $row['overdue_days'] > 0 ? $row['overdue_days'] : '-' }}</td>
+                            <td>
+                                @if ($row['next_due'])
+                                    {{ \Carbon\Carbon::parse($row['next_due'])->format('M d, Y') }}
+                                    <small class="d-block text-muted">
+                                        {{ $currency }}{{ number_format($row['next_due_amount'], 2) }}
+                                    </small>
+                                @else
+                                    &ndash;
+                                @endif
+                            </td>
+                            <td>
+                                @php
+                                    $tone = ['paid' => 'success', 'partial' => 'warning', 'unpaid' => 'danger'][$row['status']] ?? 'secondary';
+                                @endphp
+                                <span class="badge badge-{{ $tone }}">@lang('reports.fees_metric_' . $row['status'])</span>
+                            </td>
+                            <td>
+                                <a class="primary-btn small fix-gr-bg"
+                                    href="{{ route('fees-standard-report-statement', array_merge(['student' => $row['student']->id], request()->only(['academic_id', 'semester_id', 'course_id', 'type']))) }}"
+                                    target="_blank">
+                                    <span class="ti-printer pr-2"></span>@lang('reports.fees_statement_print')
+                                </a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                {{-- The list is of money, so it has to add up - a page of amounts with no
+                     total asks the reader to do the arithmetic the report was for.
+                     Totalled from these rows alone, which is why it matches the figure
+                     that was clicked. --}}
+                <tfoot>
+                    <tr>
+                        <th colspan="{{ isBasicEd() ? 4 : 5 }}" class="text-right">@lang('dashboard.total')</th>
+                        <th class="text-right">{{ $currency }}{{ number_format($totals['assessed'], 2) }}</th>
+                        <th class="text-right">{{ $currency }}{{ number_format($totals['waiver'], 2) }}</th>
+                        <th class="text-right">{{ $currency }}{{ number_format($totals['fine'], 2) }}</th>
+                        <th class="text-right">{{ $currency }}{{ number_format($totals['collected'], 2) }}</th>
+                        <th class="text-right">{{ $currency }}{{ number_format($totals['outstanding'], 2) }}</th>
+                        <th class="text-right">{{ $currency }}{{ number_format($totals['prior_balance'], 2) }}</th>
+                        {{-- Overdue, Next Due, Status and Action: four columns the totals
+                             row has nothing to say about. --}}
+                        <th colspan="4"></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    @endif

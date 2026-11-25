@@ -1497,6 +1497,16 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function () {
 
            Registered before the one that takes an id, so the bare path is not
            matched as a student id. */
+        /* The five fees reports this school already knew, each a page of its own
+           but all five reading classify() - one arithmetic, five questions. Named
+           routes rather than one with a {metric} parameter, so each keeps its own
+           permission row and can be granted separately. */
+        Route::get('fees-due-report', ['as' => 'fees-due-report', 'uses' => 'Admin\Report\FeesStandardReportController@metricPage'])->defaults('metric', 'due_now')->middleware('userRolePermission:fees-due-report');
+        Route::get('fees-balance-report', ['as' => 'fees-balance-report', 'uses' => 'Admin\Report\FeesStandardReportController@metricPage'])->defaults('metric', 'outstanding')->middleware('userRolePermission:fees-balance-report');
+        Route::get('fees-fine-report', ['as' => 'fees-fine-report', 'uses' => 'Admin\Report\FeesStandardReportController@metricPage'])->defaults('metric', 'fine')->middleware('userRolePermission:fees-fine-report');
+        Route::get('fees-payment-report', ['as' => 'fees-payment-report', 'uses' => 'Admin\Report\FeesStandardReportController@metricPage'])->defaults('metric', 'collected')->middleware('userRolePermission:fees-payment-report');
+        Route::get('fees-waiver-report', ['as' => 'fees-waiver-report', 'uses' => 'Admin\Report\FeesStandardReportController@metricPage'])->defaults('metric', 'waiver')->middleware('userRolePermission:fees-waiver-report');
+
         Route::get('student-account', ['as' => 'student-account', 'uses' => 'Admin\Report\FeesStandardReportController@accountSearch'])->middleware('userRolePermission:student-account');
         Route::get('student-account/{student}', ['as' => 'student-account-view', 'uses' => 'Admin\Report\FeesStandardReportController@account'])->middleware('userRolePermission:student-account');
         /* Declared after the page it belongs to, but matched before it: the segment

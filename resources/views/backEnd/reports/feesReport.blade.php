@@ -365,6 +365,49 @@
                                     </select>
                                 </div>
                             @endif
+
+                            {{-- Year level and section. The section list is of the chosen
+                                 level only, so it is empty until one is picked and the
+                                 form reloads - a plain submit rather than a dependent
+                                 dropdown, which keeps the whole page on one request. --}}
+                            <div class="col-lg-3 mb-3 mb-lg-0">
+                                <label class="primary_input_label">@lang('academics.year_level')</label>
+                                <select class="primary_select form-control" name="class_id"
+                                    onchange="this.form.querySelector('[name=section_name]').value=''; this.form.submit();">
+                                    <option value="">@lang('reports.all_year_levels')</option>
+                                    @foreach ($criteria['lists']['classes'] as $class)
+                                        <option value="{{ $class->id }}"
+                                            {{ (int) $criteria['classId'] === (int) $class->id ? 'selected' : '' }}>
+                                            {{ $class->class_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-lg-3 mb-3 mb-lg-0">
+                                <label class="primary_input_label">@lang('academics.section')</label>
+                                {{-- Never disabled. The theme styles selects through
+                                     niceSelect, which skips disabled ones - so a disabled
+                                     select stayed a native control and sat a few pixels
+                                     lower than the styled one beside it, as well as being
+                                     unclickable. With no level chosen it simply offers
+                                     "All sections", which is the truth. --}}
+                                {{-- Valued by name: a section is recreated each academic
+                                     year, so its id names one year's row and would miss
+                                     the same section in every other. --}}
+                                <select class="primary_select form-control" name="section_name">
+                                    <option value="">@lang('reports.all_sections')</option>
+                                    @foreach ($criteria['lists']['sections'] as $section)
+                                        <option value="{{ $section->section_name }}"
+                                            {{ $criteria['sectionName'] === $section->section_name ? 'selected' : '' }}>
+                                            {{ $section->section_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @if (!$criteria['classId'])
+                                    <span class="text-muted" style="font-size: 11px;">@lang('reports.section_pick_level')</span>
+                                @endif
+                            </div>
                             {{-- Empty means now. A date turns the page into a trial
                                  balance as that day closed, which is what a month end
                                  needs. --}}
